@@ -6,12 +6,79 @@
 ** PMA - Precise modeling and analysis
 ** LogID - Logic and Intelligent Data
 ** WNaS - Wireless Networks and Security
-* Ideas
-** Shared Buffer done right
+* First semester
+** Courses
+** INF4130
+** INF4820
+** INF5780
+* Thesis
+** Implementation goals
+*** A sound protocol for real-time collaboration in Emacs
+*** Server should be written in functional style using Clojure
+*** Minimize client, making expansion to other editors trivial
+*** Prove soundness of protocol
+*** Make it fast
+*** Make it secure
+*** Integration with source control (git)
+** Thesis goals
+*** Clear problem statement
+
+    The thesis will focus on enabling real-time collaboration for software
+    projects. More specifically we will focus on developing a sound protocol
+    for real-time collaboration, which is to be minimal, and optimized for
+    software development. In order to narrow the scope we will focus on
+    enabling this feature in Emacs.
+
+    This is not an unsolved problem, but there are no widespread usage of
+    any current solution (for Emacs). Why this is will be discussed
+    further. A solution for Emacs is, however, not the goal in itself, only
+    a stepping stone towards it. The solution implemented should not be in
+    any way limited to Emacs; it should be a generalized solution which
+    support any client that satisfies the protocol.
+
+    There are at the moment several solution for real-time collaboration,
+    these include Google Drive, ShareLaTex, Etherpad, SubEthaEdit and
+    Stypi. These cover different needs; Google Drive is mainly for creating
+    documents (in a style not unlike Word); ShareLaTeX is tailored for
+    LaTeX; Etherpad is a document editor that is open source and
+    customizable; SubEthaEdit is for collaborative coding; Stypi is a online
+    text editor.
+
+    In this collection SubEthaEdit stands out as a product which is close to
+    our goal, which is to enable real-time collaboration for software
+    projects. This is however limited to the Mac OS X platform, and is under
+    a proprietary license. A similar editor, Gobby, is open source and uses
+    the Obby protocol.
+
+    Gobby comes very close indeed. There even exists an Emacs extension
+    called Rudel which uses this protocol. Rudel is seemingly abandonware,
+    seeing that there has been no activity on their mailing list since 2011.
+
+    The Rudel code base consists of more than 16000 lines of
+    code[fn:1]. This poses a potential problem for widespread use;
+    developers gravitate towards different tools (or their work drags them
+    in a particular direction), so having the tool available on a variety of
+    platforms seems paramount. Perhaps if the protocol requires a
+    significantly smaller implementation, widespread usage is feasible.
+
+*** Discuss different approaches 
+**** P2P vs Server & Client
+**** Other solutions
+***** What does Shared Buffer provide that lacks in other solutions?
+***** Discuss Google drive/docs/wave
+***** ShareLaTex
+***** Discuss Rudel
+***** Discuss Etherpad
+***** Discuss Stypi
+***** Discuss SubEthaEdit
+** Links
 *** http://static.googleusercontent.com/media/research.google.com/no//pubs/archive/41895.pdf
 *** P2P http://dl.acm.org/citation.cfm?id=1180916 [[file:p259-oster.pdf][lokal-pdf]]
 *** Duplex http://dl.acm.org/citation.cfm?id=192900 [[file:p165-pacull.pdf][local-pdf]]
 *** TLA+ http://research.microsoft.com/en-us/um/people/lamport/tla/formal-methods-amazon.pdf
+** Miscellaneous
+*** Have INF2810 students test Share Buffer
+* No longer relevant ideas
 ** A new language
 *** The StackOverflow structure
     Create a language which is at its core very (very) small. It won't have
@@ -29,8 +96,7 @@
    Make an alternative markdown to html, and using javascript to typeset the
    document.
 
-* First semester
-** Courses
-** INF4130
-** INF4820
-** INF5780
+* Footnotes
+
+[fn:1] Ran =find . -name "*.el" | xargs wc -l= in the Rudel base directory.
+
