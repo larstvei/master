@@ -12,6 +12,9 @@
 ** INF4820
 ** INF5780
 * Thesis
+** Tasks
+*** DONE Implement an echo server in Clojure using websocket
+*** DONE Make Emacs connect to the echo server using websocket
 ** Implementation goals
 *** A sound protocol for real-time collaboration in Emacs
 *** Server should be written in functional style using Clojure
