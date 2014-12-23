@@ -1,20 +1,23 @@
-* Info
-** DMMS - Distributed multimedia systems
-** ND - Networks and distributed systems
-** PSE - Programming and software engineering
-** GI - Global infrastructures
-** PMA - Precise modeling and analysis
-** LogID - Logic and Intelligent Data
-** WNaS - Wireless Networks and Security
-* First semester
-** Courses
-** INF4130
-** INF4820
-** INF5780
+* Plan
+** First semester
+*** INF4130
+*** INF4820
+*** INF5780
+** Second semester
+*** INF5140
+*** INF5510
+*** Essay (10 pts)
+** Third semster
+*** INF5750
+*** Master (20 pts)
+** Fourth semester
+*** Master (30 pts)
 * Thesis
 ** Tasks
 *** DONE Implement an echo server in Clojure using websocket
 *** DONE Make Emacs connect to the echo server using websocket
+*** TODO Send changes to the server form Emacs
+*** TODO Make server sync the Emacs buffer
 ** Implementation goals
 *** A sound protocol for real-time collaboration in Emacs
 *** Server should be written in functional style using Clojure
@@ -81,7 +84,7 @@
 *** TLA+ http://research.microsoft.com/en-us/um/people/lamport/tla/formal-methods-amazon.pdf
 ** Miscellaneous
 *** Have INF2810 students test Share Buffer
-* No longer relevant ideas
+* Other ideas for theis
 ** A new language
 *** The StackOverflow structure
     Create a language which is at its core very (very) small. It won't have

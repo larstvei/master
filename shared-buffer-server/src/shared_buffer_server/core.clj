@@ -1,39 +1,48 @@
 (ns shared-buffer-server.core
   (:gen-class)
-  (:use org.httpkit.server))
-
-;; (defn handler [request]
-;;   (with-channel request channel
-;;     (on-close channel (fn [status] (println "channel closed: " status)))
-;;     (on-receive channel (fn [data] ;; echo it back
-;;                           (send! channel data)))))
+  (:use org.httpkit.server)
+  (:import java.security.SecureRandom
+           [org.apache.commons.codec.binary Base64]))
 
 (defn app [req]
   {:status  200
    :headers {"Content-Type" "text/html"}
    :body    "This should provide a overview of the activity on the server."})
 
+(def clients
+  "A set of clients."
+  (atom #{}))
+
+(def key-length
+  "This dictates the length of random generated keys."
+  8)
+
+(defn generate-key [len]
+  (Base64/encodeBase64URLSafeString
+   (let [seed (byte-array len)]
+     (.nextBytes (SecureRandom.) seed)
+     seed)))
+
+(defn receive [client data]
+  (send! client data))
+
+(defn dissolve-client [client status]
+  (swap! clients disj client))
+
 (defn handler [req]
-  (with-channel req channel              ; get the channel
-    ;; communicate with client using method defined above
-    (on-close channel (fn [status] (println "channel closed")))
+  (with-channel req channel
     (if (websocket? channel)
-      (println "WebSocket channel")
+      (swap! clients conj channel)
       (send! channel (app req)))
-    (on-receive
-     channel
-     (fn [data]    ; data received from client
-       ;; An optional param can pass to send!: close-after-send?
-       ;; When unspecified, `close-after-send?` defaults to true for HTTP channels
-       ;; and false for WebSocket.  (send! channel data close-after-send?)
-       (send! channel data)))))        ; data is sent directly to the client
+    ;; Log closing channel.
+    (on-close channel #(dissolve-client channel %))
+    ;; Echo on receive
+    (on-receive channel #(receive channel %))))
 
 (defonce server (atom nil))
 
 (defn stop-server []
   (when-not (nil? @server)
-    ;; graceful shutdown: wait 100ms for existing requests to be finished
-    ;; :timeout is optional, when no timeout, stop immediately
     (@server :timeout 100)
     (reset! server nil)))
 

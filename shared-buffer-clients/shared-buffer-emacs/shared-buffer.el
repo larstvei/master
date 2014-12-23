@@ -31,21 +31,28 @@
   "A buffer-local reference to the connection.")
 
 (defun sb-connect-to-server (host buffer)
-  (websocket-open
-   "ws://localhost:8080"
-   :on-message (lambda (websocket frame) (print frame))))
+  (websocket-open "ws://localhost:8080" :on-message 'sb-receive))
 
 (defun sb-share-buffer (host &optional buffer)
   (interactive "sHost: ")
-  (if (setq sb-socket (sb-connect-to-server host (or buffer (current-buffer)))) 
+  (setq sb-socket (sb-connect-to-server host (or buffer (current-buffer))))
+  (if sb-socket
       (message "Connected!")
     (message "Connection failed.")))
+
+(defun sb-disconnect (&optional buffer)
+  (interactive)
+  (with-current-buffer (or buffer (current-buffer))
+    (websocket-close sb-socket)))
+
+(defun sb-receive (websocket frame)
+  (print (websocket-frame-payload frame)))
 
 (defun sb-send (data)
   (websocket-send-text sb-socket data))
 
+;; (sb-send "asdfasdf")
+;; (sb-disconnect)
 
-
-(sb-send "asdfasdf")
 
 ;;; shared-buffer.el ends here.

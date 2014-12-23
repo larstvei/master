@@ -1,2 +1,21 @@
 * Introduction
+** Problem statement
+
+   #+BEGIN_QUOTE
+   The goal is to implement real-time collaborative editing in Emacs. 
+   #+END_QUOTE
+
+   Collaborative editing is a form of groupware
+
+   We will focus on developing a sound protocol for real-time collaboration,
+   which is to be minimal, and optimized for software development. To
+   determine whether or not the protocol is sound, we want model it, and
+   verify it using a tool for model checking.
+
+   # In order to achieve this we want to describe the problem formally.
+   
 * Related works
+* Algorithm
+** Verification
+** Implementation
+* Concluding remarks
