@@ -1,6 +1,7 @@
 (ns shared-buffer-server.core
   (:gen-class)
   (:use org.httpkit.server)
+  (:require [clojure.data.json :as json])
   (:import java.security.SecureRandom
            [org.apache.commons.codec.binary Base64]))
 
@@ -23,28 +24,39 @@
      (.nextBytes (SecureRandom.) seed)
      seed)))
 
+(defn provide-room [client room]
+  (if room
+    (println room)
+    (send! client (json/write-str {:type 'room :room (generate-key 8)}))))
+
 (defn receive [client data]
-  (send! client data))
+  (case (data "type")
+    "room" (provide-room client (data 'room))
+    "unknown"))
 
 (defn dissolve-client [client status]
   (swap! clients disj client))
 
+(defn initialize-client [client]
+  (swap! clients conj client))
+
 (defn handler [req]
   (with-channel req channel
     (if (websocket? channel)
-      (swap! clients conj channel)
+      (initialize-client channel)
       (send! channel (app req)))
     ;; Log closing channel.
     (on-close channel #(dissolve-client channel %))
     ;; Echo on receive
-    (on-receive channel #(receive channel %))))
+    (on-receive channel #(receive channel (json/read-str %)))))
 
 (defonce server (atom nil))
 
 (defn stop-server []
   (when-not (nil? @server)
     (@server :timeout 100)
-    (reset! server nil)))
+    (reset! server nil)
+    (reset! clients nil)))
 
 (defn -main [&args]
   ;; The #' is useful when you want to hot-reload code
