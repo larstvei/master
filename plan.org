@@ -82,6 +82,7 @@
 *** P2P http://dl.acm.org/citation.cfm?id=1180916 [[file:p259-oster.pdf][lokal-pdf]]
 *** Duplex http://dl.acm.org/citation.cfm?id=192900 [[file:p165-pacull.pdf][local-pdf]]
 *** TLA+ http://research.microsoft.com/en-us/um/people/lamport/tla/formal-methods-amazon.pdf
+*** Formal methods protocol testing http://www.csee.umbc.edu/courses/graduate/681/Fall07/formal_methods_protocol_testing.pdf
 ** Miscellaneous
 *** Have INF2810 students test Share Buffer
 * Other ideas for theis

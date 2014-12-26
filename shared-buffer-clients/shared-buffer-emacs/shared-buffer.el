@@ -43,22 +43,25 @@
 
 (defun sb-connect-to-server (host &optional room)
   (setq sb-host "ws://localhost:8080")
-  (setq sb-socket
-        (websocket-open sb-host
-                        :on-message 'sb-receive
-                        :on-open
-                        (lambda (w) (sb-send (json-encode
-                                         (list :type 'room :room sb-room))))
-                        :on-close
-                        (lambda (w) (message "SB: Connection closed!")))))
+  (setq sb-socket (websocket-open
+                   sb-host
+                   :on-message 'sb-receive
+                   :on-open 'sb-on-open
+                   :on-close 'sb-on-close)))
+
+(defun sb-on-open (websocket)
+  (sb-send (json-encode (list :type 'room :room sb-room))))
+
+(defun sb-on-close (websocket)
+  (message "Shared Buffer: Connection closed!"))
 
 (defun sb-share-buffer (host &optional buffer)
   (interactive "sHost: ")
   (with-current-buffer (or buffer (current-buffer))
     (setf sb-socket (sb-connect-to-server host))
     (if sb-socket
-        (message "Connected")
-      (message "Connection failed."))))
+        (message "Shared Buffer: Connected")
+      (message "Shared Buffer: Connection failed."))))
 
 (defun sb-join-room (host room &optional buffer)
   (interactive "sHost: \nsRoom: ")
@@ -73,8 +76,8 @@
 (defun sb-set-room (room)
   (setq sb-room room)
   (kill-new room)
-  (message
-   "Connected to room: %s, the key was added to the kill ring." room))
+  (message "Shared Buffer: \
+Connected to room: %s, the key was added to the kill ring." room))
 
 (defun sb-receive (websocket frame)
   (let* ((payload (websocket-frame-payload frame))
