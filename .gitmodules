@@ -1,6 +1,0 @@
-[submodule "Doconce"]
-	path = Doconce
-	url = git@github.com:larstvei/Doconce-mode.git
-[submodule "typeset"]
-	path = typeset
-	url = https://github.com/bramstein/typeset.git
