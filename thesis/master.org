@@ -117,7 +117,7 @@ Placeholder for abstract.
     The language should also have libraries for high-level network
     programming, to be able to focus at the task at hand, and not having to
     re-implement solved problems.
-
+    
     The languages that are up for consideration should be functional,
     enforce thread-safety and have high-level network communication
     libraries. /Erlang/ is such a language. It is functional, this implies
@@ -180,13 +180,15 @@ Placeholder for abstract.
     vector associates a index with some piece of data, whilst maps associate
     any piece of data with some other piece of data.
 
-* TODO Related works
-* TODO Algorithm
-** TODO Verification
-** TODO Implementation
+* TODO Existing solutions
+* TODO Algorithm and protocol
+** The /Shared Buffer/ protocol
+
+   
+
+** TODO Verification of the algorithm
+** TODO Implementation of the algorithm
 * TODO Concluding remarks
 
 #+LaTeX: \backmatter{}
 #+LaTeX: \printbibliography
-
-
