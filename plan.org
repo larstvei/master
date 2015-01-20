@@ -107,3 +107,134 @@
 
 [fn:1] Ran =find . -name "*.el" | xargs wc -l= in the Rudel base directory.
 
+* Notes
+** Things I find difficult
+*** Deciding on structure
+*** Avoiding "we"-form 
+*** Avoid trailing off on something slightly beside the point
+** Structure
+*** Title
+*** Abstract
+*** Introduction
+*** Methods
+*** Results
+*** Discussion
+*** Conclusion
+** Write down how you would explain your thesis to a 15 year old kid
+   Making it possible for more than one person to work on the same code at
+   the same time. Working on code is a lot like writing in a document, but
+   we work with pure text (bla bla bla).
+** 10 rules
+*** Find out what you want to say using only one sentence
+*** Know your target group
+*** Do not assume that everyone interested, make them
+*** Give your reader a good reason for reading your esay
+*** Kill your darlings
+*** Write as simple sentences as possible
+*** Know why you are saying what you are saying where you are saying it
+*** Show them, don't tell them
+*** Know the difference between your goals and your means
+*** Create flow and bridges between sentences, points and paragraphs
+** Write down your essay question
+*** How to make a (preferable proven) reliable and minimalistic protocol for collaborative editing.
+*** How to design, implement and verify collaborative editing facilities in Emacs.
+*** What is "operational transformation"?
+*** Is a subset of the operational transformation adequate for sb?
+*** Why not gobby/SubEthaEdit/Rudel?
+*** Can I describe the program with temporal logic?
+*** What is temporal logic?
+*** Can the entire program be modeled and proved?
+*** Can parts of the program be modeled and proved?
+*** What is the smallest feature-set suitable for sb?
+** Write down two to three sentences to introduce the context of your question
+
+   There are several collaborative editing services in wide-spread use, like
+   Google Docs. Still, there is no tool in wide-spread use to enable this
+   feature for working with code. Developers tend to prefer combining
+   several specialized (and preferably extendable) tools targeting a
+   specialized task, over "one great tool" that does everything.
+
+   How can one implement a simple enough tool to make enabling collaborative
+   editing in existing code development tools? We'll target Emacs to narrow
+   the scope of this thesis.
+
+** The meta trap
+   Skriv noe her...
+** Introduction
+
+   In the introduction the work of others is primary, and your work is
+   secondary.
+
+** Discussion
+
+   In the introduction your work is primary, and the work of others is
+   secondary.
+
+*** How to build up an argument
+**** A bad essay is one with long intro and no discussion.
+
+** Establishing research territory
+*** Establishing a niche
+** When do I need a reference
+*** When it is not your idea
+*** When you need backup
+*** When you are looking for supporting facts
+*** When you need to show what is done before
+*** When you need to show the "bricks"
+*** When you need to show your actual contribution
+** Write down your path of sub questions and give it to the person sitting next to you
+*** How does one implement a minimal protocol for enabling collaborative editing?
+*** How does one model the protocol?
+*** Is this best represented as operational transformations?
+*** What are a operational transform?
+*** Is a subset of operational transform adequate for the task?
+*** What modelling language is best suited for verifying a distributed system like this?
+*** Can the algorithm be described with temporal logic?
+*** What is temporal logic?
+*** What is the minimal amount of information needed to keep a synchronized state?
+*** What representation will be most likely to be supported in other text editors?
+** Discussing your results
+*** Discuss existing literature
+*** Offering a general conclusion
+*** Reminding the reader of the original purpose of the research
+*** ...
+** You and your language
+*** Operates on three levels
+**** Sentence
+**** Paragraph
+     Discuss only one point at a time, and tie the paragraphs together.
+**** The whole essay
+** Giving up your baby
+*** Letting other people read your draft is crucial
+*** Getting criticism is the best thing that can happen
+*** How do you receive and give criticism the right way?
+**** Receiving criticism
+***** Criticism is help
+***** If you have to explain what you mean - rewrite
+***** If people don't understand, it's not them - it's you
+***** Be grateful that people want to help you
+**** How to edit texts
+***** Why am I reading this?
+***** Where do I fall off?
+***** Is everything logical?
+***** What questions do I get when reading it?
+***** Do I like the writer?
+***** Typos
+** Writers block
+*** It's a good thing - relax and do something else
+*** Focus on what you know
+*** Write down question you get when reading your draft
+*** Write down thoughts and connections that are untied to the present structure of the essay
+** The middle problems
+*** What to do if you change your main question?
+**** Not a disaster
+*** Writing to much
+**** Is everything relevant?
+**** Have I written things twice?
+*** Writing too little
+**** Have you read enough?
+**** Expand by
+***** Exemplifying
+***** Clarifying the meaning or the significance
+***** Giving it more substance with further evidence
+***** enhancing the importance of the information
