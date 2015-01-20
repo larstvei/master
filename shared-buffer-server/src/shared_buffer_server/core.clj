@@ -31,24 +31,44 @@
 
 (defn provide-room [client room]
   (let [key (or room (generate-key 8))
-        members (or ((deref key-to-room-map) key) #{})]
+        members (or (@key-to-room-map key) #{})]
     (when-not room
       (send! client (json/write-str {:type 'room :room key})))
     (swap! client-to-key-map assoc client key)
     (swap! key-to-room-map assoc key (conj members client))))
 
+(defn send-addition [client data]
+  (let [msg (json/write-str data)]
+    (send! client msg)))
+
+(defn send-deletion [client data]
+  (let [msg (json/write-str data)]
+    (send! client msg)))
+
+(defn distribute-change [client data]
+  (let [room (@key-to-room-map (data :key))
+        clients (seq (disj room client))
+        send-f (cond (data :addition) send-addition
+                     (data :deletion) send-deletion)]
+    (when send-f
+      (doseq [c clients] (send-f c data)))))
+
 (defn receive [client data]
   (let [data (json/read-str data :key-fn keyword)]
     (case (data :type)
       "room" (provide-room client (data :room))
-      "not-supported")))
+      "change" (distribute-change client data)
+      'error)))
 
 (defn dissolve-client [client status]
-  (let [key ((deref client-to-key-map) client)
-        room ((deref key-to-room-map) key)]
+  (let [key (@client-to-key-map client)
+        room (@key-to-room-map key)
+        clients (disj room client)]
     (when key
-      (swap! key-to-room-map assoc key (disj room client))
-      (swap! client-to-key-map assoc client nil))))
+      (if-not (empty? clients)
+        (swap! key-to-room-map assoc key clients)
+        (swap! key-to-room-map dissoc key))
+      (swap! client-to-key-map dissoc client))))
 
 (defn initialize-client [client]
   (swap! client-to-key-map assoc client nil))

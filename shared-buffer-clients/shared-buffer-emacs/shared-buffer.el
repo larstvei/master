@@ -33,7 +33,7 @@
 
 ;;; Variables
 
-(defvar-local sb-room nil
+(defvar-local sb-room-key nil
   "A buffer that is shared belongs to a room. This variable keeps an
   identifier to the room this buffer belongs to.")
 
@@ -46,7 +46,7 @@
   variable keeps the connected socket.")
 
 ;; Changing major-mode should not affect Shared Buffer.
-(dolist (var '(sb-room sb-host sb-socket))
+(dolist (var '(sb-room-key sb-host sb-socket))
   (put var 'permanent-local t))
 
 ;;; Socket communication
@@ -63,7 +63,7 @@
 
 (defun sb-on-open (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
-    (sb-send (json-encode (list :type 'room :room sb-room)))))
+    (sb-send (json-encode (list :type 'room :room sb-room-key)))))
 
 (defun sb-on-close (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
@@ -77,12 +77,14 @@
 
 (defun sb-send-addition (point string)
   (sb-send (json-encode (list :type'change
+                              :key sb-room-key
                               :current-point (point)
                               :change-point point
                               :addition string))))
 
 (defun sb-send-deletion (point del)
   (sb-send (json-encode (list :type'change
+                              :key sb-room-key
                               :current-point (point)
                               :change-point point
                               :deletion del))))
@@ -95,12 +97,13 @@
            (json-object-type 'plist)
            (data (json-read-from-string payload))
            (type (plist-get data :type)))
-      (print type)
       (cond ((string= type "room")
-             (sb-set-room (plist-get data :room)))))))
+             (sb-set-room (plist-get data :room)))
+            ((string= type "change")
+             (sb-apply-change data))))))
 
 (defun sb-set-room (room)
-  (setq sb-room room)
+  (setq sb-room-key room)
   (sb-add-key-to-kill-ring)
   (message "Shared Buffer: \
 Connected to room: %s, the key was added to the kill ring." room))
@@ -116,6 +119,29 @@ in order to keep the buffer synchronized."
        beg (buffer-substring-no-properties beg end))
     (sb-send-deletion beg del)))
 
+(defun sb-apply-change (data)
+  (cond ((plist-get data :addition) (sb-apply-addition data))
+        ((plist-get data :deletion) (sb-apply-deletion data))
+        (t 'error)))
+
+(defun sb-apply-addition (data)
+  (save-excursion
+    (let ((inhibit-modification-hooks t)
+          (point (plist-get data :change-point))
+          (addition (plist-get data :addition)))
+      (when (and point addition)
+        (goto-char point)
+        (insert addition)))))
+
+(defun sb-apply-deletion (data)
+  (save-excursion
+    (let ((inhibit-modification-hooks t)
+          (point (plist-get data :change-point))
+          (deletion (plist-get data :deletion)))
+      (when (and point deletion)
+        (goto-char point)
+        (delete-char deletion)))))
+
 ;;; Interactive functions
 
 (defun sb-share-buffer (host &optional buffer)
@@ -124,12 +150,11 @@ in order to keep the buffer synchronized."
     (sb-connect-to-server host)
     (if (not sb-socket)
         (message "Shared Buffer: Connection failed.")
-      (shared-buffer-mode 1)
-      (message "Shared Buffer: Connected"))))
+      (shared-buffer-mode 1))))
 
 (defun sb-join-room (host room &optional buffer)
   (interactive "sHost: \nsRoom: ")
-  (setq sb-room room)
+  (setq sb-room-key room)
   (sb-share-buffer host buffer))
 
 (defun sb-disconnect (&optional buffer)
@@ -141,14 +166,15 @@ in order to keep the buffer synchronized."
 
 (defun sb-add-key-to-kill-ring ()
   (interactive)
-  (kill-new sb-room))
+  (kill-new sb-room-key))
 
 ;;; Minor mode
 
 (defun sb-quit ()
-  (dolist (var '(sb-room sb-host sb-socket))
+  (dolist (var '(sb-room-key sb-host sb-socket))
     (kill-local-variable var))
-  (shared-buffer-mode 0))
+  (shared-buffer-mode 0)
+  (remove-hook 'after-change-functions 'sb-after-change))
 
 (define-minor-mode shared-buffer-mode
   "A minor mode for Shared Buffer."
@@ -160,7 +186,7 @@ in order to keep the buffer synchronized."
 ;; (sb-disconnect)
 ;; (sb-share-buffer 'asdf)
 ;; (delete-process (car (process-list)))
-;; sb-room
+;; sb-room-key
 
 
 
