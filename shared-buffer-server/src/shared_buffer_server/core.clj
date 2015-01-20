@@ -10,11 +10,11 @@
    :headers {"Content-Type" "text/html"}
    :body    "This should provide a overview of the activity on the server."})
 
-(def client-to-key-map
+(def key-map
   "A map where clients are mapped to the keys."
   (atom {}))
 
-(def key-to-room-map
+(def room-map
   "A map of all rooms, where a room is a set of clients. Each room is
   associated with a random-generated key."
   (atom {}))
@@ -31,11 +31,11 @@
 
 (defn provide-room [client room]
   (let [key (or room (generate-key 8))
-        members (or (@key-to-room-map key) #{})]
+        members (or (@room-map key) #{})]
     (when-not room
       (send! client (json/write-str {:type 'room :room key})))
-    (swap! client-to-key-map assoc client key)
-    (swap! key-to-room-map assoc key (conj members client))))
+    (swap! key-map assoc client key)
+    (swap! room-map assoc key (conj members client))))
 
 (defn send-addition [client data]
   (let [msg (json/write-str data)]
@@ -46,7 +46,7 @@
     (send! client msg)))
 
 (defn distribute-change [client data]
-  (let [room (@key-to-room-map (data :key))
+  (let [room (@room-map (data :key))
         clients (seq (disj room client))
         send-f (cond (data :addition) send-addition
                      (data :deletion) send-deletion)]
@@ -61,17 +61,17 @@
       'error)))
 
 (defn dissolve-client [client status]
-  (let [key (@client-to-key-map client)
-        room (@key-to-room-map key)
+  (let [key (@key-map client)
+        room (@room-map key)
         clients (disj room client)]
     (when key
       (if-not (empty? clients)
-        (swap! key-to-room-map assoc key clients)
-        (swap! key-to-room-map dissoc key))
-      (swap! client-to-key-map dissoc client))))
+        (swap! room-map assoc key clients)
+        (swap! room-map dissoc key))
+      (swap! key-map dissoc client))))
 
 (defn initialize-client [client]
-  (swap! client-to-key-map assoc client nil))
+  (swap! key-map assoc client nil))
 
 (defn handler [req]
   (with-channel req channel
@@ -89,10 +89,10 @@
   (when-not (nil? @server)
     (@server :timeout 100)
     (reset! server nil)
-    (reset! client-to-key-map {})
-    (reset! key-to-room-map {})))
+    (reset! key-map {})
+    (reset! room-map {})))
 
-(defn -main [&args]
+(defn -main [& [args]]
   ;; The #' is useful when you want to hot-reload code
   ;; You may want to take a look: https://github.com/clojure/tools.namespace
   ;; and http://http-kit.org/migration.html#reload
