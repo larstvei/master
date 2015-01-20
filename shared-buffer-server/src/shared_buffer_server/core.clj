@@ -10,9 +10,14 @@
    :headers {"Content-Type" "text/html"}
    :body    "This should provide a overview of the activity on the server."})
 
-(def clients
-  "A set of clients."
-  (atom #{}))
+(def client-to-key-map
+  "A map where clients are mapped to the keys."
+  (atom {}))
+
+(def key-to-room-map
+  "A map of all rooms, where a room is a set of clients. Each room is
+  associated with a random-generated key."
+  (atom {}))
 
 (def key-length
   "This dictates the length of random generated keys."
@@ -25,20 +30,28 @@
      seed)))
 
 (defn provide-room [client room]
-  (if room
-    (println room)
-    (send! client (json/write-str {:type 'room :room (generate-key 8)}))))
+  (let [key (or room (generate-key 8))
+        members (or ((deref key-to-room-map) key) #{})]
+    (when-not room
+      (send! client (json/write-str {:type 'room :room key})))
+    (swap! client-to-key-map assoc client key)
+    (swap! key-to-room-map assoc key (conj members client))))
 
 (defn receive [client data]
-  (case (data "type")
-    "room" (provide-room client (data 'room))
-    "unknown"))
+  (let [data (json/read-str data :key-fn keyword)]
+    (case (data :type)
+      "room" (provide-room client (data :room))
+      "not-supported")))
 
 (defn dissolve-client [client status]
-  (swap! clients disj client))
+  (let [key ((deref client-to-key-map) client)
+        room ((deref key-to-room-map) key)]
+    (when key
+      (swap! key-to-room-map assoc key (disj room client))
+      (swap! client-to-key-map assoc client nil))))
 
 (defn initialize-client [client]
-  (swap! clients conj client))
+  (swap! client-to-key-map assoc client nil))
 
 (defn handler [req]
   (with-channel req channel
@@ -48,7 +61,7 @@
     ;; Log closing channel.
     (on-close channel #(dissolve-client channel %))
     ;; Echo on receive
-    (on-receive channel #(receive channel (json/read-str %)))))
+    (on-receive channel #(receive channel %))))
 
 (defonce server (atom nil))
 
@@ -56,7 +69,8 @@
   (when-not (nil? @server)
     (@server :timeout 100)
     (reset! server nil)
-    (reset! clients nil)))
+    (reset! client-to-key-map {})
+    (reset! key-to-room-map {})))
 
 (defn -main [&args]
   ;; The #' is useful when you want to hot-reload code
