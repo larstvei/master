@@ -45,6 +45,10 @@
   "A buffer that is shared is connected to a server. This
   variable keeps the connected socket.")
 
+(defvar-local sb-seqno 0
+  "All buffer-changes are given a sequence number. This sequence
+  number is incremented for each change.")
+
 ;; Changing major-mode should not affect Shared Buffer.
 (dolist (var '(sb-room-key sb-host sb-socket))
   (put var 'permanent-local t))
@@ -76,18 +80,21 @@
   (websocket-send-text sb-socket data))
 
 (defun sb-send-addition (point string)
-  (sb-send (json-encode (list :type'change
+  (sb-send (json-encode (list :type 'change
                               :key sb-room-key
                               :current-point (point)
                               :change-point point
-                              :addition string))))
+                              :addition string
+                              :seqno (incf sb-seqno)))))
 
-(defun sb-send-deletion (point del)
-  (sb-send (json-encode (list :type'change
+(defun sb-send-deletion (point bytes-deleted deletion)
+  (sb-send (json-encode (list :type 'change
                               :key sb-room-key
                               :current-point (point)
                               :change-point point
-                              :deletion del))))
+                              :deletion deletion
+                              :bytes-deleted bytes-deleted
+                              :seqno (incf sb-seqno)))))
 
 ;;; Receive
 
@@ -100,7 +107,8 @@
       (cond ((string= type "room")
              (sb-set-room (plist-get data :room)))
             ((string= type "change")
-             (sb-apply-change data))))))
+             (sb-apply-change data))
+            (t (error "Shared Buffer: Error in protocol."))))))
 
 (defun sb-set-room (room)
   (setq sb-room-key room)
@@ -115,32 +123,20 @@ Connected to room: %s, the key was added to the kill ring." room))
 `shared-buffer-mode' is enabled. Each change is sent to `sb-host'
 in order to keep the buffer synchronized."
   (if (zerop del)
-      (sb-send-addition
-       beg (buffer-substring-no-properties beg end))
-    (sb-send-deletion beg del)))
+      (sb-send-addition beg (buffer-substring-no-properties beg end))
+    (sb-send-deletion beg del (buffer-substring-no-properties beg end))))
 
 (defun sb-apply-change (data)
-  (cond ((plist-get data :addition) (sb-apply-addition data))
-        ((plist-get data :deletion) (sb-apply-deletion data))
-        (t 'error)))
-
-(defun sb-apply-addition (data)
   (save-excursion
     (let ((inhibit-modification-hooks t)
           (point (plist-get data :change-point))
-          (addition (plist-get data :addition)))
-      (when (and point addition)
-        (goto-char point)
-        (insert addition)))))
-
-(defun sb-apply-deletion (data)
-  (save-excursion
-    (let ((inhibit-modification-hooks t)
-          (point (plist-get data :change-point))
-          (deletion (plist-get data :deletion)))
-      (when (and point deletion)
-        (goto-char point)
-        (delete-char deletion)))))
+          (addition (plist-get data :addition))
+          (bytes-deleted (plist-get data :bytes-deleted)))
+      (when (and addition bytes-deleted)
+        (error "Shared Buffer: Error in protocol."))
+      (when point (goto-char point))
+      (when addition (insert addition))
+      (when bytes-deleted (delete-char bytes-deleted)))))
 
 ;;; Interactive functions
 
