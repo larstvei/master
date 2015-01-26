@@ -82,6 +82,12 @@
 
 (defun sb-send (data)
   (websocket-send-text sb-socket data))
+(defun sb-send-entire-buffer ()
+  (sb-send (list :type 'entire-buffer
+                 :key sb-room-key
+                 :change-point (point-min)
+                 :addition (buffer-substring-no-properties
+                            (point-min) (point-max)))))
 
 (defun sb-send-addition (point string)
   (sb-send (json-encode (list :type 'change
@@ -110,9 +116,17 @@
            (type (plist-get data :type)))
       (cond ((string= type "room")
              (sb-set-room (plist-get data :room)))
+            ((string= type "entire-buffer")
+             (sb-entire-buffer data))
             ((string= type "change")
              (sb-apply-change data))
             (t (error "Shared Buffer: Error in protocol."))))))
+
+(defun sb-entire-buffer (data)
+  (if (and (plist-get data :change-point)
+           (plist-get data :addition))
+      (sb-apply-change data)
+    (sb-send-entire-buffer)))
 
 (defun sb-set-room (room)
   (setq sb-room-key room)
