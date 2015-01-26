@@ -14,7 +14,8 @@
 (declare send-addition)
 (declare send-deletion)
 (declare receive)
-(declare provide-room)
+(declare include-clients)
+(declare add-to-room)
 (declare generate-key)
 (declare handler)
 (declare app)
@@ -23,44 +24,45 @@
 
 ;;; Variables
 
+(defrecord Room [key clients uninitialized-clients seqno operations])
+
 (def key-length
   "This dictates the length of random generated keys."
   8)
 
-(def key-map
+(def chan->key-map
   "A map where clients are mapped to the keys."
   (atom {}))
 
-(def room-map
+(def key->room-map
   "A map of all rooms, where a room is a set of clients. Each room is
   associated with a random-generated key."
   (atom {}))
 
-(def server
-  "A reference to the server, which is a function that stops the server."
-  (atom nil))
+(defonce server (atom nil))
 
 ;;; Socket communication
 
 (defn initialize-client
   "The function is called on initialization. It adds the client to the
-  key-map."
+  chan->key-map."
   [client]
-  (swap! key-map assoc client nil))
+  (swap! chan->key-map assoc client nil))
 
 (defn dissolve-client
   "The function is called when a connection to a client is closed. It
   removes the client. If the room its in has no more clients, the room is
   closed."
   [client status]
-  (let [key (@key-map client)
-        room (@room-map key)
-        clients (disj room client)]
+  (let [key (@chan->key-map client)
+        room (@key->room-map key)
+        clients (disj (:clients room) client)]
     (when key
-      (if-not (empty? clients)
-        (swap! room-map assoc key clients)
-        (swap! room-map dissoc key))
-      (swap! key-map dissoc client))))
+      (if (empty? clients)
+        (swap! key->room-map dissoc key)
+        (swap! key->room-map assoc key
+               (update-in room [:clients] disj client)))
+      (swap! chan->key-map dissoc client))))
 
 ;;; Send
 
@@ -68,8 +70,8 @@
   "Distribute a change to the room the client is in. The change is not sent
   to the client that made the change."
   [client msg]
-  (let [room (@room-map (msg :key))
-        clients (seq (disj room client))
+  (let [room (@key->room-map (msg :key))
+        clients (seq (disj (:clients room) client))
         send-f (cond (msg :addition) send-addition
                      (msg :bytes-deleted) send-deletion)]
     (when send-f (doseq [c clients] (send-f c msg)))))
@@ -95,19 +97,39 @@
   [client data]
   (let [msg (json/read-str data :key-fn keyword)]
     (case (msg :type)
-      "room" (provide-room client (msg :room))
+      "room" (add-to-room client (msg :room))
+      "entire-buffer" (include-clients msg)
       "change" (distribute-change client msg)
       'error)))
 
-(defn provide-room
+(defn include-clients
+  "Send the entire buffer to all uninitialized clients, add the
+  uninitialized clients to clients and empty the uninitialized clients set."
+  [msg]
+  (let [key (msg :key)
+        room (@key->room-map key)
+        uninit-cli (:uninitialized-clients room)]
+    (doseq [c (seq uninit-cli)] (send-addition c msg))
+    (swap! key->room-map assoc key
+           (-> room
+               (update-in [:clients] union uninit-cli)
+               (update-in [:uninitialized-clients] empty)))))
+
+(defn add-to-room
   "Adds a connecting client to a room."
-  [client room]
-  (let [key (or room (generate-key 8))
-        members (or (@room-map key) #{})]
-    (when-not room
+  [client key]
+  (let [key (or key (generate-key 8))
+        room (or (@key->room-map key)
+                 (Room. key #{} #{} 0 nil))]
+    (when (empty? (:clients room))
       (send! client (json/write-str {:type 'room :room key})))
-    (swap! key-map assoc client key)
-    (swap! room-map assoc key (conj members client))))
+    (swap! chan->key-map assoc client key)
+    (swap! key->room-map assoc key
+           (update-in room [(if (empty? (:clients room))
+                              :clients
+                              :uninitialized-clients)] conj client))
+    (when-not (empty? (:clients room))
+      (send! (first (:clients room)) (json/write-str {:type 'entire-buffer})))))
 
 ;;; Miscellaneous
 
@@ -147,10 +169,10 @@
   (when-not (nil? @server)
     (@server :timeout 100)
     (reset! server nil)
-    (reset! key-map {})
-    (reset! room-map {})))
+    (reset! chan->key-map {})
+    (reset! key->room-map {})))
 
 (defn -main
   "The main function for Shared Buffer. It simply starts the server."
   [& [args]]                            ; <- is this right?
-  (reset! server (run-server #'handler {:port 8080})))
+  (reset! server (run-server #'handler {:port 3705})))
