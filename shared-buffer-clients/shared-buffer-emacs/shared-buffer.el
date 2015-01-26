@@ -203,6 +203,6 @@ in order to keep the buffer synchronized."
 ;; (delete-process (car (process-list)))
 ;; sb-room-key
 
-
+;; (fset 'sb-type-randomly (lambda (&optional arg) "Keyboard macro." (interactive "p") (kmacro-exec-ring-item (quote ([134217786 40 103 111 116 111 45 99 104 97 114 32 40 97 110 100 backspace backspace backspace 114 97 110 100 111 109 32 40 112 111 105 110 116 45 109 97 122 backspace 120 41 134217826 134217826 2 40 49 45 32 5 41 41 134217730 40 43 backspace 49 43 32 5 41 41 return 97 24 111 134217786 up return 98 24 111] 0 "%d")) arg)))
 
 ;;; shared-buffer.el ends here.
