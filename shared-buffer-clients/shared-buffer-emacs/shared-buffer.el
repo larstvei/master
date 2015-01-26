@@ -60,7 +60,7 @@
 ;;; Socket communication
 
 (defun sb-connect-to-server (host &optional room)
-  (setq sb-host "ws://localhost:8080")
+  (setq sb-host (concat "ws://" (or host "localhost") ":3705"))
   (setq sb-socket (websocket-open sb-host
                                   :on-message 'sb-receive
                                   :on-open    'sb-on-open
