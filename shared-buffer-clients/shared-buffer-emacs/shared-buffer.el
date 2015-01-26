@@ -50,7 +50,11 @@
   number is incremented for each change.")
 
 ;; Changing major-mode should not affect Shared Buffer.
-(dolist (var '(sb-room-key sb-host sb-socket))
+(dolist (var '(sb-room-key
+               sb-host
+               sb-socket
+               shared-buffer-mode
+               after-change-functions))
   (put var 'permanent-local t))
 
 ;;; Socket communication
@@ -67,7 +71,7 @@
 
 (defun sb-on-open (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
-    (sb-send (json-encode (list :type 'room :room sb-room-key)))))
+    (sb-send (list :type 'room :room sb-room-key))))
 
 (defun sb-on-close (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
