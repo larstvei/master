@@ -1,6 +1,7 @@
 (ns shared-buffer-server.core
   (:gen-class)
   (:use org.httpkit.server)
+  (:require [clojure.set :refer :all])
   (:require [clojure.data.json :as json])
   (:import java.security.SecureRandom
            [org.apache.commons.codec.binary Base64]))
