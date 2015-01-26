@@ -81,7 +81,8 @@
 ;;; Send
 
 (defun sb-send (data)
-  (websocket-send-text sb-socket data))
+  (websocket-send-text sb-socket (json-encode data)))
+
 (defun sb-send-entire-buffer ()
   (sb-send (list :type 'entire-buffer
                  :key sb-room-key
@@ -90,21 +91,21 @@
                             (point-min) (point-max)))))
 
 (defun sb-send-addition (point string)
-  (sb-send (json-encode (list :type 'change
-                              :key sb-room-key
-                              :current-point (point)
-                              :change-point point
-                              :addition string
-                              :seqno (incf sb-seqno)))))
+  (sb-send (list :type 'change
+                 :key sb-room-key
+                 :current-point (point)
+                 :change-point point
+                 :addition string
+                 :seqno (incf sb-seqno))))
 
 (defun sb-send-deletion (point bytes-deleted deletion)
-  (sb-send (json-encode (list :type 'change
-                              :key sb-room-key
-                              :current-point (point)
-                              :change-point point
-                              :deletion deletion
-                              :bytes-deleted bytes-deleted
-                              :seqno (incf sb-seqno)))))
+  (sb-send (list :type 'change
+                 :key sb-room-key
+                 :current-point (point)
+                 :change-point point
+                 :deletion deletion
+                 :bytes-deleted bytes-deleted
+                 :seqno (incf sb-seqno))))
 
 ;;; Receive
 
