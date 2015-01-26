@@ -1,6 +1,6 @@
 ;;; shared-buffer.el --- Collaberative editing in Emacs. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013 - 2014 Lars Tveito.
+;; Copyright (C) 2013 - 2015 Lars Tveito.
 
 ;; Author: Lars Tveito <larstvei@ifi.uio.no>
 ;; Version: 0.2.1
