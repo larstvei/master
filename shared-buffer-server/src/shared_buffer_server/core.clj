@@ -24,7 +24,7 @@
 
 ;;; Variables
 
-(defrecord Room [key clients uninitialized-clients seqno operations])
+(defrecord Room [key clients uninitialized-clients min-seqno expected-seqno operations])
 
 (def key-length
   "This dictates the length of random generated keys."
@@ -120,7 +120,7 @@
   [client key]
   (let [key (or key (generate-key 8))
         room (or (@key->room-map key)
-                 (Room. key #{} #{} 0 nil))]
+                 (Room. key #{} #{} 0 1 []))]
     (when (empty? (:clients room))
       (send! client (json/write-str {:type 'room :room key})))
     (swap! chan->key-map assoc client key)
@@ -129,7 +129,8 @@
                               :clients
                               :uninitialized-clients)] conj client))
     (when-not (empty? (:clients room))
-      (send! (first (:clients room)) (json/write-str {:type 'entire-buffer})))))
+      (send! (first (:clients room))
+             (json/write-str {:type 'entire-buffer})))))
 
 ;;; Miscellaneous
 
