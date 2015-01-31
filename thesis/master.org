@@ -187,6 +187,26 @@ Placeholder for abstract.
    
 
 ** TODO Verification of the algorithm
+
+   The three clients all adds a character at the start of the buffer
+   simultaneously. Let T_n represent a step in time. The ~expected-seqno~
+   represents the global sequence number at the server, and ~ops~ represent
+   stored operations.
+
+   | T_n | recv,seqno | expected-seqno | ops   | client 1 | client 2 | client 3 |
+   |-----+------------+----------------+-------+----------+----------+----------|
+   | T_0 |            |              1 |       | a        | b        | c        |
+   | T_1 | a,1        |              1 | a     |          |          |          |
+   | T_2 |            |              2 | a     | a        | ab       | ac       |
+   | T_3 | b,1        |              2 | a,b   | a        | ab       | ac       |
+   | T_4 |            |              3 | a,b   | b        | ab       | c        |
+   | T_5 |            |              3 | a,b   | ab       | ab       | bc       |
+   | T_6 |            |              3 | a,b   | ab       | ab       | abc      |
+   | T_7 | c,1        |              3 | a,b,c | ab       | ab       | abc      |
+   | T_8 |            |              4 | a,b,c | c        | c        | abc      |
+   | T_9 |            |              4 |       | abc      | abc      | abc      |
+
+
 ** TODO Implementation of the algorithm
 * TODO Concluding remarks
 
