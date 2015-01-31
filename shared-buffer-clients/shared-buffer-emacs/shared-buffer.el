@@ -167,10 +167,12 @@ in order to keep the buffer synchronized."
         (message "Shared Buffer: Connection failed.")
       (shared-buffer-mode 1))))
 
-(defun sb-join-room (host room &optional buffer)
+(defun sb-join-room (host room)
   (interactive "sHost: \nsRoom: ")
-  (setq sb-room-key room)
-  (sb-share-buffer host buffer))
+  (let ((buffer (generate-new-buffer room)))
+    (switch-to-buffer buffer)
+    (setq sb-room-key room)
+    (sb-share-buffer host buffer)))
 
 (defun sb-disconnect (&optional buffer)
   (interactive)
