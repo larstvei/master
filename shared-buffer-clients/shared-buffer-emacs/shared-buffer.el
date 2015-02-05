@@ -123,14 +123,14 @@
              (sb-set-room (plist-get data :room)))
             ((string= type "entire-buffer")
              (sb-entire-buffer data))
-            ((string= type "change")
-             (sb-apply-change data))
+            ((string= type "changes")
+             (sb-apply-changes data))
             (t (error "Shared Buffer: Error in protocol."))))))
 
 (defun sb-entire-buffer (data)
   (if (and (plist-get data :change-point)
            (plist-get data :addition))
-      (sb-apply-change data)
+      (sb-apply-changes data)
     (sb-send-entire-buffer)))
 
 (defun sb-set-room (room)
@@ -141,20 +141,16 @@ Connected to room: %s, the key was added to the kill ring." room))
 
 ;;; Buffer modification
 
-(defun sb-after-change (beg end del)
-  "A function that is run after each change when
-`shared-buffer-mode' is enabled. Each change is sent to `sb-host'
-in order to keep the buffer synchronized."
-  (if (zerop del)
-      (sb-send-addition beg (buffer-substring-no-properties beg end))
-    (sb-send-deletion beg del (buffer-substring-no-properties beg end))))
+(defun sb-apply-changes (data)
+  (mapcar 'sb-apply-change (plist-get data :changes))
+  (setq sb-seqno (plist-get data :seqno)))
 
-(defun sb-apply-change (data)
+(defun sb-apply-change (change)
   (save-excursion
     (let ((inhibit-modification-hooks t)
-          (point (plist-get data :change-point))
-          (addition (plist-get data :addition))
-          (bytes-deleted (plist-get data :bytes-deleted)))
+          (point (plist-get change :change-point))
+          (addition (plist-get change :addition))
+          (bytes-deleted (plist-get change :bytes-deleted)))
       (when (and addition bytes-deleted)
         (error "Shared Buffer: Error in protocol."))
       (when point (goto-char point))
