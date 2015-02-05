@@ -89,25 +89,27 @@
   (sb-send (list :type 'entire-buffer
                  :key sb-room-key
                  :change-point (point-min)
-                 :addition (buffer-substring-no-properties
+                 :addition (sb-substr
                             (point-min) (point-max)))))
 
-(defun sb-send-addition (point string)
-  (sb-send (list :type 'change
-                 :key sb-room-key
-                 :current-point (point)
-                 :change-point point
-                 :addition string
-                 :seqno (incf sb-seqno))))
+(defun sb-send-addition (beg end len)
+  (and (zerop len)
+       (sb-send (list :type 'change
+                      :key sb-room-key
+                      :current-point (point)
+                      :change-point beg
+                      :addition (sb-substr beg end)
+                      :seqno (incf sb-seqno)))))
 
-(defun sb-send-deletion (point bytes-deleted deletion)
-  (sb-send (list :type 'change
-                 :key sb-room-key
-                 :current-point (point)
-                 :change-point point
-                 :deletion deletion
-                 :bytes-deleted bytes-deleted
-                 :seqno (incf sb-seqno))))
+(defun sb-send-deletion (beg end)
+  (and (not (= beg end))
+       (sb-send (list :type 'change
+                      :key sb-room-key
+                      :current-point (point)
+                      :change-point beg
+                      :deletion (sb-substr beg end)
+                      :bytes-deleted (- end beg)
+                      :seqno (incf sb-seqno)))))
 
 ;;; Receive
 
@@ -193,13 +195,15 @@ in order to keep the buffer synchronized."
   (dolist (var '(sb-room-key sb-host sb-socket))
     (kill-local-variable var))
   (shared-buffer-mode 0)
-  (remove-hook 'after-change-functions 'sb-after-change))
+  (remove-hook 'before-change-functions 'sb-send-deletion)
+  (remove-hook 'after-change-functions 'sb-send-addition))
 
 (define-minor-mode shared-buffer-mode
   "A minor mode for Shared Buffer."
   nil " SB" nil
   ;; fixme
-  (add-hook 'after-change-functions 'sb-after-change t t))
+  (add-hook 'before-change-functions 'sb-send-deletion t t)
+  (add-hook 'after-change-functions 'sb-send-addition t t))
 
 ;; (sb-send (json-encode '(:type "update")))
 ;; (sb-disconnect)
