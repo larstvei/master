@@ -136,6 +136,30 @@
       (send! (first (:clients room))
              (json/write-str {:type 'entire-buffer})))))
 
+;;; Operations
+
+(defn invert-change
+  "Every change is an operation that has an inverse. This function returns
+  the inverse of a given change."
+  [msg]
+  (if (:addition msg)
+    (invert-addition msg)
+    (invert-deletion msg)))
+
+(defn invert-addition
+  [msg]
+  (-> msg
+      (dissoc :addition)
+      (assoc :deletion (:addition msg))
+      (assoc :bytes-deleted (count (:addition msg)))))
+
+(defn invert-deletion
+  [msg]
+  (-> msg
+      (dissoc :deletion)
+      (dissoc :bytes-deleted)
+      (assoc :addition (:deletion msg))))
+
 ;;; Miscellaneous
 
 (defn generate-key
