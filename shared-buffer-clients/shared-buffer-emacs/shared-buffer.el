@@ -57,6 +57,8 @@
                after-change-functions))
   (put var 'permanent-local t))
 
+(defalias 'sb-substr 'buffer-substring-no-properties)
+
 ;;; Socket communication
 
 (defun sb-connect-to-server (host &optional room)
