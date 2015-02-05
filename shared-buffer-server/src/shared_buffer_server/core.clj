@@ -74,11 +74,32 @@
   "Distribute a change to the room the client is in. The change is not sent
   to the client that made the change."
   [client msg]
-  (let [room (@key->room-map (msg :key))
+  (let [key (msg :key)
+        room (@key->room-map key)
         clients (seq (disj (:clients room) client))
         send-f (cond (msg :addition) send-addition
-                     (msg :bytes-deleted) send-deletion)]
-    (when send-f (doseq [c clients] (send-f c msg)))))
+                     (msg :bytes-deleted) send-deletion)
+        changes (list-changes msg)]
+    ;; (if (= (msg :seqno) (:expected-seqno room))
+    ;;   (swap! key->room-map assoc key
+    ;;          (-> room
+    ;;              (update-in [:expected-seqno] inc)
+    ;;              (update-in [:operations] conj msg)))
+    ;;   ;; Fixme
+    ;;   (swap! key->room-map assoc key
+    ;;          (-> room
+    ;;              (update-in [:expected-seqno] inc)
+    ;;              (update-in [:operations] conj msg))))
+    (when send-f (doseq [c clients] (send-f c changes)))))
+
+(defn list-changes
+  [msg]
+  (let [keys [:change-point :addition :deletion :bytes-deleted]]
+    (apply dissoc
+           (-> msg
+               (assoc :type "changes")
+               (assoc :changes (list (select-keys msg keys))))
+           keys)))
 
 (defn send-addition
   "Send an addition to a given client."
@@ -100,6 +121,7 @@
   function depending on the type of the message."
   [client data]
   (let [msg (json/read-str data :key-fn keyword)]
+    (println (:seqno msg))
     (case (msg :type)
       "room" (add-to-room client (msg :room))
       "entire-buffer" (include-clients msg)
@@ -113,7 +135,7 @@
   (let [key (msg :key)
         room (@key->room-map key)
         uninit-cli (:uninitialized-clients room)]
-    (doseq [c (seq uninit-cli)] (send-addition c msg))
+    (doseq [c (seq uninit-cli)] (send-addition c (list-changes msg)))
     (swap! key->room-map assoc key
            (-> room
                (update-in [:clients] union uninit-cli)
