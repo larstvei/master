@@ -90,7 +90,8 @@
                  :key sb-room-key
                  :change-point (point-min)
                  :addition (sb-substr
-                            (point-min) (point-max)))))
+                            (point-min) (point-max))
+                 :seqno sb-seqno)))
 
 (defun sb-send-addition (beg end len)
   (and (zerop len)
@@ -111,6 +112,9 @@
                       :bytes-deleted (- end beg)
                       :seqno (incf sb-seqno)))))
 
+(defun sb-send-ack (data)
+  (sb-send (list :type 'ack :key sb-room-key :seqno sb-seqno)))
+
 ;;; Receive
 
 (defun sb-receive (websocket frame)
@@ -125,7 +129,8 @@
              (sb-entire-buffer data))
             ((string= type "changes")
              (sb-apply-changes data))
-            (t (error "Shared Buffer: Error in protocol."))))))
+            (t (error "Shared Buffer: Error in protocol.")))
+      (sb-send-ack data))))
 
 (defun sb-entire-buffer (data)
   (if (and (plist-get data :change-point)
@@ -188,7 +193,7 @@ Connected to room: %s, the key was added to the kill ring." room))
 ;;; Minor mode
 
 (defun sb-quit ()
-  (dolist (var '(sb-room-key sb-host sb-socket))
+  (dolist (var '(sb-room-key sb-host sb-socket sb-seqno))
     (kill-local-variable var))
   (shared-buffer-mode 0)
   (remove-hook 'before-change-functions 'sb-send-deletion)
