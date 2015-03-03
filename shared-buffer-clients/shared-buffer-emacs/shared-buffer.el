@@ -46,8 +46,8 @@
   variable keeps the connected socket.")
 
 (defvar-local sb-seqno 0
-  "All buffer-changes are given a sequence number. This sequence
-  number is incremented for each change.")
+  "All buffer-operations are given a sequence number. This sequence
+  number is incremented for each operation.")
 
 ;; Changing major-mode should not affect Shared Buffer.
 (dolist (var '(sb-room-key
@@ -88,29 +88,29 @@
 (defun sb-send-entire-buffer ()
   (sb-send (list :type 'entire-buffer
                  :key sb-room-key
-                 :change-point (point-min)
+                 :point (point-min)
                  :addition (sb-substr
                             (point-min) (point-max))
                  :seqno sb-seqno)))
 
 (defun sb-send-addition (beg end len)
   (and (zerop len)
-       (sb-send (list :type 'change
+       (sb-send (list :type 'operation
                       :key sb-room-key
                       :current-point (point)
-                      :change-point beg
+                      :point beg
                       :addition (sb-substr beg end)
-                      :seqno (incf sb-seqno)))))
+                      :seqno (cl-incf sb-seqno)))))
 
 (defun sb-send-deletion (beg end)
   (and (not (= beg end))
-       (sb-send (list :type 'change
+       (sb-send (list :type 'operation
                       :key sb-room-key
                       :current-point (point)
-                      :change-point beg
+                      :point beg
                       :deletion (sb-substr beg end)
                       :bytes-deleted (- end beg)
-                      :seqno (incf sb-seqno)))))
+                      :seqno (cl-incf sb-seqno)))))
 
 (defun sb-send-ack (data)
   (sb-send (list :type 'ack :key sb-room-key :seqno sb-seqno)))
@@ -127,15 +127,15 @@
              (sb-set-room (plist-get data :room)))
             ((string= type "entire-buffer")
              (sb-entire-buffer data))
-            ((string= type "changes")
-             (sb-apply-changes data))
+            ((string= type "operations")
+             (sb-apply-operations data))
             (t (error "Shared Buffer: Error in protocol.")))
       (sb-send-ack data))))
 
 (defun sb-entire-buffer (data)
-  (if (and (plist-get data :change-point)
+  (if (and (plist-get data :point)
            (plist-get data :addition))
-      (sb-apply-changes data)
+      (sb-apply-operations data)
     (sb-send-entire-buffer)))
 
 (defun sb-set-room (room)
@@ -146,16 +146,16 @@ Connected to room: %s, the key was added to the kill ring." room))
 
 ;;; Buffer modification
 
-(defun sb-apply-changes (data)
-  (mapcar 'sb-apply-change (plist-get data :changes))
+(defun sb-apply-operations (data)
+  (mapcar 'sb-apply-operation (plist-get data :operations))
   (setq sb-seqno (plist-get data :seqno)))
 
-(defun sb-apply-change (change)
+(defun sb-apply-operation (operation)
   (save-excursion
     (let ((inhibit-modification-hooks t)
-          (point (plist-get change :change-point))
-          (addition (plist-get change :addition))
-          (bytes-deleted (plist-get change :bytes-deleted)))
+          (point (plist-get operation :point))
+          (addition (plist-get operation :addition))
+          (bytes-deleted (plist-get operation :bytes-deleted)))
       (when (and addition bytes-deleted)
         (error "Shared Buffer: Error in protocol."))
       (when point (goto-char point))
@@ -205,13 +205,5 @@ Connected to room: %s, the key was added to the kill ring." room))
   ;; fixme
   (add-hook 'before-change-functions 'sb-send-deletion t t)
   (add-hook 'after-change-functions 'sb-send-addition t t))
-
-;; (sb-send (json-encode '(:type "update")))
-;; (sb-disconnect)
-;; (sb-share-buffer 'asdf)
-;; (delete-process (car (process-list)))
-;; sb-room-key
-
-;; (fset 'sb-type-randomly (lambda (&optional arg) "Keyboard macro." (interactive "p") (kmacro-exec-ring-item (quote ([134217786 40 103 111 116 111 45 99 104 97 114 32 40 97 110 100 backspace backspace backspace 114 97 110 100 111 109 32 40 112 111 105 110 116 45 109 97 122 backspace 120 41 134217826 134217826 2 40 49 45 32 5 41 41 134217730 40 43 backspace 49 43 32 5 41 41 return 97 24 111 134217786 up return 98 24 111] 0 "%d")) arg)))
 
 ;;; shared-buffer.el ends here.
