@@ -10,14 +10,16 @@
 
 (declare initialize-client)
 (declare dissolve-client)
-(declare distribute-change)
-(declare list-changes)
-(declare send-addition)
+(declare distribute-operation!)
+(declare list-operation)
+(declare send-operation)
 (declare send-deletion)
 (declare receive)
+(declare receive-ack!)
 (declare include-clients)
 (declare add-to-room)
-(declare invert-change)
+(declare drop-operations)
+(declare invert-operation)
 (declare invert-addition)
 (declare invert-deletion)
 (declare generate-key)
@@ -28,7 +30,8 @@
 
 ;;; Variables
 
-(defrecord Room [key clients uninitialized-clients min-seqno expected-seqno operations])
+(defrecord Room [key clients uninitialized-clients
+                 client-seqnos expected-seqno operations])
 
 (def key-length
   "This dictates the length of random generated keys."
@@ -65,52 +68,50 @@
       (if (empty? clients)
         (swap! key->room-map dissoc key)
         (swap! key->room-map assoc key
-               (update-in room [:clients] disj client)))
+               (-> room
+                   (update-in [:clients] disj client)
+                   (update-in [:client-seqnos] dissoc client))))
       (swap! chan->key-map dissoc client))))
 
 ;;; Send
 
-(defn distribute-change
-  "Distribute a change to the room the client is in. The change is not sent
-  to the client that made the change."
+(defn distribute-operation!
+  "Distribute an operation to the room the client is in. The operation is not sent
+  to the client that made the operation."
   [client msg]
-  (let [key (msg :key)
+  (receive-ack! client msg)
+  (let [key (:key msg)
         room (@key->room-map key)
         clients (seq (disj (:clients room) client))
-        send-f (cond (msg :addition) send-addition
-                     (msg :bytes-deleted) send-deletion)
-        changes (list-changes msg)]
-    ;; (if (= (msg :seqno) (:expected-seqno room))
-    ;;   (swap! key->room-map assoc key
-    ;;          (-> room
-    ;;              (update-in [:expected-seqno] inc)
-    ;;              (update-in [:operations] conj msg)))
-    ;;   ;; Fixme
-    ;;   (swap! key->room-map assoc key
-    ;;          (-> room
-    ;;              (update-in [:expected-seqno] inc)
-    ;;              (update-in [:operations] conj msg))))
-    (when send-f (doseq [c clients] (send-f c changes)))))
+        operation (list-operation msg room)
+        operations (drop-operations (:operations room)
+                                    (list (dec (:seqno msg)))
+                                    (:client-id msg))
+        operations (assoc operation :operations
+                       (concat (map invert-operation operations)
+                               (:operations  operation)
+                               (reverse operations)))]
+    ;; (println (:operations (@key->room-map key)))
+    (swap! key->room-map assoc key
+           (-> room
+               (assoc-in [:expected-seqno] (inc (reduce max (vals (:client-seqnos room)))))
+               (update-in [:operations] conj (first (:operations operation)))))
+    (doseq [c clients] (send-operation c operations))))
 
-(defn list-changes
-  [msg]
-  (let [keys [:change-point :addition :deletion :bytes-deleted]]
-    (apply dissoc
-           (-> msg
-               (assoc :type "changes")
-               (assoc :changes (list (select-keys msg keys))))
-           keys)))
+(defn list-operation
+  [msg room]
+  (let [keys [:point :addition :deletion :bytes-deleted]
+        entry (list (select-keys msg (conj keys :seqno :client-id)))
+        operation (-> msg
+                   (assoc :type "operations")
+                   (assoc :operations entry))]
+    (apply dissoc operation keys)))
 
-(defn send-addition
-  "Send an addition to a given client."
+(defn send-operation
+  "Send an operation to a given client."
   [client msg]
   (let [msg (json/write-str msg)]
-    (send! client msg)))
-
-(defn send-deletion
-  "Send a deletion to a given client."
-  [client msg]
-  (let [msg (json/write-str msg)]
+    (println (pr-str msg))
     (send! client msg)))
 
 ;;; Receive
@@ -120,13 +121,25 @@
   client. data is a json-string that contains a message. It passes msg to a
   function depending on the type of the message."
   [client data]
-  (let [msg (json/read-str data :key-fn keyword)]
-    (println (:seqno msg))
-    (case (msg :type)
-      "room" (add-to-room client (msg :room))
-      "entire-buffer" (include-clients msg)
-      "change" (distribute-change client msg)
-      'error)))
+  (dosync                               ; <= fix me
+   (let [msg (json/read-str data :key-fn keyword)
+         msg (conj msg {:client-id (hash client)})]
+     (case (msg :type)
+       "room" (add-to-room client (msg :room))
+       "entire-buffer" (include-clients msg)
+       "operation" (distribute-operation! client msg)
+       "ack" (receive-ack! client msg)
+       'error))))
+
+(defn receive-ack!
+  [client msg]
+  (let [key (msg :key)
+        room (@key->room-map key)]
+    (swap! key->room-map assoc key
+           (-> room
+               (update-in [:client-seqnos] assoc client (msg :seqno))
+               (update-in [:operations] drop-operations
+                          (vals (:client-seqnos room)))))))
 
 (defn include-clients
   "Send the entire buffer to all uninitialized clients, add the
@@ -135,7 +148,7 @@
   (let [key (msg :key)
         room (@key->room-map key)
         uninit-cli (:uninitialized-clients room)]
-    (doseq [c (seq uninit-cli)] (send-addition c (list-changes msg)))
+    (doseq [c (seq uninit-cli)] (send-operation c (list-operation msg room)))
     (swap! key->room-map assoc key
            (-> room
                (update-in [:clients] union uninit-cli)
@@ -146,7 +159,7 @@
   [client key]
   (let [key (or key (generate-key 8))
         room (or (@key->room-map key)
-                 (Room. key #{} #{} 0 1 []))]
+                 (Room. key #{} #{} {} 1 []))]
     (when (empty? (:clients room))
       (send! client (json/write-str {:type 'room :room key})))
     (swap! chan->key-map assoc client key)
@@ -160,27 +173,37 @@
 
 ;;; Operations
 
-(defn invert-change
-  "Every change is an operation that has an inverse. This function returns
-  the inverse of a given change."
-  [msg]
-  (if (:addition msg)
-    (invert-addition msg)
-    (invert-deletion msg)))
+(defn invert-operation
+  "Every operation is an operation that has an inverse. This function
+  returns the inverse of a given operation."
+  [operation]
+  (if (:addition operation)
+    (invert-addition operation)
+    (invert-deletion operation)))
 
 (defn invert-addition
-  [msg]
-  (-> msg
+  [operation]
+  (-> operation
       (dissoc :addition)
-      (assoc :deletion (:addition msg))
-      (assoc :bytes-deleted (count (:addition msg)))))
+      (assoc :deletion (:addition operation))
+      (assoc :bytes-deleted (count (:addition operation)))))
 
 (defn invert-deletion
-  [msg]
-  (-> msg
-      (dissoc :deletion)
+  [operation]
+  (-> operation
+      (assoc  :addition (:deletion operation))
       (dissoc :bytes-deleted)
-      (assoc :addition (:deletion msg))))
+      (dissoc :deletion)))
+
+(defn drop-operations
+  [operations seqnos & [client-id]]
+  ;; (let [max-seq (reduce max 0 seqnos)]
+  ;;   (into
+  ;;    [] (take-last
+  ;;        (- max-seq (reduce min max-seq seqnos)) operations)))
+  (let [max-seq (reduce max 0 seqnos)
+        min-seq (reduce min max-seq seqnos)]
+    (into [] (remove #(<= (:seqno %) min-seq) operations))))
 
 ;;; Miscellaneous
 
