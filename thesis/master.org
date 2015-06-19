@@ -11,7 +11,7 @@
 #+LaTeX_HEADER: \urlstyle{sf}
 #+LATEX_HEADER: \bibliography{ref}
 
-#+TITLE: Collaborative editing in Emacs
+#+TITLE: Specification, verification and Implementation of a Real-Time Collaborative Editing Protocol
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 
