@@ -43,6 +43,14 @@ Placeholder for abstract.
     #+END_QUOTE
 
 ** TODO Problem Statement
+
+   Summarized to one sentence the problem can be stated as such:
+
+   #+BEGIN_QUOTE
+   The task is to specify, verify and implement a minimal network protocol
+   that enables real-time collaborative editing in existing text editors.
+   #+END_QUOTE
+
 ** TODO Background and Related Work
 ** TODO Outline of the Thesis
 * TODO Formal Specification and Verification
