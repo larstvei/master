@@ -23,13 +23,47 @@
 Placeholder for abstract.
 #+END_abstract
 
+#+LaTeX:\chapter*{Acknowledgments}
+
 #+LaTeX: \tableofcontents{}
 #+LaTeX: \listoffigures{}
 #+LaTeX: \listoftables{}
 
 #+LaTeX: \mainmatter{}
 
+** TODO Introduction
+*** TODO Motivation
+*** TODO Problem Statement
 
+    Summarized to one sentence the problem can be stated as such:
 
-#+LaTeX: \backmatter{}
-#+LaTeX: \printbibliography
+    #+BEGIN_QUOTE
+    The task is to specify, verify and implement a minimal network protocol
+    that enables real-time collaborative editing in existing text editors,
+    where consistency is eventually reached.
+    #+END_QUOTE
+
+*** TODO Background and Related Work
+*** TODO Outline of the Thesis
+* TODO Formal Specification and Verification
+** TODO Formal Methods and Model Checking
+** TODO An informal Protocol Specification
+** TODO Formalizing the Specification
+** TODO Modeling the Specification in Maude
+** TODO Specifying the System Properties using LTL
+** TODO Verifying Properties using the Maude LTL-checker
+* TODO Design and Implementation
+** TODO Design Goals
+** TODO Ensuring Portability
+** TODO Languages and Tools
+** TODO Server-side: Implementation of the Specification in Clojure
+** TODO Client-side: Implementing a client in Emacs
+* TODO Concluding remarks
+** TODO The Caveats of the Resulting implementation
+** TODO Noteworthy Results
+** TODO The Influence of having a Formal Specification
+** TODO Public Reception
+** TODO Final Remarks and Future Work
+
+ #+LaTeX: \backmatter{}
+ #+LaTeX: \printbibliography
