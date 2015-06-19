@@ -31,9 +31,8 @@ Placeholder for abstract.
 
 #+LaTeX: \mainmatter{}
 
-** TODO Introduction
-*** TODO Motivation
-*** TODO Problem Statement
+* TODO Introduction
+** TODO Motivation
 
     Summarized to one sentence the problem can be stated as such:
 
@@ -43,8 +42,9 @@ Placeholder for abstract.
     where consistency is eventually reached.
     #+END_QUOTE
 
-*** TODO Background and Related Work
-*** TODO Outline of the Thesis
+** TODO Problem Statement
+** TODO Background and Related Work
+** TODO Outline of the Thesis
 * TODO Formal Specification and Verification
 ** TODO Formal Methods and Model Checking
 ** TODO An informal Protocol Specification
@@ -54,6 +54,7 @@ Placeholder for abstract.
 ** TODO Verifying Properties using the Maude LTL-checker
 * TODO Design and Implementation
 ** TODO Design Goals
+** TODO Design Principles
 ** TODO Ensuring Portability
 ** TODO Languages and Tools
 ** TODO Server-side: Implementation of the Specification in Clojure
