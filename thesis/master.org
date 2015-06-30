@@ -1,9 +1,7 @@
 #+TITLE: Specification, verification and Implementation of a Real-Time Collaborative Editing Protocol
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
-#+OPTIONS: num:3 H:5 todo:nil
-#+BIND: org-latex-title-command ""
-#+BIND: org-latex-toc-command ""
+#+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil
 #+LaTeX_CLASS_OPTIONS: [USenglish]
 #+LaTeX_CLASS: ifimaster
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
