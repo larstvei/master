@@ -1,0 +1,235 @@
+#+TITLE: Real-Time Collaborative Editing
+#+AUTHOR: Lars Tveito
+#+EMAIL: larstvei@ifi.uio.no
+#+OPTIONS: num:3 H:5 todo:nil
+#+LaTeX_CLASS_OPTIONS: [USenglish]
+#+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
+#+LATEX_HEADER: \usepackage{parskip, inconsolata, msc}
+#+LATEX_HEADER: \bibliography{ref}
+#+LaTeX_HEADER: \urlstyle{sf}
+
+#+LaTeX: \renewcommand\href[2]{#2\footnote{\url{#1}}}
+
+* Introduction
+
+  This is a preliminary essay for a masters thesis that concerns the
+  specification, verification and implementation of a real-time collaborative
+  editing protocol. Generally, real-time collaboration enables multiple users,
+  at (possibly) different locations, to simultaneously work on the same
+  document. If a change is made to the document by one user, the change should
+  become apparent to the other users as fast as possible.
+
+  More specifically the thesis will focus on enabling real-time collaboration
+  in /existing text editors/, implying that the protocol should, ideally, be
+  portable to any text editor (or program that embeds a text editor). To ensure
+  portability a client-server model is chosen, as opposed to a fully
+  decentralized system. Though a decentralized system is
+  possible\cite{ellis1989concurrency}, a centralized architecture significantly
+  simplifies the algorithm\cite{nichols95}. The goal to make it very easy to
+  implement a client (in other words we want a thin client), and move as much
+  complexity as possible to the server in order to preserve portability.
+
+* Background and Motivation
+
+  The thesis will also be a continuation of the work [[http://lispinsummerprojects.org/static/summer/231030-sharedbuffer.pdf][I submitted]] to the [[http://lispinsummerprojects.org/][LISP
+  In Summer Projects]] competition. I implemented an extension for the
+  text-editor Emacs that provided real-time collaboration abilities. It was
+  developed in a quick-and-dirty fashion, and worked well as a
+  proof-of-concept program. It did not handle all conflicts, so at times users
+  would find themselves working on /different/ documents with no way to
+  reconcile these conflicting copies. This is a more difficult problem than
+  what is likely to be solved in a quick-and-dirty fashion.
+
+  Guaranteeing consistency between shared documents is the main problem to be
+  solved; in order to solve it, and to /trust the resulting solution is
+  correct/, more sophisticated tools should be applied to aid our thinking.
+  For this thesis Formal Methods are chosen, and more specifically Model
+  Checking.
+
+  Formal Methods are used in order to reason unambiguously about a system. By
+  describing a system mathematically we get a completely unambiguous
+  representation of the system; this representation is called a /model/.
+  Typically the model will be much smaller in representation than the actual
+  system; a system that consists of million lines of code can still be
+  usefully represented with a small model (e.g. 200 lines in some modeling
+  language). In such a case the model could, for instance, only represent a
+  small part of the system, or represent how different major components of the
+  system interact with each other.
+
+  Leslie Lamport is known for advocating "thinking before
+  coding"\cite{Lamport:2002}, and that one should probably make a sketch (an
+  informal specification) of a program before writing an implementation. For
+  harder problems, typically problems that are concurrent or distributed, the
+  program should be formally specified. He claims the act of writing the
+  specification helps you think about the system; this way one can avoid
+  implementing /bad ideas/ at all, which can greatly reduce the cost of
+  development. Work at Amazon seem to support the claim\cite{amazon}.
+
+  Once a formal specification is written, we can use tools to verify that
+  certain properties are satisfied by the specification. The tool we will use
+  is a model checker. Simply stated, a model checker explores the state-space
+  of a given model for properties. If some property should hold in every
+  state, then the negation of the property will be searched for; if the
+  negated property is found then the system specification does /not/ satisfy
+  the property specification, and the model checker will output a counter
+  example. If, however, no such state is found, the system specification
+  satisfies the property specification.
+
+  Applying formal methods to a problem seems like the antithesis of the
+  quick-and-dirty approach used the first time I tackled the problem.
+  Hopefully it will help in developing a sound real-time collaboration
+  protocol, both with regards to the quality of the resulting application and
+  the time spent in development.
+
+  # An important note for model checking is that it can only verify finite state
+  # systems; if one where to search an infinite state space for a
+  # counter-example the search obviously would not terminate unless such an
+  # counter-example was found.
+
+  # The problem of real-time collaboration seems a good fit for formal methods,
+  # seeing that it is a highly concurrent and distributed problem.
+
+  # There are several techniques for doing this, we will solely explore the use
+  # of Model Checking. Properties can be expressed in some logic, we will /LTL/
+  # (Linear Time Logic)
+
+  # Our problem seems like a good fit for formal methods, because it is
+  # sufficiently complex and hard to reason about that we need tools to
+
+* Problem Description
+
+  Summarized to one sentence the problem can be stated as such:
+
+  #+BEGIN_QUOTE
+  The task is to specify, verify and implement a minimal network protocol that
+  enables real-time collaborative editing in existing text editors.
+  #+END_QUOTE
+
+  In this thesis we will restrict the document kind to /plain text/. This is a
+  very helpful restriction, because there are only two fundamental operations
+  one can perform on text, namely insertions and deletions. Another advantage
+  is that plain text has proven extremely applicable, seeing that all
+  programming languages and markup languages uses this representation.
+
+  We aim for a client that has very limited capabilities, but it should /at
+  least/ have the following properties:
+  - Every local change is immediately applied.
+  - Every local change is sent to the server once.
+  - Every remote change is applied when received.
+
+  Assume we have a server that simply broadcasts any change made by a user to
+  every other user except the one who made the change. Further assume we have
+  two clients, /A/ and /B/, that both conform to the description above, and
+  share an initially empty document. Client /A/ inserts the letter =a= at the
+  first position in the document, and simultaneously another user /B/ inserts
+  the letter =b=, also at the first position in the document.
+
+  After the remote changes are received and applied client /A/'s document will
+  contain =ba= and client /B/'s document will contain =ab=. The copies now
+  conflict and there is no reconciling them.
+  
+  #+INCLUDE: "./simple-broadcasting-server.tex"
+
+  What we will develop during the thesis is a server that will detect this,
+  and every conceivable other conflict, and alter the changes in a way that
+  keeps the distributed copies synchronized.
+
+  In addition to a server, at least one client will be developed. The first
+  one will be written for Emacs, which is chosen for its remarkable
+  extensibility. Seeing that a goal is to maximize portability, it does not
+  seem unlikely that there will be time to implement more than one client.
+
+  The entire system should be modeled and verified before an implementation
+  finds place.
+
+** Related Problems
+
+   /Replication/ of data is used for fault-tolerant systems, data is replicated
+   to different machines so that the data is not lost if one machine goes down.
+   It is important to maintain consistency between machines that have a copy of
+   the data so that all replicas stay synchronized. Replication is used in
+   databases and other settings, and how this problem is is solved could give
+   insight to our own.
+
+   There are collaborative editing systems that are /not/ real-time, for
+   instance version control systems like SVN and Git. A real-time collaborative
+   system works much like a version control system with very high-frequency
+   commits (where each commit is small). In a version control system conflicts
+   in commits (normally meaning that different users have made changes on the
+   same lines) are detected but not automatically handled. Rather the user must
+   manually resolve the conflict, because in a version control system a
+   /correct/ resolution is more important than a /fast/ resolution. This is
+   different from a real-time collaborative setting, where fast (automatic)
+   merges are preferred, even though the result sometimes may differ from what
+   the user hoped for. This is mostly due to the small size of commits, and
+   that manual conflict resolution would have to interrupt the user from
+   editing the document.
+
+* Background and related work
+
+  In large, real-time collaborative editing is a /solved/ problem, meaning
+  there exist reliable software that allows users to edit documents
+  simultaneously.
+
+** Pioneering Work
+
+   There are numerous programs that embed real-time collaboration, the oldest
+   of which dates back to 1988\cite{ellis1989concurrency} with GROVE (GRoup,
+   Outline, Viewing Editor). They introduced the concept of Operational
+   Transformation which offers a way of dealing with collaborative systems.
+   Operational Transformation is the algorithm that powers almost all real-time
+   collaborative systems to this day.
+
+   Assume we have two operations $o_i$ and $o_j$, and that a /primed/ operation
+   represents a /transformed/ operation. Applying operations in sequence is
+   denoted $o_i \circ o_j$ where $o_j$ is applied before $o_i$. The transformed
+   operations must have the property $o_i' \circ o_j = o_j' \circ o_i$. If the
+   property holds and a client has already applied $o_j$, it can safely apply
+   $o_i'$. Similarly, if $o_i$ has been applied, $o_j'$ can safely be applied.
+   In the original paper Ellis et al. proposed a $m \times m$ transformation
+   matrix, where $m$ is the number of operations. Each component is a functions
+   that takes operations as arguments and returns transformed arguments.
+   Getting the transformation matrix right is quite difficult, and increasingly
+   so if one wants to support many types of operations.
+
+   Insertions and deletions yields a functionally complete set of operations
+   for text editing, meaning all operations applicable on text can be expressed
+   in terms of insertion and deletion. This limits the transformation matrix to
+   a $2 \times 2$ matrix, which seems as a manageable size.
+
+** Google
+
+   A younger system that integrates real-time collaboration is Google Docs. It
+   is a featureful "web 2.0" application\cite{Dekeyser06extendinggoogle} that
+   provides a WYSIWYG-editor which offers much of the same functionality as
+   Microsoft Office, but in a collaborative environment. It is derived from
+   Google Wave, which was developed to become a real-time collaborative
+   platform. It never grew very popular, and Google handed it over to Apache
+   in 2012.
+
+   Google Wave was powered by operational transformations\cite{WaveOT}. Since
+   Google Docs is a WYSIWYG-editor there are /a lot/ more fundamental
+   operations that can be applied to the document. This is a major source of
+   complexity. Google has initiated research has on an promising alternative
+   named Differential Synchronization\cite{Fraser:09}. It completely removes
+   the need of handling different operations in different way and there is no
+   need to keep history. This technology should be explored more carefully
+   during the thesis, even though it is a symmetrical algorithm in the sense
+   that client and server side implementation is almost identical; we want an
+   asymmetric algorithm where complexity is skewed towards the server.
+
+** Formal Methods and Operational Transformation
+
+* Plan for the Thesis
+
+  In the thesis, an attempt will be made to formally specify a protocol for
+  real-time collaborative editing of /plain text/. The specification will be
+  written in Maude, a rich and declarative modeling language with good
+  capabilities for modeling distributed systems.
+
+  #+LaTeX: \printbibliography
+* COMMENT Local variables
+  # Local Variables:
+  # eval: (add-hook 'after-save-hook 'org-latex-export-to-latex nil t)
+  # eval: (compile "latexmk -pdf -pvc -pdflatex='pdflatex -shell-escape -interaction nonstopmode'")
+  # End:

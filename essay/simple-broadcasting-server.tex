@@ -1,0 +1,22 @@
+\begin{figure}
+  \begin{center}
+    \begin{msc}[msc keyword=, instance distance=3.7cm]{A simple broadcasting server}
+      \declinst[instance width=0.2cm]{A}{$A$}{}
+      \declinst[instance width=0.2cm]{C}{Server}{}
+      \declinst[instance width=0.2cm]{B}{$B$}{}
+      \msccomment[side=left]{$a$}{A}
+      \msccomment[side=right]{$b$}{B}
+      \nextlevel
+      \mess[label distance=-1ex]{\rotatebox{347}{\texttt{ins("a", 1)}}}{A}{C}[2]
+      \mess[label distance=-1ex]{\rotatebox{15}{\texttt{ins("b", 1)}}}{B}{C}[2]
+      \nextlevel
+      \nextlevel
+      \mess[label distance=-1ex]{\rotatebox{347}{\color{gray}\texttt{ins("a", 1)}}}{C}{B}[2]
+      \mess[label distance=-1ex]{\rotatebox{15}{\color{gray}\texttt{ins("b", 1)}}}{C}{A}[2]
+      \nextlevel[3]
+      \msccomment[side=right]{$ab$}{B}
+      \msccomment[side=left]{$ba$}{A}
+    \end{msc}
+    \caption{An illustration of the example above.}
+  \end{center}
+\end{figure}
