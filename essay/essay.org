@@ -48,32 +48,57 @@
 
   Formal Methods are used in order to reason unambiguously about a system. By
   describing a system mathematically we get a completely unambiguous
-  representation of the system; this representation is called a /model/.
-  Typically the model will be much smaller in representation than the actual
-  system; a system that consists of million lines of code can still be
-  usefully represented with a small model (e.g. 200 lines in some modeling
-  language). In such a case the model could, for instance, only represent a
-  small part of the system, or represent how different major components of the
-  system interact with each other.
+  representation of the system; this representation is called a system
+  specification. Typically the specification will be much smaller in
+  representation than the actual system; a system that consists of million
+  lines of code can still be usefully represented with a small specification
+  (e.g. 200 lines in some modeling language). In such a case one could, for
+  instance, only model a small, but critical, part of the system, or perhaps
+  represent the system at a very high level of abstraction.
 
-  Leslie Lamport is known for advocating "thinking before
-  coding"\cite{Lamport:2002}, and that one should probably make a sketch (an
-  informal specification) of a program before writing an implementation. For
-  harder problems, typically problems that are concurrent or distributed, the
-  program should be formally specified. He claims the act of writing the
-  specification helps you think about the system; this way one can avoid
-  implementing /bad ideas/ at all, which can greatly reduce the cost of
-  development. Work at Amazon seem to support the claim\cite{amazon}.
+  Leslie Lamport is known for advocating to think about a program before you
+  write code\cite{Lamport:2015}\cite{Lamport:2002}, and that writing a
+  specification is the best way of doing this. A specification should just
+  describe what the program does, and how it does it; a specification does not
+  need to be formal. The specification should somehow be as formal as the
+  program is complex. If the system is sufficiently complex (e.g. a highly
+  concurrent or distributed system) a formal specification should be written
+  for the benefit of having machines interpret the specification.
+
+  # By writing a specification, one might discover flaws in
+  # the design early, before any time has been spent on implementing it.
+  # Here one can draw a parallel to that one
+  # generally favor catching errors at compile-time over run-time; before
+  # implementation-time seems to be far better yet. 
+
+  # For simple programs a few English sentences may be sufficient, but for more
+  # complex programs that are highly concurrent or distributed, a formal
+  # specification is needed. The main benefit of a /formal/ specification is that
+  # one can apply automatic tools to them.
+
+  # For most programs, a few
+  # sentences is probably sufficient, but for harder problems, typically problems
+  # that are concurrent or distributed, the program should be formally specified.
+
+  # He claims that the act of writing the specification helps you think about the
+  # system;
+  # this way one can avoid implementing /bad ideas/ at all, which can greatly
+  # reduce the cost of development. Work at Amazon seem to support the
+  # claim\cite{amazon}.
 
   Once a formal specification is written, we can use tools to verify that
   certain properties are satisfied by the specification. The tool we will use
   is a model checker. Simply stated, a model checker explores the state-space
-  of a given model for properties. If some property should hold in every
-  state, then the negation of the property will be searched for; if the
-  negated property is found then the system specification does /not/ satisfy
-  the property specification, and the model checker will output a counter
-  example. If, however, no such state is found, the system specification
-  satisfies the property specification.
+  of a given model for properties. If some property should hold in every state,
+  then the /negation/ of the property will be searched for; if the negated
+  property is found then the system specification does /not/ satisfy the
+  property specification, and the model checker will output a counter example.
+  If, however, no such state is found, the system specification satisfies the
+  property specification. Because model checking does an exhaustive search, it
+  can only verify systems with a finite-state systems. This is part of the
+  challenge for this thesis; the state space for the system we will implement
+  is infinite. This means that we perhaps won't be able to verify the system in
+  its entirety, but with some limitations in order to reduce the state-space.
 
   Applying formal methods to a problem seems like the antithesis of the
   quick-and-dirty approach used the first time I tackled the problem.
@@ -114,42 +139,51 @@
   We aim for a client that has very limited capabilities, but it should /at
   least/ have the following properties:
   - Every local change is immediately applied.
-  - Every local change is sent to the server once.
+  - Every local change is sent to the server exactly once.
   - Every remote change is applied when received.
 
   Assume we have a server that simply broadcasts any change made by a user to
-  every other user except the one who made the change. Further assume we have
+  every other client except the one who made the change. Further assume we have
   two clients, /A/ and /B/, that both conform to the description above, and
   share an initially empty document. Client /A/ inserts the letter =a= at the
-  first position in the document, and simultaneously another user /B/ inserts
-  the letter =b=, also at the first position in the document.
+  first position in the document, and simultaneously user /B/ inserts the
+  letter =b=, also at the first position in the document.
 
-  After the remote changes are received and applied client /A/'s document will
-  contain =ba= and client /B/'s document will contain =ab=. The copies now
-  conflict and there is no reconciling them.
+  After the remote changes are received and applied, client /A/'s document will
+  contain =ba= and client /B/'s document will contain =ab=. The conflicting
+  edits went undetected and the system failed to keep the documents
+  synchronized.
   
-  #+INCLUDE: "./simple-broadcasting-server.tex"
+  #+INCLUDE: "./illustrations/simple-broadcasting-server.tex"
 
-  What we will develop during the thesis is a server that will detect this,
-  and every conceivable other conflict, and alter the changes in a way that
-  keeps the distributed copies synchronized.
+  What we will develop during the thesis is a server that will detect this, and
+  every other conceivable conflict, and alter the changes in a way that keeps
+  the distributed copies synchronized. Note that the server should do this in
+  way that provides a good user experience; technically, if the server always
+  advocated "delete everything" we would have consistency, but this is clearly
+  not a desirable solution.
 
   In addition to a server, at least one client will be developed. The first
   one will be written for Emacs, which is chosen for its remarkable
   extensibility. Seeing that a goal is to maximize portability, it does not
   seem unlikely that there will be time to implement more than one client.
 
-  The entire system should be modeled and verified before an implementation
-  finds place.
+  The system should be modeled and verified before an implementation finds
+  place.
 
 ** Related Problems
 
-   /Replication/ of data is used for fault-tolerant systems, data is replicated
-   to different machines so that the data is not lost if one machine goes down.
-   It is important to maintain consistency between machines that have a copy of
-   the data so that all replicas stay synchronized. Replication is used in
-   databases and other settings, and how this problem is is solved could give
-   insight to our own.
+   /Replication/ of data is used in databases and for fault-tolerant systems.
+   Data is replicated to different machines so that the data is still
+   accessible if a machine goes down. It is important to maintain consistency
+   between machines that have a copy of the data so that all replicas stay
+   synchronized. We are especially interested in /optimistic/ replication
+   algorithms\cite{ModelCheckingOptimisticReplication}, because this is
+   essentially the same problem as real-time collaboration. In this context
+   /optimistic/ means one assumes that during execution no conflicts will occur
+   (i.e. text is, locally, inserted immediately), but at a later stage performs
+   checks and handles conflicts. Solutions to this problem could shed light on
+   our own.
 
    There are collaborative editing systems that are /not/ real-time, for
    instance version control systems like SVN and Git. A real-time collaborative
@@ -164,6 +198,16 @@
    the user hoped for. This is mostly due to the small size of commits, and
    that manual conflict resolution would have to interrupt the user from
    editing the document.
+
+   Perhaps the most influential paper on distributed computing is Leslie
+   Lamport's "Time, Clocks, and the Ordering of Events in a Distributed
+   System"\cite{lamport1978time}. It tackles fundamental problems in
+   distributed systems, like how to obtain a partial ordering of events and how
+   to break ties, thus constructing a total ordering of events. Understanding
+   these fundamentals seems highly relevant for the thesis.
+
+   # It introduces the /happened-before/ relation
+   # $\rightarrow$, which is a antisymmetric, irreflexive and transitive relation.
 
 * Background and related work
 
@@ -220,12 +264,51 @@
 
 ** Formal Methods and Operational Transformation
 
+   Most of the work done on operational transformation builds one the work by
+   Ellis et al. but in 2006 formal methods\cite{formalOT} were used to verify
+   the transformation functions. Though the transformations from the original
+   papers were proven correct, Imine et al. were able to find a subtle error in
+   one of the transformation functions using theorem proving; this error would
+   cause the copies to conflict.
+
+   Very recent work by Imine et al. has been done on model checking these
+   algorithms\cite{ModelCheckingOptimisticReplication}, reproducing some of the
+   results form\cite{formalOT}. It argues that one of the benefits of model
+   checking is that it provides a specific scenario, showing how some property
+   was broken; the theorem prover on the other hand does not provide
+   information of whether or not the violation is reachable.
+
 * Plan for the Thesis
 
   In the thesis, an attempt will be made to formally specify a protocol for
   real-time collaborative editing of /plain text/. The specification will be
   written in Maude, a rich and declarative modeling language with good
   capabilities for modeling distributed systems.
+
+  In addition to specifying the system, we need to specify the properties that
+  the system should satisfy. Such properties will be expressed in Linear
+  Temporal Logic (LTL), a logic that has semantics for time. It allows us to
+  express statements like "It is always the case that clients eventually
+  reaches consistency" assuming /clients/ and /consistency/ is formally
+  defined. How to formally define the properties the system should satisfy will
+  be a challenging part of the thesis.
+
+  Once we have both system and properties specifications, we can model check
+  the system using either [[http://maude.cs.illinois.edu/tools/lmc/][Maude LTL-checker]] or [[http://maude.cs.illinois.edu/tools/tlr/][Maude LTLR-checker]]. Some
+  investigation into what model checker suites our problem best should find
+  place in the thesis.
+
+  An implementation of the protocol will also be developed. A server will be
+  written in Clojure, a modern programming language in the Lisp-family, which
+  have good semantics for time, making it suitable for concurrent and
+  distributed programming. It is a functional language, and functional
+  languages are declarative. This will hopefully leave a smaller gap between
+  the formal specification and the actual implementation (seeing that Maude
+  also is a declarative language).
+
+  At least one client should be implemented, and it will be implemented for
+  Emacs. It will start as an external package, but if we have promising results
+  we will try to submit the package to Emacs.
 
   #+LaTeX: \printbibliography
 * COMMENT Local variables
