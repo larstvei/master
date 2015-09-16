@@ -1,0 +1,53 @@
+load prelude .
+load model-checker.maude .
+load full-maude26 .
+
+(fmod BUFFER is
+    protecting STRING .
+    sorts Name Content Operation .
+    subsort String < Content .
+    op inverse : Operation -> Operation .
+    op insert_at_ : String Nat -> Operation .
+    op delete_at_ : Nat Nat -> Operation .
+    op apply_in_ : Operation Content -> Content .
+
+    vars I N : Nat .
+    var S : String .
+    var C : Content .
+
+    eq apply insert S at I in C = substr(C, 0, I) + S + substr(C, I, length(C)) .
+    eq apply delete N at I in C = substr(C, 0, I) + substr(C, I + N, length(C)) .
+
+    eq inverse(insert S at I) = delete length(S) at I .
+    eq inverse(delete N at I) = insert substr(C, I, I + N) at I .
+endfm)
+
+(omod CLIENT is
+    protecting BUFFER .
+    class Client | content : Content .
+
+    vars N I : Nat .
+    var C : Content .
+    var S : String .
+    var O : Oid .
+
+    rl [insert] :
+        < O : Client | content : C >
+      =>
+        < O : Client | content : apply insert S at I in C > .
+
+    rl [delete] :
+        < O : Client | content : C >
+      =>
+        < O : Client | content : apply delete N at I in C > .
+endom)
+
+(omod TEST is
+    protecting CLIENT .
+    subsort String < Oid .
+    op init : Content -> Configuration .   --- a suitable initial state
+
+    var C : Content .
+
+    eq init(C) = < "Client1" : Client | content : C > .
+endom)
