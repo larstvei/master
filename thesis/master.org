@@ -1,4 +1,4 @@
-#+TITLE: Specification, verification and Implementation of a Real-Time Collaborative Editing Protocol
+#+TITLE: Specification, Verification and Implementation of a Real-Time Collaborative Editing Protocol
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil
