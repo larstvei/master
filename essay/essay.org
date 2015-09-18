@@ -8,7 +8,7 @@
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
-#+LaTeX: \renewcommand\href[2]{#2\footnote{\url{#1}}}
+# #+LaTeX: \renewcommand\href[2]{#2\footnote{\url{#1}}}
 
 * Introduction
 
@@ -17,7 +17,7 @@
   editing protocol. Generally, real-time collaboration enables multiple users,
   at (possibly) different locations, to simultaneously work on the same
   document. If a change is made to the document by one user, the change should
-  become apparent to the other users as fast as possible.
+  appear at the other users as fast as possible.
 
   More specifically the thesis will focus on enabling real-time collaboration
   in /existing text editors/, implying that the protocol should, ideally, be
@@ -25,8 +25,8 @@
   portability a client-server model is chosen, as opposed to a fully
   decentralized system. Though a decentralized system is
   possible\cite{ellis1989concurrency}, a centralized architecture significantly
-  simplifies the algorithm\cite{nichols95}. The goal to make it very easy to
-  implement a client (in other words we want a thin client), and move as much
+  simplifies the algorithm\cite{nichols95}. The goal is to make it very easy to
+  implement a client (in other words we want a /thin/ client), and move as much
   complexity as possible to the server in order to preserve portability.
 
 * Background and Motivation
@@ -41,29 +41,30 @@
   what is likely to be solved in a quick-and-dirty fashion.
 
   Guaranteeing consistency between shared documents is the main problem to be
-  solved; in order to solve it, and to /trust the resulting solution is
-  correct/, more sophisticated tools should be applied to aid our thinking.
-  For this thesis Formal Methods are chosen, and more specifically Model
-  Checking.
+  solved; seeing that it is a highly concurrent and distributed problem, it is
+  non-trivial. In order to solve it, and to /trust that the resulting solution
+  is correct/, more sophisticated tools should be applied to aid our thinking.
+  For this thesis formal methods are chosen, and more specifically model
+  checking.
 
-  Formal Methods are used in order to reason unambiguously about a system. By
+  Formal methods are used in order to reason unambiguously about a system. By
   describing a system mathematically we get a completely unambiguous
-  representation of the system; this representation is called a system
-  specification. Typically the specification will be much smaller in
-  representation than the actual system; a system that consists of million
-  lines of code can still be usefully represented with a small specification
-  (e.g. 200 lines in some modeling language). In such a case one could, for
-  instance, only model a small, but critical, part of the system, or perhaps
-  represent the system at a very high level of abstraction.
+  representation of the system; this representation is called a formal system
+  specification. Typically the specification will be much smaller than the
+  actual implementation; a system that consists of million lines of code can
+  still be usefully represented with a small specification (e.g. 200 lines in
+  some modeling language). In such a case one could, for instance, only model a
+  small, but critical, part of the system, or perhaps represent the system at a
+  very high level of abstraction.
 
   Leslie Lamport is known for advocating to think about a program before you
   write code\cite{Lamport:2015}\cite{Lamport:2002}, and that writing a
   specification is the best way of doing this. A specification should just
-  describe what the program does, and how it does it; a specification does not
-  need to be formal. The specification should somehow be as formal as the
+  describe what the program does, and how it does it; the specification does
+  not need to be formal. Somehow the specification should be as formal as the
   program is complex. If the system is sufficiently complex (e.g. a highly
   concurrent or distributed system) a formal specification should be written
-  for the benefit of having machines interpret the specification.
+  for the benefit of having machines being able to interpret the specification.
 
   # By writing a specification, one might discover flaws in
   # the design early, before any time has been spent on implementing it.
@@ -94,17 +95,22 @@
   property is found then the system specification does /not/ satisfy the
   property specification, and the model checker will output a counter example.
   If, however, no such state is found, the system specification satisfies the
-  property specification. Because model checking does an exhaustive search, it
-  can only verify systems with a finite-state systems. This is part of the
-  challenge for this thesis; the state space for the system we will implement
-  is infinite. This means that we perhaps won't be able to verify the system in
-  its entirety, but with some limitations in order to reduce the state-space.
+  property specification.
+
+  Because model checking does an exhaustive search, it can only verify systems
+  with a finite number of states. Seeing that any unique document represents a
+  unique state in the system, and the number of unique documents is surely
+  infinite, we must be dealing with an infinite-state system. This will be a
+  challenge to tackle in the thesis; how to reduce the state space to a finite
+  (and manageable) number. This means that we perhaps won't be able to verify
+  the system in its entirety, but with some limitations in order to reduce the
+  state-space.
 
   Applying formal methods to a problem seems like the antithesis of the
-  quick-and-dirty approach used the first time I tackled the problem.
-  Hopefully it will help in developing a sound real-time collaboration
-  protocol, both with regards to the quality of the resulting application and
-  the time spent in development.
+  quick-and-dirty approach used the first time I tackled the problem. Hopefully
+  it will help in developing a sound real-time collaboration protocol, both
+  with regards to the quality of the resulting application and the time spent
+  in development.
 
   # An important note for model checking is that it can only verify finite state
   # systems; if one where to search an infinite state space for a
@@ -133,13 +139,16 @@
   In this thesis we will restrict the document kind to /plain text/. This is a
   very helpful restriction, because there are only two fundamental operations
   one can perform on text, namely insertions and deletions. Another advantage
-  is that plain text has proven extremely applicable, seeing that all
-  programming languages and markup languages uses this representation.
+  is that plain text has proven extremely applicable (especially for
+  developers), seeing that almost every programming/markup language uses this
+  representation.
 
   We aim for a client that has very limited capabilities, but it should /at
   least/ have the following properties:
+
   - Every local change is immediately applied.
-  - Every local change is sent to the server exactly once.
+  - Every local change is sent to the server exactly once (assuming no message
+    loss).
   - Every remote change is applied when received.
 
   Assume we have a server that simply broadcasts any change made by a user to
@@ -168,7 +177,7 @@
   extensibility. Seeing that a goal is to maximize portability, it does not
   seem unlikely that there will be time to implement more than one client.
 
-  The system should be modeled and verified before an implementation finds
+  The system should be modeled and verified before an implementation takes
   place.
 
 ** Related Problems
@@ -188,16 +197,15 @@
    There are collaborative editing systems that are /not/ real-time, for
    instance version control systems like SVN and Git. A real-time collaborative
    system works much like a version control system with very high-frequency
-   commits (where each commit is small). In a version control system conflicts
-   in commits (normally meaning that different users have made changes on the
-   same lines) are detected but not automatically handled. Rather the user must
-   manually resolve the conflict, because in a version control system a
-   /correct/ resolution is more important than a /fast/ resolution. This is
-   different from a real-time collaborative setting, where fast (automatic)
-   merges are preferred, even though the result sometimes may differ from what
-   the user hoped for. This is mostly due to the small size of commits, and
-   that manual conflict resolution would have to interrupt the user from
-   editing the document.
+   commits. In a version control system conflicts in commits (normally meaning
+   that different users have made changes on the same lines) are detected but
+   not automatically handled. Rather the user must manually resolve the
+   conflict, because in a version control system a /correct/ resolution is more
+   important than a /fast/ resolution. This is different from a real-time
+   collaborative setting, where fast (automatic) merges are preferred, even
+   though the result sometimes may differ from what the user hoped for. This is
+   mostly due to the small size of commits, and that manual conflict resolution
+   would have to interrupt the user from editing the document.
 
    Perhaps the most influential paper on distributed computing is Leslie
    Lamport's "Time, Clocks, and the Ordering of Events in a Distributed
@@ -221,7 +229,7 @@
    of which dates back to 1988\cite{ellis1989concurrency} with GROVE (GRoup,
    Outline, Viewing Editor). They introduced the concept of Operational
    Transformation which offers a way of dealing with collaborative systems.
-   Operational Transformation is the algorithm that powers almost all real-time
+   Operational Transformation is the algorithm that powers most real-time
    collaborative systems to this day.
 
    Assume we have two operations $o_i$ and $o_j$, and that a /primed/ operation
@@ -230,16 +238,17 @@
    operations must have the property $o_i' \circ o_j = o_j' \circ o_i$. If the
    property holds and a client has already applied $o_j$, it can safely apply
    $o_i'$. Similarly, if $o_i$ has been applied, $o_j'$ can safely be applied.
-   In the original paper Ellis et al. proposed a $m \times m$ transformation
-   matrix, where $m$ is the number of operations. Each component is a functions
-   that takes operations as arguments and returns transformed arguments.
-   Getting the transformation matrix right is quite difficult, and increasingly
-   so if one wants to support many types of operations.
+   In the original paper Ellis et al.\cite{ellis1989concurrency} proposed a $m
+   \times m$ transformation matrix, where $m$ is the number of operations (e.g.
+   insertion and deletion). Each component is a function that takes operations
+   as arguments and returns /transformed/ operations. Getting the
+   transformation matrix right is quite difficult, and increasingly so if one
+   wants to support many types of operations.
 
    Insertions and deletions yields a functionally complete set of operations
    for text editing, meaning all operations applicable on text can be expressed
    in terms of insertion and deletion. This limits the transformation matrix to
-   a $2 \times 2$ matrix, which seems as a manageable size.
+   a $2 \times 2$ matrix, which seems like a manageable size.
 
 ** Google
 
@@ -249,7 +258,7 @@
    Microsoft Office, but in a collaborative environment. It is derived from
    Google Wave, which was developed to become a real-time collaborative
    platform. It never grew very popular, and Google handed it over to Apache
-   in 2012.
+   in 2012\cite{waveApache}.
 
    Google Wave was powered by operational transformations\cite{WaveOT}. Since
    Google Docs is a WYSIWYG-editor there are /a lot/ more fundamental
@@ -276,7 +285,8 @@
    results form\cite{formalOT}. It argues that one of the benefits of model
    checking is that it provides a specific scenario, showing how some property
    was broken; the theorem prover on the other hand does not provide
-   information of whether or not the violation is reachable.
+   information of whether or not the violation is reachable (i.e. there is no
+   trace showing how the violation occured).
 
 * Plan for the Thesis
 
@@ -289,7 +299,7 @@
   the system should satisfy. Such properties will be expressed in Linear
   Temporal Logic (LTL), a logic that has semantics for time. It allows us to
   express statements like "It is always the case that clients eventually
-  reaches consistency" assuming /clients/ and /consistency/ is formally
+  reaches consistency", assuming /clients/ and /consistency/ is formally
   defined. How to formally define the properties the system should satisfy will
   be a challenging part of the thesis.
 
@@ -307,8 +317,11 @@
   also is a declarative language).
 
   At least one client should be implemented, and it will be implemented for
-  Emacs. It will start as an external package, but if we have promising results
-  we will try to submit the package to Emacs.
+  Emacs. At first it will be developed as an external package, but aim to get
+  it included as a buildt-in package if the resulting package shows promise.
+
+  # It will start as an external package, but if we develop promising
+  # results, we will try to get built-in package.
 
   #+LaTeX: \printbibliography
 * COMMENT Local variables
