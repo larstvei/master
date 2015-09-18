@@ -1,53 +1,43 @@
 load prelude .
 load model-checker.maude .
-load full-maude26 .
+load full-maude .
 
-(fmod BUFFER is
-    protecting STRING .
-    sorts Name Content Operation .
-    subsort String < Content .
-    op inverse : Operation -> Operation .
-    op insert_at_ : String Nat -> Operation .
-    op delete_at_ : Nat Nat -> Operation .
-    op apply_in_ : Operation Content -> Content .
+(omod BUFFER is
+    protecting NAT .
+    protecting LIST{Nat} .
 
-    vars I N : Nat .
-    var S : String .
-    var C : Content .
+    sorts Content Str .
+    subsort List{Nat} < Content .
+    subsort Nat < Str .
 
-    eq apply insert S at I in C = substr(C, 0, I) + S + substr(C, I, length(C)) .
-    eq apply delete N at I in C = substr(C, 0, I) + substr(C, I + N, length(C)) .
+    class Buffer | content : Content, nextStr : Str .
 
-    eq inverse(insert S at I) = delete length(S) at I .
-    eq inverse(delete N at I) = insert substr(C, I, I + N) at I .
-endfm)
-
-(omod CLIENT is
-    protecting BUFFER .
-    class Client | content : Content .
-
-    vars N I : Nat .
-    var C : Content .
-    var S : String .
-    var O : Oid .
+    vars C C' : Content .
+    var S     : Str .
+    var O     : Oid .
 
     rl [insert] :
-        < O : Client | content : C >
+        < O : Buffer | content : C C',   nextStr : S   >
       =>
-        < O : Client | content : apply insert S at I in C > .
+        < O : Buffer | content : C S C', nextStr : s S > .
 
-    rl [delete] :
-        < O : Client | content : C >
+    rl [deletion] :
+        < O : Buffer | content : C S C' >
       =>
-        < O : Client | content : apply delete N at I in C > .
+        < O : Buffer | content : C C' > .
 endom)
 
 (omod TEST is
-    protecting CLIENT .
+    protecting STRING .
+    protecting BUFFER .
     subsort String < Oid .
     op init : Content -> Configuration .   --- a suitable initial state
 
     var C : Content .
 
-    eq init(C) = < "Client1" : Client | content : C > .
+    eq init(C) = < "Client1" : Buffer | content : C, nextStr : 0 > .
 endom)
+
+*** Commands:
+
+(search[1] init(nil) =>* < "Client1" : Buffer | content : 3 0 > .)
