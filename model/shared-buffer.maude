@@ -10,34 +10,34 @@ load full-maude .
     subsort List{Nat} < Content .
     subsort Nat < Str .
 
-    class Buffer | content : Content, nextStr : Str .
+    class Client | content : Content, nextStr : Str .
 
     vars C C' : Content .
     var S     : Str .
     var O     : Oid .
 
     rl [insert] :
-        < O : Buffer | content : C C',   nextStr : S   >
+        < O : Client | content : C C',   nextStr : S   >
       =>
-        < O : Buffer | content : C S C', nextStr : s S > .
+        < O : Client | content : C S C', nextStr : s S > .
 
     rl [deletion] :
-        < O : Buffer | content : C S C' >
+        < O : Client | content : C S C' >
       =>
-        < O : Buffer | content : C C' > .
+        < O : Client | content : C C'   > .
 endom)
 
 (omod TEST is
     protecting STRING .
-    protecting BUFFER .
+    protecting CLIENT .
     subsort String < Oid .
     op init : Content -> Configuration .   --- a suitable initial state
 
     var C : Content .
 
-    eq init(C) = < "Client1" : Buffer | content : C, nextStr : 0 > .
+    eq init(C) = < "Client1" : Client | content : C, nextStr : 0 > .
 endom)
 
 *** Commands:
 
-(search[1] init(nil) =>* < "Client1" : Buffer | content : 3 0 > .)
+(search[1] init(nil) =>* < "Client1" : Client | content : 3 0 > .)
