@@ -2,7 +2,22 @@ load prelude .
 load model-checker.maude .
 load full-maude .
 
-(omod BUFFER is
+(omod MSG is
+    sort Msg .
+endom)
+
+(omod CHANNEL is
+    protecting MSG .
+    sort MsgQueue .
+    subsort Msg < MsgQueue .
+
+    op empty : -> MsgQueue [ctor] .
+    op _:_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
+
+    class Channel | msgQueue : MsgQueue .
+endom)
+
+(omod CLIENT is
     protecting NAT .
     protecting LIST{Nat} .
 
