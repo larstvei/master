@@ -25,16 +25,16 @@ endom)
     subsort List{Nat} < Content .
     subsort Nat < Str .
 
-    class Client | content : Content, nextStr : Str .
+    class Client | content : Content, seqNo : Str .
 
     vars C C' : Content .
     var S     : Str .
     var O     : Oid .
 
     rl [insert] :
-        < O : Client | content : C C',   nextStr : S   >
+        < O : Client | content : C C',   seqNo : S   >
       =>
-        < O : Client | content : C S C', nextStr : s S > .
+        < O : Client | content : C S C', seqNo : s S > .
 
     rl [deletion] :
         < O : Client | content : C S C' >
@@ -50,7 +50,7 @@ endom)
 
     var C : Content .
 
-    eq init(C) = < "Client1" : Client | content : C, nextStr : 0 > .
+    eq init(C) = < "Client1" : Client | content : C, seqNo : 0 > .
 endom)
 
 *** Commands:
