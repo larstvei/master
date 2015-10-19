@@ -21,9 +21,13 @@ endom)
     subsort Msg < MsgQueue .
 
     op empty : -> MsgQueue [ctor] .
-    op _:_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
+    op _~_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
+endom)
 
-    class Channel | msgQueue : MsgQueue .
+(omod SERVER is
+    including CHANNEL .
+
+    class Server | chan : MsgQueue .
 endom)
 
 (omod CLIENT is
