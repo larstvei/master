@@ -16,7 +16,7 @@ load full-maude .
 endom)
 
 (omod CHANNEL is
-    protecting MSG .
+    including MSG .
     sort MsgQueue .
     subsort Msg < MsgQueue .
 
@@ -27,8 +27,8 @@ endom)
 endom)
 
 (omod CLIENT is
-    protecting NAT .
-    protecting LIST{Nat} .
+    including SERVER .
+    including LIST{Nat} .
 
     sorts Content Str .
     subsort List{Nat} < Content .
@@ -52,8 +52,8 @@ endom)
 endom)
 
 (omod TEST is
-    protecting STRING .
-    protecting CLIENT .
+    including CLIENT .
+    including SERVER .
     subsort String < Oid .
     op init : Content -> Configuration .   --- a suitable initial state
 
