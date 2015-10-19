@@ -34,25 +34,29 @@ endom)
     including SERVER .
     including LIST{Nat} .
 
-    sorts Content Str .
+    sort Content .
     subsort List{Nat} < Content .
-    subsort Nat < Str .
 
     class Client | content : Content, seqNo : Str .
 
     vars C C' : Content .
+    vars O O' : Oid .
     var S     : Str .
-    var O     : Oid .
+    var MS    : MsgQueue .
 
     rl [insert] :
-        < O : Client | content : C C',   seqNo : S   >
+        < O  : Client | content : C C', seqNo : S >
+        < O' : Server | chan : MS >
       =>
-        < O : Client | content : C S C', seqNo : s S > .
+        < O  : Client | content : C S C', seqNo : s S >
+        < O' : Server | chan : (ins(S, size(C)) from O to O') ~ MS > .
 
     rl [deletion] :
         < O : Client | content : C S C' >
+        < O' : Server | chan : MS >
       =>
-        < O : Client | content : C C'   > .
+        < O : Client | content : C C' >
+        < O' : Server | chan : (del(size(C), 1) from O to O') ~ MS > .
 endom)
 
 (omod TEST is
