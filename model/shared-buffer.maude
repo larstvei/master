@@ -67,9 +67,11 @@ endom)
 
     var C : Content .
 
-    eq init(C) = < "Client1" : Client | content : C, seqNo : 0 > .
+    eq init(C) =
+        < "Server"  : Server | chan : empty >
+        < "Client1" : Client | content : C, seqNo : 0 > .
 endom)
 
 *** Commands:
 
-(search[1] init(nil) =>* < "Client1" : Client | content : 3 0 > .)
+(search[1] init(nil) =>* < "Client1" : Client | content : 3 0 > C:Configuration .)
