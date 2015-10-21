@@ -5,11 +5,13 @@ load full-maude .
 (omod MSG is
     including NAT .
     including STRING .
+
     sorts Msg MsgContent Str .
     subsort String < Oid .
     subsort Nat < Str .
+
     op ack : -> MsgContent [ctor] .
-    op ins : Nat Str -> MsgContent [ctor] .
+    op ins : Str Nat -> MsgContent [ctor] .
     op del : Nat Nat -> MsgContent [ctor] .
 
     msg _from_to_ : MsgContent Oid Oid -> Msg .
@@ -26,7 +28,6 @@ endom)
 
 (omod SERVER is
     including CHANNEL .
-
     class Server | chan : MsgQueue .
 endom)
 
