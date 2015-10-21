@@ -38,6 +38,9 @@ endom)
     sort Content .
     subsort List{Nat} < Content .
 
+    op ins : Str Nat Content -> Content .
+    op del : Nat Nat Content -> Content .
+
     class Client | content : Content, seqNo : Str .
 
     vars C C' : Content .
@@ -46,6 +49,12 @@ endom)
     var MS    : MsgQueue .
 
     rl [insert] :
+    eq ins(S, 0, C)   = S C .
+    eq ins(S, s N, C) = head(C) ins(S, N, tail(C)) .
+
+    *** Assuming N is 1, change this later?
+    eq del(0, 1, C)   = tail(C) .
+    eq del(s I, 1, C) = head(C) del(I, 1, tail(C)) .
         < O  : Client | content : C C', seqNo : S >
         < O' : Server | chan : MS >
       =>
