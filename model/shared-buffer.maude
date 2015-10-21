@@ -44,29 +44,45 @@ endom)
     class Client | content : Content, seqNo : Str .
 
     vars C C' : Content .
+    vars I N  : Nat .
     vars O O' : Oid .
     var S     : Str .
     var MS    : MsgQueue .
 
-    rl [insert] :
     eq ins(S, 0, C)   = S C .
     eq ins(S, s N, C) = head(C) ins(S, N, tail(C)) .
 
     *** Assuming N is 1, change this later?
     eq del(0, 1, C)   = tail(C) .
     eq del(s I, 1, C) = head(C) del(I, 1, tail(C)) .
+
+    rl [user-inserts] :
         < O  : Client | content : C C', seqNo : S >
         < O' : Server | chan : MS >
       =>
         < O  : Client | content : C S C', seqNo : s S >
         < O' : Server | chan : (ins(S, size(C)) from O to O') ~ MS > .
 
-    rl [deletion] :
-        < O : Client | content : C S C' >
+    rl [user-deletes] :
+        < O  : Client | content : C S C' >
         < O' : Server | chan : MS >
       =>
-        < O : Client | content : C C' >
+        < O  : Client | content : C S C' >
         < O' : Server | chan : (del(size(C), 1) from O to O') ~ MS > .
+
+    rl [insert] :
+        < O  : Client | content : C, seqNo : S >
+        < O' : Server | chan : (ins(S, I) from O to O') ~ MS >
+      =>
+        < O' : Server | chan : MS >
+        < O  : Client | content : ins(S,I,C) , seqNo : s S > .
+
+    rl [delete] :
+        < O  : Client | content : C, seqNo : S >
+        < O' : Server | chan : (del(I, N) from O to O') ~ MS >
+      =>
+        < O  : Client | content : del(I,N,C) , seqNo : s S >
+        < O' : Server | chan : MS > .
 endom)
 
 (omod TEST is
