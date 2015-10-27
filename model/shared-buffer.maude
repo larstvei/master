@@ -59,31 +59,31 @@ endom)
     eq del 1 at s I in C = head(C) (del 1 at I in tail(C)) .
 
     rl [user-inserts] :
-        < O  : Client | content : C C', seqNo : S >
-        < O' : Server | chan : MS >
+        < O  : Client | content : C C', seqNo : N' >
+        < O' : Server | chan : empty, nextStr : S >
       =>
-        < O  : Client | content : C S C', seqNo : s S >
-        < O' : Server | chan : (ins(S, size(C)) from O to O') ~ MS > .
+        < O  : Client | content : C C', seqNo : s N' >
+        < O' : Server | chan : (ins(S, size(C)) from O to O'), nextStr : s S > .
 
     rl [user-deletes] :
-        < O  : Client | content : C S C' >
-        < O' : Server | chan : MS >
+        < O  : Client | content : C S C', seqNo : N' >
+        < O' : Server | chan : empty >
       =>
-        < O  : Client | content : C S C' >
-        < O' : Server | chan : (del(size(C), 1) from O to O') ~ MS > .
+        < O  : Client | seqNo : s N' >
+        < O' : Server | chan : (del(1, size(C)) from O to O') > .
 
     rl [insert] :
-        < O  : Client | content : C, seqNo : S >
-        < O' : Server | chan : (ins(S, I) from O to O') ~ MS >
+        < O  : Client | content : C >
+        < O' : Server | chan : MS ~ (ins(S,I) from O to O') >
       =>
-        < O' : Server | chan : MS >
-        < O  : Client | content : ins(S,I,C) , seqNo : s S > .
+        < O  : Client | content : ins S at I in C >
+        < O' : Server | chan : MS > .
 
     rl [delete] :
-        < O  : Client | content : C, seqNo : S >
-        < O' : Server | chan : (del(I, N) from O to O') ~ MS >
+        < O  : Client | content : C >
+        < O' : Server | chan : MS ~ (del(N, I) from O to O') >
       =>
-        < O  : Client | content : del(I,N,C) , seqNo : s S >
+        < O  : Client | content : del N at I in C >
         < O' : Server | chan : MS > .
 endom)
 
