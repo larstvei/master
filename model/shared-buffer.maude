@@ -40,8 +40,8 @@ endom)
     sort Content .
     subsort List{Nat} < Content .
 
-    op ins : Str Nat Content -> Content .
-    op del : Nat Nat Content -> Content .
+    op ins_at_in_ : Str Nat Content -> Content .
+    op del_at_in_ : Nat Nat Content -> Content .
 
     class Client | content : Content, seqNo : Str .
 
@@ -51,12 +51,12 @@ endom)
     var S     : Str .
     var MS    : MsgQueue .
 
-    eq ins(S, 0, C)   = S C .
-    eq ins(S, s N, C) = head(C) ins(S, N, tail(C)) .
+    eq ins S at 0 in C   = S C .
+    eq ins S at s N in C = head(C) (ins S at N in tail(C)) .
 
     *** Assuming N is 1, change this later?
-    eq del(0, 1, C)   = tail(C) .
-    eq del(s I, 1, C) = head(C) del(I, 1, tail(C)) .
+    eq del 1 at 0 in C   = tail(C) .
+    eq del 1 at s I in C = head(C) (del 1 at I in tail(C)) .
 
     rl [user-inserts] :
         < O  : Client | content : C C', seqNo : S >
