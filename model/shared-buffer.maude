@@ -6,7 +6,7 @@ load full-maude .
     including NAT .
     including STRING .
 
-    sorts Msg MsgContent Str .
+    sorts MsgContent Str .
     subsort String < Oid .
     subsort Nat < Str .
 
