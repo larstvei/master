@@ -28,7 +28,9 @@ endom)
 
 (omod SERVER is
     including CHANNEL .
-    class Server | chan : MsgQueue .
+    including SET{Oid} .
+
+    class Server | chan : MsgQueue, clients : Set{Oid}, nextStr : Str .
 endom)
 
 (omod CLIENT is
