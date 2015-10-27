@@ -43,13 +43,13 @@ endom)
     op ins_at_in_ : Str Nat Content -> Content .
     op del_at_in_ : Nat Nat Content -> Content .
 
-    class Client | content : Content, seqNo : Str .
+    class Client | content : Content, seqNo : Nat .
 
-    vars C C' : Content .
-    vars I N  : Nat .
-    vars O O' : Oid .
-    var S     : Str .
-    var MS    : MsgQueue .
+    var S       : Str .
+    var MS      : MsgQueue .
+    vars C C'   : Content .
+    vars O O'   : Oid .
+    vars I N N' : Nat .
 
     eq ins S at 0 in C   = S C .
     eq ins S at s N in C = head(C) (ins S at N in tail(C)) .
