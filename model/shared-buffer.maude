@@ -89,17 +89,25 @@ endom)
 
 (omod TEST is
     including CLIENT .
-    including SERVER .
+
     subsort String < Oid .
+
     op init : Content -> Configuration .   --- a suitable initial state
+    op max  : List{Nat} -> Nat .
 
     var C : Content .
+    var N : Nat .
+    var L : List{Nat} .
+
+    eq max(N)   = N .
+    eq max(N L) = if N > max(L) then N else max(L) fi .
 
     eq init(C) =
-        < "Server"  : Server | chan : empty >
-        < "Client1" : Client | content : C, seqNo : 0 > .
+        < "S"  : Server | chan : empty, clients : "C1",
+                          nextStr : if C == nil then 0 else s(max(C)) fi >
+        < "C1" : Client | content : C, seqNo : 0 > .
 endom)
 
 *** Commands:
 
-(search[1] init(nil) =>* < "Client1" : Client | content : 3 0 > C:Configuration .)
+(search[1] init(nil) =>* < "C1" : Client | content : 3 0 > C:Configuration .)
