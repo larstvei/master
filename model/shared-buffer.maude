@@ -2,13 +2,29 @@ load prelude .
 load model-checker.maude .
 load full-maude .
 
-(omod MSG is
+(omod GLOBAL is
     including NAT .
+    including LIST{Nat} .
+    sorts NextStr Str .
+    subsort NextStr < Configuration .
+    subsort Nat < Str .
+
+    op next : Str       -> NextStr .
+    op max  : List{Nat} -> Nat .
+
+    var N : Nat .
+    var L : List{Nat} .
+
+    eq max(N)   = N .
+    eq max(N L) = if N > max(L) then N else max(L) fi .
+endom)
+
+(omod MSG is
+    including GLOBAL .
     including STRING .
 
-    sorts MsgContent Str .
+    sorts MsgContent .
     subsort String < Oid .
-    subsort Nat < Str .
 
     op ack : -> MsgContent [ctor] .
     op ins : Str Nat -> MsgContent [ctor] .
@@ -30,7 +46,7 @@ endom)
     including CHANNEL .
     including SET{Oid} .
 
-    class Server | chan : MsgQueue, clients : Set{Oid}, nextStr : Str .
+    class Server | chan : MsgQueue, clients : Set{Oid} .
 endom)
 
 (omod CLIENT is
@@ -60,10 +76,12 @@ endom)
 
     rl [user-inserts] :
         < O  : Client | content : C C', seqNo : N' >
-        < O' : Server | chan : empty, nextStr : S >
+        < O' : Server | chan : empty >
+        next(S)
       =>
         < O  : Client | content : C C', seqNo : s N' >
-        < O' : Server | chan : (ins(S, size(C)) from O to O'), nextStr : s S > .
+        < O' : Server | chan : (ins(S, size(C)) from O to O') >
+        next(s S) .
 
     rl [user-deletes] :
         < O  : Client | content : C S C', seqNo : N' >
@@ -89,23 +107,16 @@ endom)
 
 (omod TEST is
     including CLIENT .
-
     subsort String < Oid .
 
-    op init : Content -> Configuration .   --- a suitable initial state
-    op max  : List{Nat} -> Nat .
+    op init : Content   -> Configuration .   --- a suitable initial state
 
     var C : Content .
-    var N : Nat .
-    var L : List{Nat} .
-
-    eq max(N)   = N .
-    eq max(N L) = if N > max(L) then N else max(L) fi .
 
     eq init(C) =
-        < "S"  : Server | chan : empty, clients : "C1",
-                          nextStr : if C == nil then 0 else s(max(C)) fi >
-        < "C1" : Client | content : C, seqNo : 0 > .
+        < "S"  : Server | chan : empty, clients : "C1" >
+        < "C1" : Client | content : C, seqNo : 0 >
+        next(if C == nil then 0 else s(max(C)) fi) .
 endom)
 
 *** Commands:
