@@ -9,8 +9,8 @@ load full-maude .
     subsort NextStr < Configuration .
     subsort Nat < Str .
 
-    op next : Str       -> NextStr .
-    op max  : List{Nat} -> Nat .
+    op next_ : Str       -> NextStr .
+    op max   : List{Nat} -> Nat .
 
     var N : Nat .
     var L : List{Nat} .
@@ -27,8 +27,8 @@ endom)
     subsort String < Oid .
 
     op ack : -> MsgContent [ctor] .
-    op ins : Str Nat -> MsgContent [ctor] .
-    op del : Nat Nat -> MsgContent [ctor] .
+    op ins : Str Nat Nat -> MsgContent [ctor] .
+    op del : Nat Nat Nat -> MsgContent [ctor] .
 
     msg _from_to_ : MsgContent Oid Oid -> Msg .
 endom)
@@ -46,7 +46,7 @@ endom)
     including CHANNEL .
     including SET{Oid} .
 
-    class Server | chan : MsgQueue, clients : Set{Oid} .
+    class Server | clients : Set{Oid} .
 endom)
 
 (omod CLIENT is
@@ -55,18 +55,15 @@ endom)
     sort Content .
     subsort List{Nat} < Content .
 
-    op ins_at_in_ : Str Nat Content    -> Content .
-    op del_at_in_ : Nat Nat Content    -> Content .
+    op ins_at_in_ : Str    Nat Content -> Content .
+    op del_at_in_ : Nat    Nat Content -> Content .
     op receive__  : MsgContent Content -> Content .
 
-    class Client | content : Content, seqNo : Nat .
+    class Client | content : Content, seqNo : Nat, out : MsgQueue, in : MsgQueue .
 
-    var S       : Str .
-    var M       : MsgContent .
-    var MS      : MsgQueue .
-    vars C C'   : Content .
-    vars O O'   : Oid .
-    vars I N N' : Nat .
+    var C      : Content .
+    var S      : Str .
+    vars I M N : Nat .
 
     eq ins S at 0 in C   = S C .
     eq ins S at s I in C = head(C) (ins S at I in tail(C)) .
@@ -75,35 +72,67 @@ endom)
     eq del 1 at 0 in C   = tail(C) .
     eq del 1 at s I in C = head(C) (del 1 at I in tail(C)) .
 
-    eq receive ins(S,I) C = ins S at I in C .
-    eq receive del(N,I) C = del N at I in C .
+    eq receive ins(S,I,N) C = ins S at I in C .
+    eq receive del(M,I,N) C = del M at I in C .
+endom)
+
+(omod SERVER-RULES is
+    including CLIENT .
+
+    sort Multicast .
+    subsort Multicast < Configuration .
+
+    op multicast_from_to_ : MsgContent Oid Set{Oid} -> Multicast .
+
+    vars O O' : Oid .
+    var  M    : MsgContent .
+    var  Q    : MsgQueue .
+    var  CS   : Set{Oid} .
+
+    rl [recv] :
+        < O  : Client | out : Q ~ (M from O to O') >
+        < O' : Server | clients : CS >
+      =>
+        < O  : Client | out : Q >
+        < O' : Server | clients : CS >
+        multicast M from O' to CS .
+
+    eq < O : Client | in : Q > multicast M from O' to (O, CS) =
+        < O : Client | in : (M from O' to O) ~ Q > multicast M from O' to CS .
+
+    eq multicast M from O' to empty = none .
+endom)
+
+(omod CLIENT-RULES is
+    including SERVER-RULES .
+
+    vars O O'   : Oid .
+    vars C C'   : Content .
+    var S       : Str .
+    var N       : Nat .
+    var Q       : MsgQueue .
 
     rl [user-inserts] :
-        < O  : Client | content : C C', seqNo : N' >
-        < O' : Server | chan : empty >
-        next(S)
+        < O  : Client | content : C C', seqNo : N, out : Q >
+        < O' : Server | >
+        next S
       =>
-        < O  : Client | content : C C', seqNo : s N' >
-        < O' : Server | chan : (ins(S, size(C)) from O to O') >
-        next(s S) .
+        < O  : Client | content : C C', seqNo : s N, out :
+                        (ins(S, size(C), N) from O to O') ~ Q >
+        < O' : Server | >
+        next s S .
 
     rl [user-deletes] :
-        < O  : Client | content : C S C', seqNo : N' >
-        < O' : Server | chan : empty >
+        < O  : Client | content : C S C', seqNo : N, out : Q >
+        < O' : Server | >
       =>
-        < O  : Client | seqNo : s N' >
-        < O' : Server | chan : (del(1, size(C)) from O to O') > .
-
-    rl [receive] :
-        < O  : Client | content : C >
-        < O' : Server | chan : MS ~ (M from O to O') >
-      =>
-        < O  : Client | content : receive M C >
-        < O' : Server | chan : MS > .
+        < O  : Client | seqNo : s N , out :
+                        (del(1, size(C), N) from O to O') ~ Q >
+        < O' : Server | > .
 endom)
 
 (omod TEST is
-    including CLIENT .
+    including CLIENT-RULES .
     subsort String < Oid .
 
     op init : Content   -> Configuration .   --- a suitable initial state
@@ -111,11 +140,12 @@ endom)
     var C : Content .
 
     eq init(C) =
-        < "S"  : Server | chan : empty, clients : "C1" >
-        < "C1" : Client | content : C, seqNo : 0 >
-        next(if C == nil then 0 else s(max(C)) fi) .
+        < "S"  : Server | clients : "C1", "C2" >
+        < "C1" : Client | content : C, seqNo : 0, out : empty, in : empty >
+        < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty >
+        next if C == nil then 0 else s(max(C)) fi .
 endom)
 
 *** Commands:
 
-(search[1] init(nil) =>* < "C1" : Client | content : 3 0 > C:Configuration .)
+*** (search[1] init(nil) =>* < "C1" : Client | content : 3 0 > C:Configuration .)
