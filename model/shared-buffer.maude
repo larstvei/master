@@ -33,7 +33,7 @@ endom)
     msg _from_to_ : MsgContent Oid Oid -> Msg .
 endom)
 
-(omod CHANNEL is
+(omod QUEUE is
     including MSG .
     sort MsgQueue .
     subsort Msg < MsgQueue .
@@ -43,7 +43,7 @@ endom)
 endom)
 
 (omod SERVER is
-    including CHANNEL .
+    including QUEUE .
     including SET{Oid} .
 
     class Server | clients : Set{Oid} .
