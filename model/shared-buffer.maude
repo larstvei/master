@@ -15,7 +15,7 @@ mod GLOBAL is
     subsort Nat < Str .
     subsort String < Oid .
 
-    op next_ : Str       -> NextStr .
+    op next_ : Str       -> NextStr [format (n s n)] .
     op max   : List{Nat} -> Nat .
 
     var N : Nat .
@@ -52,7 +52,8 @@ mod SERVER is
 
     sort Server .
 
-    op <_: Server | clients :_> : Oid Set{Oid} -> Object .
+    op <_: Server | clients :_> : Oid Set{Oid} -> Object
+        [format (n s s s s s s s s n)] .
 endm
 
 mod CLIENT is
@@ -66,7 +67,8 @@ mod CLIENT is
     op receive__  : MsgContent Content -> Content .
 
     op <_: Client | content :_, seqNo :_, out :_, in :_> :
-        Oid Content Nat MsgQueue MsgQueue -> Object .
+        Oid Content Nat MsgQueue MsgQueue -> Object
+        [format (n s s s s n+i s s s ni s s s ni s s s ni s s s n)] .
 
     var C      : Content .
     var S      : Str .
@@ -147,14 +149,15 @@ mod CLIENT-RULES is
     rl [user-receive] :
         < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O) >
       =>
-        < O : Client | content : receive M C, seqNo : N, out : Q', in : Q > .
+        < O : Client | content : receive M C, seqNo : N, out : ack ~ Q', in : Q > .
 endm
 
 mod TEST is
     including CLIENT-RULES .
+
     subsort String < Oid .
 
-    op init : Content   -> Configuration .   --- a suitable initial state
+    op init : Content -> Configuration .   --- a suitable initial state
 
     var C : Content .
 
