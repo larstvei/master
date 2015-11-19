@@ -55,8 +55,8 @@ endom)
     sort Content .
     subsort List{Nat} < Content .
 
-    op ins_at_in_ : Str    Nat Content -> Content .
-    op del_at_in_ : Nat    Nat Content -> Content .
+    op ins_at_in_ : Str Nat    Content -> Content .
+    op del_at_in_ : Nat Nat    Content -> Content .
     op receive__  : MsgContent Content -> Content .
 
     class Client | content : Content, seqNo : Nat, out : MsgQueue, in : MsgQueue .
@@ -89,7 +89,7 @@ endom)
     var  Q    : MsgQueue .
     var  CS   : Set{Oid} .
 
-    rl [recv] :
+    rl [server-receive] :
         < O  : Client | out : Q ~ (M from O to O') >
         < O' : Server | clients : CS >
       =>
@@ -97,10 +97,13 @@ endom)
         < O' : Server | clients : CS >
         multicast M from O' to CS .
 
-    eq < O : Client | in : Q > multicast M from O' to (O, CS) =
-        < O : Client | in : (M from O' to O) ~ Q > multicast M from O' to CS .
-
     eq multicast M from O' to empty = none .
+
+    eq < O : Client | in : Q >
+        multicast M from O' to (O, CS)
+      =
+       < O : Client | in : (M from O' to O) ~ Q >
+        multicast M from O' to CS .
 endom)
 
 (omod CLIENT-RULES is
@@ -110,6 +113,7 @@ endom)
     vars C C'   : Content .
     var S       : Str .
     var N       : Nat .
+    var M       : MsgContent .
     var Q       : MsgQueue .
 
     rl [user-inserts] :
@@ -129,6 +133,11 @@ endom)
         < O  : Client | seqNo : s N , out :
                         (del(1, size(C), N) from O to O') ~ Q >
         < O' : Server | > .
+
+    rl [user-receive] :
+        < O : Client | content : C, seqNo : N, in : Q ~ (M from O' to O) >
+      =>
+        < O : Client | content : receive M C, seqNo : N, in : Q > .
 endom)
 
 (omod TEST is
@@ -149,3 +158,4 @@ endom)
 *** Commands:
 
 *** (search[1] init(nil) =>* < "C1" : Client | content : 3 0 > C:Configuration .)
+*** (search[1] init(nil) =>* < "C1" : Client | content : (head(nil)(ins 1 at 0 in tail(nil))) > C:Configuration .)
