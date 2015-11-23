@@ -18,8 +18,6 @@ mod GLOBAL is
     var N : Nat .
     var L : List{Nat} .
 
-    eq next 4 = none .
-
     eq max(N)   = N .
     eq max(N L) = if N > max(L) then N else max(L) fi .
 endm
@@ -66,9 +64,9 @@ mod CLIENT is
     op del_at_in_ : Nat Nat    Content -> Content .
     op receive__  : MsgContent Content -> Content .
 
-    op <_: Client | content :_, seqNo :_, out :_, in :_> :
-        Oid Content Nat MsgQueue MsgQueue -> Object
-        [format (n s s s s n++i s s s ni s s s ni s s s ni-- s s s n)] .
+    op <_: Client | content :_, seqNo :_, out :_, in :_, ops :_> :
+        Oid Content Nat MsgQueue MsgQueue Nat -> Object
+        [format (n s s s s n++i s s s ni s s s ni s s s ni s s s ni-- s s s n)] .
 
     var C      : Content .
     var S      : Str .
@@ -95,25 +93,25 @@ mod SERVER-RULES is
 
     vars Q Q' : MsgQueue .
     vars O O' : Oid .
-    var  N    : Nat .
+    vars N N' : Nat .
     var  C    : Content .
     var  CS   : Set{Oid} .
     var  M    : MsgContent .
 
     rl [server-receive] :
-        < O  : Client | content : C, seqNo : N, out : Q ~ (M from O to O'), in : Q' >
+        < O  : Client | content : C, seqNo : N, out : Q ~ (M from O to O'), in : Q', ops : N' >
         < O' : Server | clients : CS >
       =>
-        < O  : Client | content : C, seqNo : N, out : Q, in : Q' >
+        < O  : Client | content : C, seqNo : N, out : Q, in : Q', ops : N' >
         < O' : Server | clients : CS >
         multicast M from O' to CS .
 
     eq multicast M from O' to empty = none .
 
-    eq < O : Client | content : C, seqNo : N, out : Q', in : Q >
+    eq < O : Client | content : C, seqNo : N, out : Q', in : Q, ops : N' >
         multicast M from O' to (O, CS)
       =
-       < O : Client | content : C, seqNo : N, out : Q', in : (M from O' to O) ~ Q >
+       < O : Client | content : C, seqNo : N, out : Q', in : (M from O' to O) ~ Q, ops : N' >
         multicast M from O' to CS .
 endm
 
@@ -121,37 +119,37 @@ mod CLIENT-RULES is
     including SERVER-RULES .
 
     vars O O' : Oid .
+    vars N N' : Nat .
     vars S S' : Str .
     vars C C' : Content .
     vars Q Q' : MsgQueue .
     var CS    : Set{Oid} .
-    var N     : Nat .
+    var NZ    : NzNat .
     var M     : MsgContent .
 
     rl [user-inserts] :
-        < O  : Client | content : C C', seqNo : N, out : Q, in : Q' >
+        < O  : Client | content : C C', seqNo : N, out : Q, in : Q', ops : NZ >
         < O' : Server | clients : CS >
         next S
       =>
-        < O  : Client | content : C C', seqNo : s N, out :
-                        (ins(S, size(C), N) from O to O') ~ Q, in : Q' >
+        < O  : Client | content : C C', seqNo : s N,
+                        out : (ins(S, size(C), N) from O to O') ~ Q,
+                        in : Q', ops : sd(NZ, 1) >
         < O' : Server | clients : CS >
         next s S .
 
     rl [user-deletes] :
-        < O  : Client | content : C S C', seqNo : N, out : Q, in : Q' >
+        < O  : Client | content : C S C', seqNo : N, out : Q, in : Q', ops : NZ >
         < O' : Server | clients : CS >
-        next S'
       =>
         < O  : Client | content : C S C', seqNo : s N , out :
-                        (del(1, size(C), N) from O to O') ~ Q, in : Q' >
-        < O' : Server | clients : CS >
-        next s S' .
+                        (del(1, size(C), N) from O to O') ~ Q, in : Q', ops : sd(NZ, 1) >
+        < O' : Server | clients : CS > .
 
     rl [user-receive] :
-        < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O) >
+        < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O), ops : N' >
       =>
-        < O : Client | content : receive M C, seqNo : N, out : Q', in : Q > .
+        < O : Client | content : receive M C, seqNo : N, out : Q', in : Q, ops : N' > .
 endm
 
 mod TEST is
@@ -165,8 +163,8 @@ mod TEST is
 
     eq init(C) =
         < "S"  : Server | clients : "C1" >
-        < "C1" : Client | content : C, seqNo : 0, out : empty, in : empty >
-        --- < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty >
+        < "C1" : Client | content : C, seqNo : 0, out : empty, in : empty, ops : 3 >
+        --- < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty, ops : 3 >
         --- < "C3" : Client | content : C, seqNo : 0, out : empty, in : empty >
         next if C == nil then 0 else s(max(C)) fi .
 endm
@@ -180,4 +178,5 @@ search[1] init(nil) =>*
 < "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
                   seqNo   : N:Nat,
                   out     : Q:MsgQueue,
-                  in      : Q':MsgQueue > C:Configuration .
+                  in      : Q':MsgQueue,
+                  ops     : N':Nat > C:Configuration .
