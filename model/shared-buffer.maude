@@ -18,6 +18,8 @@ mod GLOBAL is
     var N : Nat .
     var L : List{Nat} .
 
+    eq next 4 = none .
+
     eq max(N)   = N .
     eq max(N L) = if N > max(L) then N else max(L) fi .
 endm
