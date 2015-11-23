@@ -68,7 +68,7 @@ mod CLIENT is
 
     op <_: Client | content :_, seqNo :_, out :_, in :_> :
         Oid Content Nat MsgQueue MsgQueue -> Object
-        [format (n s s s s n+i s s s ni s s s ni s s s ni s s s n)] .
+        [format (n s s s s n++i s s s ni s s s ni s s s ni-- s s s n)] .
 
     var C      : Content .
     var S      : Str .
