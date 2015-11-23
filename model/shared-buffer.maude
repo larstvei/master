@@ -159,16 +159,23 @@ mod TEST is
 
     op init : Content -> Configuration .   --- a suitable initial state
 
-    var C : Content .
+    var C  : Content .
 
     eq init(C) =
-        < "S"  : Server | clients : "C1", "C2" >
+        < "S"  : Server | clients : "C1" >
         < "C1" : Client | content : C, seqNo : 0, out : empty, in : empty >
-        < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty >
+        --- < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty >
+        --- < "C3" : Client | content : C, seqNo : 0, out : empty, in : empty >
         next if C == nil then 0 else s(max(C)) fi .
 endm
 
 *** Commands:
 
-*** (search[1] init(nil) =>* < "C1" : Client | content : 3 0 > C:Configuration .)
-*** (search[1] init(nil) =>* < "C1" : Client | content : (head(nil)(ins 1 at 0 in tail(nil))) > C:Configuration .)
+--- frew[10] init(nil) .
+
+--- Finds example after 9 steps
+search[1] init(nil) =>*
+< "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
+                  seqNo   : N:Nat,
+                  out     : Q:MsgQueue,
+                  in      : Q':MsgQueue > C:Configuration .
