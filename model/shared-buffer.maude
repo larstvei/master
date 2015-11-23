@@ -119,10 +119,10 @@ mod CLIENT-RULES is
     including SERVER-RULES .
 
     vars O O' : Oid .
+    vars S S' : Str .
     vars C C' : Content .
     vars Q Q' : MsgQueue .
     var CS    : Set{Oid} .
-    var S     : Str .
     var N     : Nat .
     var M     : MsgContent .
 
@@ -139,10 +139,12 @@ mod CLIENT-RULES is
     rl [user-deletes] :
         < O  : Client | content : C S C', seqNo : N, out : Q, in : Q' >
         < O' : Server | clients : CS >
+        next S'
       =>
         < O  : Client | content : C S C', seqNo : s N , out :
                         (del(1, size(C), N) from O to O') ~ Q, in : Q' >
-        < O' : Server | clients : CS > .
+        < O' : Server | clients : CS >
+        next s S' .
 
     rl [user-receive] :
         < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O) >
