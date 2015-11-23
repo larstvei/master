@@ -25,13 +25,14 @@ endm
 mod MSG is
     including GLOBAL .
 
-    sorts MsgContent .
+    sort MsgContent .
 
-    op ack : -> MsgContent [ctor] .
+    op ack : -> Msg [ctor] .
     op ins : Str Nat Nat -> MsgContent [ctor] .
     op del : Nat Nat Nat -> MsgContent [ctor] .
 
-    msg _from_to_ : MsgContent Oid Oid -> Msg .
+    msg _from_to_ : MsgContent Oid Oid -> Msg
+    [format (r d d d d o)] .
 endm
 
 mod QUEUE is
