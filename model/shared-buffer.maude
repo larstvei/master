@@ -149,7 +149,7 @@ mod CLIENT-RULES is
     rl [user-receive] :
         < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O) >
       =>
-        < O : Client | content : receive M C, seqNo : N, out : ack ~ Q', in : Q > .
+        < O : Client | content : receive M C, seqNo : N, out : Q', in : Q > .
 endm
 
 mod TEST is
