@@ -1,5 +1,5 @@
 view Oid from TRIV to CONFIGURATION is
-  sort Elt to Oid .
+    sort Elt to Oid .
 endv
 
 mod GLOBAL is
@@ -64,7 +64,7 @@ mod CLIENT is
     op del_at_in_ : Nat Nat    Content -> Content .
     op receive__  : MsgContent Content -> Content .
 
-    op <_: Client | content :_, seqNo :_, out :_, in :_, ops :_> :
+    op <_: Client | content :_, seqNo :_, out-channel :_, in-channel :_, operations-left :_> :
         Oid Content Nat MsgQueue MsgQueue Nat -> Object
         [format (n s s s s n++i s s s ni s s s ni s s s ni s s s ni-- s s s n)] .
 
@@ -101,16 +101,16 @@ mod SERVER-RULES is
     rl [server-receive] :
         < O  : Client | content : C,
                         seqNo : N,
-                        out : Q ~ (M from O to O'),
-                        in : Q',
-                        ops : N' >
+                        out-channel : Q ~ (M from O to O'),
+                        in-channel : Q',
+                        operations-left : N' >
         < O' : Server | clients : CS >
       =>
         < O  : Client | content : C,
                         seqNo : N,
-                        out : Q,
-                        in : Q',
-                        ops : N' >
+                        out-channel : Q,
+                        in-channel : Q',
+                        operations-left : N' >
         < O' : Server | clients : CS >
         multicast M from O' to CS .
 
@@ -118,16 +118,16 @@ mod SERVER-RULES is
 
     eq < O : Client | content : C,
                       seqNo : N,
-                      out : Q',
-                      in : Q,
-                      ops : N' >
+                      out-channel : Q',
+                      in-channel : Q,
+                      operations-left : N' >
         multicast M from O' to (O, CS)
       =
         < O : Client | content : C,
                        seqNo : N,
-                       out : Q',
-                       in : (M from O' to O) ~ Q,
-                       ops : N' >
+                       out-channel : Q',
+                       in-channel : (M from O' to O) ~ Q,
+                       operations-left : N' >
         multicast M from O' to CS .
 endm
 
@@ -146,47 +146,47 @@ mod CLIENT-RULES is
     rl [user-inserts] :
         < O  : Client | content : C C',
                         seqNo : N,
-                        out : Q,
-                        in : Q',
-                        ops : NZ >
+                        out-channel : Q,
+                        in-channel : Q',
+                        operations-left : NZ >
         < O' : Server | clients : CS >
         next S
       =>
         < O  : Client | content : C C',
                         seqNo : s N,
-                        out : (ins(S, size(C), N) from O to O') ~ Q,
-                        in : Q',
-                        ops : sd(NZ, 1) >
+                        out-channel : (ins(S, size(C), N) from O to O') ~ Q,
+                        in-channel : Q',
+                        operations-left : sd(NZ, 1) >
         < O' : Server | clients : CS >
         next s S .
 
     rl [user-deletes] :
         < O  : Client | content : C S C',
                         seqNo : N,
-                        out : Q,
-                        in : Q',
-                        ops : NZ >
+                        out-channel : Q,
+                        in-channel : Q',
+                        operations-left : NZ >
         < O' : Server | clients : CS >
       =>
         < O  : Client | content : C S C',
                         seqNo : s N ,
-                        out : (del(1, size(C), N) from O to O') ~ Q,
-                        in : Q',
-                        ops : sd(NZ, 1) >
+                        out-channel : (del(1, size(C), N) from O to O') ~ Q,
+                        in-channel : Q',
+                        operations-left : sd(NZ, 1) >
         < O' : Server | clients : CS > .
 
     rl [user-receive] :
         < O : Client | content : C,
                        seqNo : N,
-                       out : Q',
-                       in : Q ~ (M from O' to O),
-                       ops : N' >
+                       out-channel : Q',
+                       in-channel : Q ~ (M from O' to O),
+                       operations-left : N' >
       =>
         < O : Client | content : receive M C,
                        seqNo : N,
-                       out : Q',
-                       in : Q,
-                       ops : N' > .
+                       out-channel : Q',
+                       in-channel : Q,
+                       operations-left : N' > .
 endm
 
 mod TEST is
