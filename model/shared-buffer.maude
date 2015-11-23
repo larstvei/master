@@ -111,7 +111,7 @@ mod SERVER-RULES is
     eq < O : Client | content : C, seqNo : N, out : Q', in : Q >
         multicast M from O' to (O, CS)
       =
-       < O : Client | content : C, seqNo : N, out : Q, in : (M from O' to O) ~ Q >
+       < O : Client | content : C, seqNo : N, out : Q', in : (M from O' to O) ~ Q >
         multicast M from O' to CS .
 endm
 
