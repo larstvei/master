@@ -194,16 +194,25 @@ mod TEST is
 
     subsort String < Oid .
 
-    op init : Content -> Configuration .   --- a suitable initial state
+    op init__        : Content Set{Oid} -> Configuration .   --- a suitable initial state
+    op initclients__ : Content Set{Oid} -> Configuration .   --- a suitable initial state
 
+    var O  : Oid .
     var C  : Content .
+    var CS : Set{Oid} .
 
-    eq init(C) =
-        < "S"  : Server | clients : "C1" >
-        < "C1" : Client | content : C, seqNo : 0, out : empty, in : empty, ops : 3 >
-        --- < "C2" : Client | content : C, seqNo : 0, out : empty, in : empty, ops : 3 >
-        --- < "C3" : Client | content : C, seqNo : 0, out : empty, in : empty >
+    eq init C CS =
+        < "S" : Server | clients : CS >
+        (initclients C CS)
         next if C == nil then 0 else s(max(C)) fi .
+
+    eq initclients C empty   = none .
+    eq initclients C (O, CS) = initclients C CS .
+    < O : Client | content : C,
+                   seqNo : 0,
+                   out-channel : empty,
+                   in-channel : empty,
+                   operations-left : 3 >
 endm
 
 *** Commands:
