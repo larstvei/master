@@ -1,6 +1,3 @@
-load model-checker.maude .
-load prelude .
-
 view Oid from TRIV to CONFIGURATION is
   sort Elt to Oid .
 endv
