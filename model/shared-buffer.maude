@@ -99,19 +99,35 @@ mod SERVER-RULES is
     var  M    : MsgContent .
 
     rl [server-receive] :
-        < O  : Client | content : C, seqNo : N, out : Q ~ (M from O to O'), in : Q', ops : N' >
+        < O  : Client | content : C,
+                        seqNo : N,
+                        out : Q ~ (M from O to O'),
+                        in : Q',
+                        ops : N' >
         < O' : Server | clients : CS >
       =>
-        < O  : Client | content : C, seqNo : N, out : Q, in : Q', ops : N' >
+        < O  : Client | content : C,
+                        seqNo : N,
+                        out : Q,
+                        in : Q',
+                        ops : N' >
         < O' : Server | clients : CS >
         multicast M from O' to CS .
 
     eq multicast M from O' to empty = none .
 
-    eq < O : Client | content : C, seqNo : N, out : Q', in : Q, ops : N' >
+    eq < O : Client | content : C,
+                      seqNo : N,
+                      out : Q',
+                      in : Q,
+                      ops : N' >
         multicast M from O' to (O, CS)
       =
-       < O : Client | content : C, seqNo : N, out : Q', in : (M from O' to O) ~ Q, ops : N' >
+        < O : Client | content : C,
+                       seqNo : N,
+                       out : Q',
+                       in : (M from O' to O) ~ Q,
+                       ops : N' >
         multicast M from O' to CS .
 endm
 
@@ -128,28 +144,49 @@ mod CLIENT-RULES is
     var M     : MsgContent .
 
     rl [user-inserts] :
-        < O  : Client | content : C C', seqNo : N, out : Q, in : Q', ops : NZ >
+        < O  : Client | content : C C',
+                        seqNo : N,
+                        out : Q,
+                        in : Q',
+                        ops : NZ >
         < O' : Server | clients : CS >
         next S
       =>
-        < O  : Client | content : C C', seqNo : s N,
+        < O  : Client | content : C C',
+                        seqNo : s N,
                         out : (ins(S, size(C), N) from O to O') ~ Q,
-                        in : Q', ops : sd(NZ, 1) >
+                        in : Q',
+                        ops : sd(NZ, 1) >
         < O' : Server | clients : CS >
         next s S .
 
     rl [user-deletes] :
-        < O  : Client | content : C S C', seqNo : N, out : Q, in : Q', ops : NZ >
+        < O  : Client | content : C S C',
+                        seqNo : N,
+                        out : Q,
+                        in : Q',
+                        ops : NZ >
         < O' : Server | clients : CS >
       =>
-        < O  : Client | content : C S C', seqNo : s N , out :
-                        (del(1, size(C), N) from O to O') ~ Q, in : Q', ops : sd(NZ, 1) >
+        < O  : Client | content : C S C',
+                        seqNo : s N ,
+                        out : (del(1, size(C), N) from O to O') ~ Q,
+                        in : Q',
+                        ops : sd(NZ, 1) >
         < O' : Server | clients : CS > .
 
     rl [user-receive] :
-        < O : Client | content : C, seqNo : N, out : Q', in : Q ~ (M from O' to O), ops : N' >
+        < O : Client | content : C,
+                       seqNo : N,
+                       out : Q',
+                       in : Q ~ (M from O' to O),
+                       ops : N' >
       =>
-        < O : Client | content : receive M C, seqNo : N, out : Q', in : Q, ops : N' > .
+        < O : Client | content : receive M C,
+                       seqNo : N,
+                       out : Q',
+                       in : Q,
+                       ops : N' > .
 endm
 
 mod TEST is
