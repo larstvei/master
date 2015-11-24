@@ -1,3 +1,5 @@
+load model-checker .
+
 view Oid from TRIV to CONFIGURATION is
     sort Elt to Oid .
 endv
@@ -199,6 +201,7 @@ mod TEST is
 
     var O  : Oid .
     var C  : Content .
+    var CF : Configuration .
     var CS : Set{Oid} .
 
     eq init C CS =
@@ -207,12 +210,48 @@ mod TEST is
         next if C == nil then 0 else s(max(C)) fi .
 
     eq initclients C empty   = none .
-    eq initclients C (O, CS) = initclients C CS .
-    < O : Client | content : C,
-                   seqNo : 0,
-                   out-channel : empty,
-                   in-channel : empty,
-                   operations-left : 3 >
+    eq initclients C (O, CS) =
+        < O : Client | content : C,
+                       seqNo : 0,
+                       out-channel : empty,
+                       in-channel : empty,
+                       operations-left : 3 >
+        (initclients C CS) .
+endm
+
+mod PREDICATES is
+    including TEST .
+    including SATISFACTION .
+    including MODEL-CHECKER .
+    including LTL-SIMPLIFIER .
+
+    subsort Configuration < State .
+
+    ops consistent inconsistent : -> Prop .
+
+    vars C C'          : Content .
+    vars O O'          : Oid .
+    vars N N' N'' N''' : Nat .
+    vars Q Q' Q'' Q''' : MsgQueue .
+    var  CF            : Configuration .
+
+    ceq < O  : Client | content : C,
+                        seqNo : N,
+                        out-channel : Q,
+                        in-channel : Q',
+                        operations-left : N' >
+        < O' : Client | content : C',
+                        seqNo : N'',
+                        out-channel : Q'',
+                        in-channel : Q''',
+                        operations-left : N''' >
+        CF |= inconsistent = true if C =/= C' .
+
+    eq CF |= inconsistent = false [owise] .
+
+    eq CF |= consistent = not CF |= inconsistent .
+
+    eq CF |= inconsistent = false [owise] .
 endm
 
 *** Commands:
@@ -220,9 +259,24 @@ endm
 --- frew[10] init(nil) .
 
 --- Finds example after 9 steps
-search[1] init(nil) =>*
-< "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
-                  seqNo   : N:Nat,
-                  out     : Q:MsgQueue,
-                  in      : Q':MsgQueue,
-                  ops     : N':Nat > C:Configuration .
+--- search[1] init nil "C1" =>*
+--- < "C1" : Client | content         : (head(nil)(ins S:Str at 0 in tail(nil))),
+---                   seqNo           : N:Nat,
+---                   out-channel     : Q:MsgQueue,
+---                   in-channel      : Q':MsgQueue,
+---                   operations-left : N':Nat > C:Configuration .
+
+--- search[1]
+---     next 0
+---     < "S"  : Server | clients : "C1", "C2" >
+---     < "C1" : Client | content : nil, seqNo : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
+---     < "C2" : Client | content : nil, seqNo : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
+---   =>*
+---     < "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
+---                       seqNo   : N:Nat,
+---                       out     : Q:MsgQueue,
+---                       in      : Q':MsgQueue,
+---                       operations-left     : N':Nat > C:Configuration .
+
+--- red modelCheck(init nil ("C1", "C2"), (inconsistent -> <> consistent)) .
+red modelCheck(init nil ("C1", "C2"), [] <> consistent ) .
