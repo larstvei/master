@@ -1,4 +1,4 @@
-load model-checker .
+load model-checker
 
 view Oid from TRIV to CONFIGURATION is
     sort Elt to Oid .
@@ -46,29 +46,15 @@ mod QUEUE is
     op _~_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
 endm
 
-mod SERVER is
+mod OPERATIONS is
     including QUEUE .
-    including SET{Oid} .
 
-    sort Server .
-
-    op <_: Server | clients :_> : Oid Set{Oid} -> Object
-        [format (n s s s s s s s s n)] .
-endm
-
-mod CLIENT is
-    including SERVER .
-
-    sorts Client Content .
+    sort Content .
     subsort List{Nat} < Content .
 
     op ins_at_in_ : Str Nat    Content -> Content .
     op del_at_in_ : Nat Nat    Content -> Content .
     op receive__  : MsgContent Content -> Content .
-
-    op <_: Client | content :_, seqNo :_, out-channel :_, in-channel :_, operations-left :_> :
-        Oid Content Nat MsgQueue MsgQueue Nat -> Object
-        [format (n s s s s n++i s s s ni s s s ni s s s ni s s s ni-- s s s n)] .
 
     var C      : Content .
     var S      : Str .
@@ -85,6 +71,26 @@ mod CLIENT is
     eq receive del(M,I,N) C = del M at I in C .
 endm
 
+mod SERVER is
+    including OPERATIONS .
+    including SET{Oid} .
+
+    sort Server .
+
+    op <_: Server | content :_, clients :_ > : Oid Content Set{Oid} -> Object
+        [format (n s s s s n++i s s s ni-- s s s n)] .
+endm
+
+mod CLIENT is
+    including SERVER .
+
+    sort Client .
+
+    op <_: Client | content :_, seqNo :_, out-channel :_, in-channel :_, operations-left :_> :
+        Oid Content Nat MsgQueue MsgQueue Nat -> Object
+        [format (n s s s s n++i s s s ni s s s ni s s s ni s s s ni-- s s s n)] .
+endm
+
 mod SERVER-RULES is
     including CLIENT .
 
@@ -94,9 +100,9 @@ mod SERVER-RULES is
     op multicast_from_to_ : MsgContent Oid Set{Oid} -> Multicast .
 
     vars Q Q' : MsgQueue .
+    vars C C' : Content .
     vars O O' : Oid .
     vars N N' : Nat .
-    var  C    : Content .
     var  CS   : Set{Oid} .
     var  M    : MsgContent .
 
@@ -106,14 +112,16 @@ mod SERVER-RULES is
                         out-channel : Q ~ (M from O to O'),
                         in-channel : Q',
                         operations-left : N' >
-        < O' : Server | clients : O, CS >
+        < O' : Server | content : C',
+                        clients : O, CS >
       =>
         < O  : Client | content : C,
                         seqNo : N,
                         out-channel : Q,
                         in-channel : Q',
                         operations-left : N' >
-        < O' : Server | clients : O, CS >
+        < O' : Server | content : receive M C',
+                        clients : O, CS >
         multicast M from O' to CS .
 
     eq multicast M from O' to empty = none .
@@ -136,14 +144,14 @@ endm
 mod CLIENT-RULES is
     including SERVER-RULES .
 
-    vars O O' : Oid .
-    vars N N' : Nat .
-    vars S S' : Str .
-    vars C C' : Content .
-    vars Q Q' : MsgQueue .
-    var CS    : Set{Oid} .
-    var NZ    : NzNat .
-    var M     : MsgContent .
+    vars C C' C'' : Content .
+    vars O O'     : Oid .
+    vars N N'     : Nat .
+    vars S S'     : Str .
+    vars Q Q'     : MsgQueue .
+    var CS        : Set{Oid} .
+    var NZ        : NzNat .
+    var M         : MsgContent .
 
     rl [user-inserts] :
         < O  : Client | content : C C',
@@ -151,7 +159,8 @@ mod CLIENT-RULES is
                         out-channel : Q,
                         in-channel : Q',
                         operations-left : NZ >
-        < O' : Server | clients : CS >
+        < O' : Server | content : C'',
+                        clients : CS >
         next S
       =>
         < O  : Client | content : C S C',
@@ -159,7 +168,8 @@ mod CLIENT-RULES is
                         out-channel : (ins(S, size(C), N) from O to O') ~ Q,
                         in-channel : Q',
                         operations-left : sd(NZ, 1) >
-        < O' : Server | clients : CS >
+        < O' : Server | content : C'',
+                        clients : CS >
         next s S .
 
     rl [user-deletes] :
@@ -168,14 +178,16 @@ mod CLIENT-RULES is
                         out-channel : Q,
                         in-channel : Q',
                         operations-left : NZ >
-        < O' : Server | clients : CS >
+        < O' : Server | content : C'',
+                        clients : CS >
       =>
         < O  : Client | content : C C',
                         seqNo : s N ,
                         out-channel : (del(1, size(C), N) from O to O') ~ Q,
                         in-channel : Q',
                         operations-left : sd(NZ, 1) >
-        < O' : Server | clients : CS > .
+        < O' : Server | content : C'',
+                        clients : CS > .
 
     rl [user-receive] :
         < O : Client | content : C,
@@ -205,7 +217,8 @@ mod TEST is
     var CS : Set{Oid} .
 
     eq init C CS =
-        < "S" : Server | clients : CS >
+        < "S" : Server | content : C,
+                         clients : CS >
         (initclients C CS)
         next if C == nil then 0 else s(max(C)) fi .
 
