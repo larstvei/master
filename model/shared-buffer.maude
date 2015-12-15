@@ -256,8 +256,6 @@ mod PREDICATES is
     eq CF |= inconsistent = false [owise] .
 
     eq CF |= consistent = not CF |= inconsistent .
-
-    eq CF |= inconsistent = false [owise] .
 endm
 
 *** Commands:
