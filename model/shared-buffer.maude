@@ -27,13 +27,13 @@ endm
 mod MSG is
     including GLOBAL .
 
-    sort MsgContent .
+    sort Operation .
 
     op ack : -> Msg [ctor] .
-    op ins : Str Nat Nat -> MsgContent [ctor] .
-    op del : Nat Nat Nat -> MsgContent [ctor] .
+    op ins : Str Nat Nat -> Operation [ctor] .
+    op del : Nat Nat Nat -> Operation [ctor] .
 
-    msg _from_to_ : MsgContent Oid Oid -> Msg
+    msg _from_to_ : Operation Oid Oid -> Msg
     [format (r d d d d o)] .
 endm
 
@@ -52,9 +52,9 @@ mod OPERATIONS is
     sort Content .
     subsort List{Nat} < Content .
 
-    op ins_at_in_ : Str Nat    Content -> Content .
-    op del_at_in_ : Nat Nat    Content -> Content .
-    op receive__  : MsgContent Content -> Content .
+    op ins_at_in_  : Str Nat    Content   -> Content .
+    op del_at_in_  : Nat Nat    Content   -> Content .
+    op receive__   : Operation  Content   -> Content .
 
     var C      : Content .
     var S      : Str .
@@ -97,14 +97,14 @@ mod SERVER-RULES is
     sort Multicast .
     subsort Multicast < Configuration .
 
-    op multicast_from_to_ : MsgContent Oid Set{Oid} -> Multicast .
+    op multicast_from_to_ : Operation Oid Set{Oid} -> Multicast .
 
     vars Q Q' : MsgQueue .
     vars O O' : Oid .
     vars N N' : Nat .
     var  CS   : Set{Oid} .
     var  C    : Content .
-    var  M    : MsgContent .
+    var  M    : Operation .
 
     rl [server-receive] :
         < O  : Client | content : C,
@@ -149,7 +149,7 @@ mod CLIENT-RULES is
     vars Q Q'     : MsgQueue .
     var CS        : Set{Oid} .
     var NZ        : NzNat .
-    var M         : MsgContent .
+    var M         : Operation .
 
     rl [user-inserts] :
         < O  : Client | content : C C',
