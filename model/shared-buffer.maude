@@ -254,12 +254,14 @@ mod PREDICATES is
     subsort Configuration < State .
 
     ops consistent inconsistent : -> Prop .
+    op  ot-function : -> Prop .
 
     vars C C'          : Content .
     vars O O'          : Oid .
     vars N N' N'' N''' : Nat .
     vars Q Q' Q'' Q''' : MsgQueue .
     var  CF            : Configuration .
+    vars OI OJ : Operation .
 
     ceq < O  : Client | content : C,
                         seqNo : N,
@@ -276,6 +278,23 @@ mod PREDICATES is
     eq CF |= inconsistent = false [owise] .
 
     eq CF |= consistent = not CF |= inconsistent .
+
+    ceq < O  : Client | content : receive (transform OI OJ) (receive OJ C),
+                        seqNo : N,
+                        out-channel : Q,
+                        in-channel : Q',
+                        operations-left : N' >
+        < O' : Client | content : receive (transform OJ OI) (receive OI C),
+                        seqNo : N'',
+                        out-channel : Q'',
+                        in-channel : Q''',
+                        operations-left : N''' >
+        CF |= ot-function = true
+      if receive (transform OI OJ) (receive OJ C) ==
+          receive (transform OJ OI) (receive OI C) .
+
+    eq CF |= ot-function = false [owise] .
+endm
 endm
 
 *** Commands:
