@@ -30,6 +30,7 @@ mod MSG is
     sort Operation .
 
     op ack : -> Msg [ctor] .
+    op nop : -> Operation [ctor] .
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
 
@@ -55,10 +56,12 @@ mod OPERATIONS is
     op ins_at_in_  : Str Nat    Content   -> Content .
     op del_at_in_  : Nat Nat    Content   -> Content .
     op receive__   : Operation  Content   -> Content .
+    op transform__ : Operation  Operation -> Operation .
 
-    var C      : Content .
-    var S      : Str .
-    vars I M N : Nat .
+    var C               : Content .
+    vars S S'           : Str .
+    vars O O'           : Operation .
+    vars I I' M M' N N' : Nat .
 
     eq ins S at 0 in C   = S C .
     eq ins S at s I in C = head(C) (ins S at I in tail(C)) .
@@ -67,8 +70,25 @@ mod OPERATIONS is
     eq del 1 at 0 in C   = tail(C) .
     eq del 1 at s I in C = head(C) (del 1 at I in tail(C)) .
 
+    eq receive nop C = C .
     eq receive ins(S,I,N) C = ins S at I in C .
     eq receive del(M,I,N) C = del M at I in C .
+
+    ceq transform ins(S,I,N) ins(S',I',N') = ins(S,I,N) if I < I' .
+    ceq transform ins(S,I,N) ins(S',I',N') = ins(S,s I,N) if I > I' .
+    ceq transform ins(S,I,N) ins(S',I',N') = ins(S,s I,N) if N > N' .
+    eq  transform ins(S,I,N) ins(S',I',N') = ins(S,I,N) [owise] .
+
+    ceq transform ins(S,I,N) del(M,I',N') = ins(S,I,N) if I < I' .
+    eq  transform ins(S,I,N) del(M,I',N') = ins(S,sd(I,1),N) [owise] .
+
+    ceq transform del(M,I,N) ins(S,I',N') = del(M,I,N) if I < I' .
+    eq  transform del(M,I,N) ins(S,I',N') = del(M,s I,N) [owise] .
+
+    ceq transform del(M,I,N) del(M',I',N') = del(M,I,N) if I < I' .
+    ceq transform del(M,I,N) del(M',I',N') = del(M,sd(I,1),N) if I > I' .
+
+    eq  transform O O' = nop [owise] .
 endm
 
 mod SERVER is
