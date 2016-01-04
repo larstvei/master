@@ -302,6 +302,46 @@ mod PREDICATES is
 
     eq S |= ot-function = true [owise] .
 endm
+
+mod LOOP-STATE is
+    including PREDICATES .
+
+    op endstate : Configuration -> Bool .
+    op wraparound : Configuration -> Configuration .
+
+    vars CF I : Configuration .
+    vars Q Q' : MsgQueue .
+    vars M M' : Msg .
+    vars N N' : Nat .
+    var O     : Oid .
+    var NZ    : NzNat .
+    var C     : Content .
+    var CS    : Set{Oid} .
+
+    eq endstate(< O : Client | content : C,
+                               seqNo : N,
+                               out-channel : Q,
+                               in-channel : Q',
+                               operations-left : NZ > CF) = false .
+
+    eq endstate( < O : Client | content : C,
+                                seqNo : N,
+                                out-channel : M ~ Q,
+                                in-channel : Q',
+                                operations-left : 0 > CF) = false .
+
+    eq endstate( < O : Client | content : C,
+                                seqNo : N,
+                                out-channel : Q,
+                                in-channel : M ~ Q',
+                                operations-left : 0 > CF) = false .
+
+    eq endstate(CF) = true [owise] .
+
+    crl { < O : Server | clients : CS > CF }
+      =>
+        init nil CS
+      if endstate(CF) and ({ < O : Server | clients : CS > CF } |= consistent) .
 endm
 
 *** Commands:
