@@ -267,39 +267,40 @@ mod PREDICATES is
     vars N N' N'' N''' : Nat .
     vars Q Q' Q'' Q''' : MsgQueue .
     var  CF            : Configuration .
+    var  S             : System .
     vars OI OJ : Operation .
 
-    ceq < O  : Client | content : C,
-                        seqNo : N,
-                        out-channel : Q,
-                        in-channel : Q',
-                        operations-left : N' >
-        < O' : Client | content : C',
-                        seqNo : N'',
-                        out-channel : Q'',
-                        in-channel : Q''',
-                        operations-left : N''' >
-        CF |= inconsistent = true if C =/= C' .
+    ceq { < O  : Client | content : C,
+                          seqNo : N,
+                          out-channel : Q,
+                          in-channel : Q',
+                          operations-left : N' >
+          < O' : Client | content : C',
+                          seqNo : N'',
+                          out-channel : Q'',
+                          in-channel : Q''',
+                          operations-left : N''' >
+          CF } |= inconsistent = true if C =/= C' .
 
-    eq CF |= inconsistent = false [owise] .
+    eq S |= inconsistent = false [owise] .
 
-    eq CF |= consistent = not CF |= inconsistent .
+    eq S |= consistent = not S |= inconsistent .
 
-    ceq < O  : Client | content : receive (transform OI OJ) (receive OJ C),
-                        seqNo : N,
-                        out-channel : Q,
-                        in-channel : Q',
-                        operations-left : N' >
-        < O' : Client | content : receive (transform OJ OI) (receive OI C),
-                        seqNo : N'',
-                        out-channel : Q'',
-                        in-channel : Q''',
-                        operations-left : N''' >
-        CF |= ot-function = true
-      if receive (transform OI OJ) (receive OJ C) ==
-          receive (transform OJ OI) (receive OI C) .
+    ceq { < O  : Client | content : receive (transform OI OJ) (receive OJ C),
+                          seqNo : N,
+                          out-channel : Q,
+                          in-channel : Q',
+                          operations-left : N' >
+          < O' : Client | content : receive (transform OJ OI) (receive OI C),
+                          seqNo : N'',
+                          out-channel : Q'',
+                          in-channel : Q''',
+                          operations-left : N''' >
+          CF } |= ot-function = false
+        if receive (transform OI OJ) (receive OJ C) =/=
+            receive (transform OJ OI) (receive OI C) .
 
-    eq CF |= ot-function = false [owise] .
+    eq S |= ot-function = true [owise] .
 endm
 endm
 
