@@ -32,10 +32,17 @@ mod MSG is
 
     sort Operation .
 
-    op ack : -> Msg [ctor] .
+    op ack : Nat -> Msg [ctor] .
     op nop : -> Operation [ctor] .
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
+    op seq : Operation -> Nat .
+
+    var S       : Str .
+    vars I N N' : Nat .
+
+    eq seq(ins(S,N',N)) = N .
+    eq seq(del(N',I,N)) = N .
 
     msg _from_to_ : Operation Oid Oid -> Msg
     [format (r d d d d o)] .
@@ -215,7 +222,7 @@ mod CLIENT-RULES is
       =>
         < O : Client | content : receive M C,
                        seqNo : N,
-                       out-channel : Q',
+                       out-channel : ack(seq(M)) ~ Q',
                        in-channel : Q,
                        operations-left : N' > .
 endm
@@ -307,7 +314,6 @@ mod LOOP-STATE is
     including PREDICATES .
 
     op endstate : Configuration -> Bool .
-    op wraparound : Configuration -> Configuration .
 
     vars CF I : Configuration .
     vars Q Q' : MsgQueue .
