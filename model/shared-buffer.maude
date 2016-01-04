@@ -9,13 +9,16 @@ mod GLOBAL is
     including LIST{Nat} .
     including CONFIGURATION .
     including STRING .
-    sorts NextStr Str .
-    subsort NextStr < Configuration .
-    subsort Nat < Str .
-    subsort String < Oid .
 
-    op next_ : Str       -> NextStr [format (n s n)] .
-    op max   : List{Nat} -> Nat .
+    sorts NextStr Str System .
+
+    subsort  Nat             < Str .
+    subsort  String          < Oid .
+    subsorts NextStr System  < Configuration .
+
+    op {_}   : Configuration -> System .
+    op max   : List{Nat}     -> Nat .
+    op next_ : Str           -> NextStr [format (n s n)] .
 
     var N : Nat .
     var L : List{Nat} .
@@ -231,9 +234,9 @@ mod TEST is
     var CS : Set{Oid} .
 
     eq init C CS =
-        < "S" : Server | clients : CS >
-        (initclients C CS)
-        next if C == nil then 0 else s(max(C)) fi .
+        { < "S" : Server | clients : CS >
+          (initclients C CS)
+          next if C == nil then 0 else s(max(C)) fi } .
 
     eq initclients C empty   = none .
     eq initclients C (O, CS) =
