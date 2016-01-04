@@ -349,30 +349,3 @@ mod LOOP-STATE is
         init nil CS
       if endstate(CF) and ({ < O : Server | clients : CS > CF } |= consistent) .
 endm
-
-*** Commands:
-
---- frew[10] init(nil) .
-
---- Finds example after 9 steps
---- search[1] init nil "C1" =>*
---- < "C1" : Client | content         : (head(nil)(ins S:Str at 0 in tail(nil))),
----                   seqNo           : N:Nat,
----                   out-channel     : Q:MsgQueue,
----                   in-channel      : Q':MsgQueue,
----                   operations-left : N':Nat > C:Configuration .
-
---- search[1]
----     next 0
----     < "S"  : Server | clients : "C1", "C2" >
----     < "C1" : Client | content : nil, seqNo : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
----     < "C2" : Client | content : nil, seqNo : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
----   =>*
----     < "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
----                       seqNo   : N:Nat,
----                       out     : Q:MsgQueue,
----                       in      : Q':MsgQueue,
----                       operations-left     : N':Nat > C:Configuration .
-
---- red modelCheck(init nil ("C1", "C2"), (inconsistent -> <> consistent)) .
-red modelCheck(init nil ("C1", "C2"), [] <> consistent ) .
