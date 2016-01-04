@@ -225,13 +225,16 @@ mod TEST is
 
     subsort String < Oid .
 
-    op init__        : Content Set{Oid} -> Configuration .   --- a suitable initial state
-    op initclients__ : Content Set{Oid} -> Configuration .   --- a suitable initial state
+    op init          :                  -> Configuration .
+    op init__        : Content Set{Oid} -> Configuration .
+    op initclients__ : Content Set{Oid} -> Configuration .
 
     var O  : Oid .
     var C  : Content .
     var CF : Configuration .
     var CS : Set{Oid} .
+
+    eq init = init nil ("C1","C2") .
 
     eq init C CS =
         { < "S" : Server | clients : CS >
