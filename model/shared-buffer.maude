@@ -120,20 +120,20 @@ mod SERVER is
     including OPERATIONS .
     including SET{Oid} .
 
-    sort Server .
+    op Server : -> Cid .
+    op clients :_ : Set{Clientdata} -> Attribute .
 
-    op <_: Server | clients :_ > : Oid Set{Oid} -> Object
-        [format (n s s s s s s s s n)] .
 endm
 
 mod CLIENT is
     including SERVER .
 
-    sort Client .
-
-    op <_: Client | content :_, seqNo :_, out-channel :_, in-channel :_, operations-left :_> :
-        Oid Content Nat MsgQueue MsgQueue Nat -> Object
-        [format (n s s s s n++i s s s ni s s s ni s s s ni s s s ni-- s s s n)] .
+    op Client : -> Cid .
+    op content :_     : Content -> Attribute .
+    op seqNo :_       : Nat     -> Attribute .
+    op out-channel :_ : MsgQueue -> Attribute .
+    op in-channel :_  : MsgQueue -> Attribute .
+    op operations-left :_ : Nat -> Attribute .
 endm
 
 mod SERVER-RULES is
