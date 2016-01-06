@@ -291,40 +291,23 @@ mod PREDICATES is
     ops consistent inconsistent : -> Prop .
     op  ot-function : -> Prop .
 
-    vars C C'          : Content .
-    vars O O'          : Oid .
-    vars N N' N'' N''' : Nat .
-    vars Q Q' Q'' Q''' : MsgQueue .
-    var  CF            : Configuration .
-    var  S             : System .
+    vars A A'  : AttributeSet .
+    vars C C'  : Content .
+    vars O O'  : Oid .
     vars OI OJ : Operation .
+    var  CF    : Configuration .
+    var  S     : System .
 
-    ceq { < O  : Client | content : C,
-                          seqNo : N,
-                          out-channel : Q,
-                          in-channel : Q',
-                          operations-left : N' >
-          < O' : Client | content : C',
-                          seqNo : N'',
-                          out-channel : Q'',
-                          in-channel : Q''',
-                          operations-left : N''' >
+    ceq { < O  : Client | content : C,  A  >
+          < O' : Client | content : C', A' >
           CF } |= inconsistent = true if C =/= C' .
 
     eq S |= inconsistent = false [owise] .
 
     eq S |= consistent = not S |= inconsistent .
 
-    ceq { < O  : Client | content : receive (transform OI OJ) (receive OJ C),
-                          seqNo : N,
-                          out-channel : Q,
-                          in-channel : Q',
-                          operations-left : N' >
-          < O' : Client | content : receive (transform OJ OI) (receive OI C),
-                          seqNo : N'',
-                          out-channel : Q'',
-                          in-channel : Q''',
-                          operations-left : N''' >
+    ceq { < O  : Client | content : (receive (transform OI OJ) (receive OJ C)), A >
+          < O' : Client | content : (receive (transform OJ OI) (receive OI C)), A >
           CF } |= ot-function = false
         if receive (transform OI OJ) (receive OJ C) =/=
             receive (transform OJ OI) (receive OI C) .
