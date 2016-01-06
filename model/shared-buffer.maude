@@ -31,14 +31,7 @@ mod GLOBAL is
     subsorts NextStr System  < Configuration .
 
     op {_}   : Configuration -> System .
-    op max   : List{Nat}     -> Nat .
     op next_ : Str           -> NextStr [format (n s n)] .
-
-    var N : Nat .
-    var L : List{Nat} .
-
-    eq max(N)   = N .
-    eq max(N L) = if N > max(L) then N else max(L) fi .
 endm
 
 mod MSG is
@@ -247,16 +240,22 @@ mod TEST is
 
     subsort String < Oid .
 
+    op max           : List{Nat}        -> Nat .
     op init          :                  -> Configuration .
     op init__        : Content Set{Oid} -> Configuration .
     op initclients__ : Content Set{Oid} -> Configuration .
     op initclients_  : Set{Oid}         -> Set{Clientdata} .
 
+    var N  : Nat .
     var O  : Oid .
     var C  : Content .
+    var L  : List{Nat} .
     var CF : Configuration .
     var OS : Set{Oid} .
     var CS : Set{Clientdata} .
+
+    eq max(N)   = N .
+    eq max(N L) = if N > max(L) then N else max(L) fi .
 
     eq init = init nil ("C1","C2") .
 
