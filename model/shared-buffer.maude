@@ -21,7 +21,6 @@ endv
 
 mod GLOBAL is
     including NAT .
-    including LIST{Nat} .
     including CONFIGURATION .
     including STRING .
 
@@ -74,6 +73,7 @@ endm
 
 mod OPERATIONS is
     including QUEUE .
+    including LIST{Nat} .
 
     sort Content .
     subsort List{Nat} < Content .
