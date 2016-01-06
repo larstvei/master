@@ -195,59 +195,51 @@ endm
 mod CLIENT-RULES is
     including SERVER-RULES .
 
-    vars C C'     : Content .
-    vars O O'     : Oid .
-    vars N N'     : Nat .
-    vars S S'     : Str .
-    vars Q Q'     : MsgQueue .
-    var CS        : Set{Oid} .
-    var NZ        : NzNat .
-    var M         : Operation .
+    vars A A' : AttributeSet .
+    vars C C' : Content .
+    vars O O' : Oid .
+    vars Q Q' : MsgQueue .
+    var  NZ   : NzNat .
+    var  M    : Operation .
+    var  N    : Nat .
+    var  S    : Str .
 
     rl [user-inserts] :
-        < O  : Client | content : C C',
+        < O  : Client | content : (C C'),
                         seqNo : N,
                         out-channel : Q,
-                        in-channel : Q',
-                        operations-left : NZ >
-        < O' : Server | clients : CS >
+                        operations-left : NZ, A >
+        < O' : Server | A' >
         next S
       =>
-        < O  : Client | content : C S C',
+        < O  : Client | content : (C S C'),
                         seqNo : s N,
-                        out-channel : (ins(S, size(C), N) from O to O') ~ Q,
-                        in-channel : Q',
-                        operations-left : sd(NZ, 1) >
-        < O' : Server | clients : CS >
+                        out-channel : ((ins(S, size(C), N) from O to O') ~ Q),
+                        operations-left : sd(NZ, 1), A >
+        < O' : Server | A' >
         next s S .
 
     rl [user-deletes] :
-        < O  : Client | content : C S C',
+        < O  : Client | content : (C S C'),
                         seqNo : N,
                         out-channel : Q,
-                        in-channel : Q',
-                        operations-left : NZ >
-        < O' : Server | clients : CS >
+                        operations-left : NZ, A >
+        < O' : Server | A' >
       =>
-        < O  : Client | content : C C',
+        < O  : Client | content : (C C'),
                         seqNo : s N,
-                        out-channel : (del(1, size(C), N) from O to O') ~ Q,
-                        in-channel : Q',
-                        operations-left : sd(NZ, 1) >
-        < O' : Server | clients : CS > .
+                        out-channel : ((del(1, size(C), N) from O to O') ~ Q),
+                        operations-left : sd(NZ, 1), A >
+        < O' : Server | A' > .
 
     rl [user-receive] :
         < O : Client | content : C,
-                       seqNo : N,
                        out-channel : Q',
-                       in-channel : Q ~ (M from O' to O),
-                       operations-left : N' >
+                       in-channel : (Q ~ (M from O' to O)), A >
       =>
-        < O : Client | content : receive M C,
-                       seqNo : N,
-                       out-channel : ack(seq(M)) ~ Q',
-                       in-channel : Q,
-                       operations-left : N' > .
+        < O : Client | content : (receive M C),
+                       out-channel : (ack(seq(M)) ~ Q'),
+                       in-channel : Q, A > .
 endm
 
 mod TEST is
