@@ -168,44 +168,28 @@ mod SERVER-RULES is
 
     op multicast_from_to_ : Operation Oid Set{Oid} -> Multicast .
 
-    vars Q Q' : MsgQueue .
+    vars A A' : AttributeSet .
     vars O O' : Oid .
-    vars N N' : Nat .
-    var  CS   : Set{Oid} .
-    var  C    : Content .
+    var  OS   : Set{Oid} .
+    var  CS   : Set{Clientdata} .
+    var  Q    : MsgQueue .
     var  M    : Operation .
 
     rl [server-receive] :
-        < O  : Client | content : C,
-                        seqNo : N,
-                        out-channel : Q ~ (M from O to O'),
-                        in-channel : Q',
-                        operations-left : N' >
-        < O' : Server | clients : O, CS >
+        < O  : Client | out-channel : (Q ~ (M from O to O')), A >
+        < O' : Server | clients : (< O | A' >, CS) >
       =>
-        < O  : Client | content : C,
-                        seqNo : N,
-                        out-channel : Q,
-                        in-channel : Q',
-                        operations-left : N' >
-        < O' : Server | clients : O, CS >
-        multicast M from O' to CS .
+        < O  : Client | out-channel : Q, A >
+        < O' : Server | clients : (< O | A' >, CS) >
+        multicast M from O' to oids(CS) .
 
     eq multicast M from O' to empty = none .
 
-    eq < O : Client | content : C,
-                      seqNo : N,
-                      out-channel : Q',
-                      in-channel : Q,
-                      operations-left : N' >
-        multicast M from O' to (O, CS)
+    eq < O : Client | in-channel : Q, A >
+        multicast M from O' to (O, OS)
       =
-        < O : Client | content : C,
-                       seqNo : N,
-                       out-channel : Q',
-                       in-channel : (M from O' to O) ~ Q,
-                       operations-left : N' >
-        multicast M from O' to CS .
+        < O : Client | in-channel : ((M from O' to O) ~ Q), A >
+        multicast M from O' to OS .
 endm
 
 mod CLIENT-RULES is
