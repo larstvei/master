@@ -116,13 +116,37 @@ mod OPERATIONS is
     eq  transform O O' = nop [owise] .
 endm
 
-mod SERVER is
+mod CLIENTDATA is
     including OPERATIONS .
+
+    sort Clientdata .
+
+    op <_ | _ > : Oid AttributeSet -> Clientdata .
+    op ackedSeqNo :_ : Nat -> Attribute .
+    op in-queue   :_ : MsgQueue -> Attribute .
+    op out-queue  :_ : MsgQueue -> Attribute .
+endm
+
+view Clientdata from TRIV to CLIENTDATA is
+    sort Elt to Clientdata .
+endv
+
+mod SERVER is
+    including CLIENTDATA .
     including SET{Oid} .
+    including SET{Clientdata} .
 
     op Server : -> Cid .
     op clients :_ : Set{Clientdata} -> Attribute .
 
+    op oids : Set{Clientdata} -> Set{Oid} .
+
+    var O  : Oid .
+    var A  : AttributeSet .
+    var CS : Set{Clientdata} .
+
+    eq oids(empty) = empty .
+    eq oids((< O | A > , CS)) = O, oids(CS) .
 endm
 
 mod CLIENT is
