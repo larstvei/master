@@ -320,37 +320,21 @@ mod LOOP-STATE is
 
     op endstate : Configuration -> Bool .
 
-    vars CF I : Configuration .
     vars Q Q' : MsgQueue .
-    vars M M' : Msg .
-    vars N N' : Nat .
     var O     : Oid .
+    var A     : AttributeSet .
+    var M     : Msg .
+    var CF    : Configuration .
+    var CS    : Set{Clientdata} .
     var NZ    : NzNat .
-    var C     : Content .
-    var CS    : Set{Oid} .
 
-    eq endstate(< O : Client | content : C,
-                               seqNo : N,
-                               out-channel : Q,
-                               in-channel : Q',
-                               operations-left : NZ > CF) = false .
-
-    eq endstate( < O : Client | content : C,
-                                seqNo : N,
-                                out-channel : M ~ Q,
-                                in-channel : Q',
-                                operations-left : 0 > CF) = false .
-
-    eq endstate( < O : Client | content : C,
-                                seqNo : N,
-                                out-channel : Q,
-                                in-channel : M ~ Q',
-                                operations-left : 0 > CF) = false .
-
+    eq endstate(< O : Client | operations-left : NZ, A > CF)  = false .
+    eq endstate(< O : Client | out-channel : (M ~ Q), A > CF) = false .
+    eq endstate(< O : Client | in-channel : (M ~ Q'), A > CF) = false .
     eq endstate(CF) = true [owise] .
 
     crl { < O : Server | clients : CS > CF }
       =>
-        init nil CS
+        init nil oids(CS)
       if endstate(CF) and ({ < O : Server | clients : CS > CF } |= consistent) .
 endm
