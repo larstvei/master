@@ -56,12 +56,16 @@ mod MSG is
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
     op seq : Operation -> Nat .
+    op assignSeqNo : Operation Nat -> Operation .
 
-    var S       : Str .
-    vars I N N' : Nat .
+    var S : Str .
+    vars I N N' N'' : Nat .
 
     eq seq(ins(S,N',N)) = N .
     eq seq(del(N',I,N)) = N .
+
+    eq assignSeqNo(ins(N', S, N''), N) = ins(N', S, N) .
+    eq assignSeqNo(del(N', I, N''), N) = del(N', I, N) .
 
     msg _from_to_ : Operation Oid Oid -> Msg
     [format (r d d d d o)] .
