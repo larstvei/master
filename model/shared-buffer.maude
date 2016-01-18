@@ -77,6 +77,10 @@ mod QUEUE is
     op _~_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
 endm
 
+view Operation from TRIV to MSG is
+    sort Elt to Operation .
+endv
+
 --- Operations works on buffers (NOTE: remember to rename). We have two types
 --- of operations, insertions and deletions. Operations can be received, if so,
 --- they are applied. Given two operations, they can be transformed in a way
@@ -89,14 +93,16 @@ mod OPERATIONS is
     sort Content .
     subsort List{Nat} < Content .
 
-    op ins_at_in_  : Str Nat    Content   -> Content .
-    op del_at_in_  : Nat Nat    Content   -> Content .
-    op receive__   : Operation  Content   -> Content .
-    op transform__ : Operation  Operation -> Operation .
+    op ins_at_in_      : Str Nat    Content        -> Content .
+    op del_at_in_      : Nat Nat    Content        -> Content .
+    op receive__       : Operation  Content        -> Content .
+    op transform__     : Operation  Operation      -> Operation .
+    op transformlist__ : Operation List{Operation} -> Operation .
 
     var C               : Content .
     vars S S'           : Str .
     vars O O'           : Operation .
+    vars OS             : List{Operation} .
     vars I I' M M' N N' : Nat .
 
     eq ins S at 0 in C   = S C .
@@ -125,6 +131,10 @@ mod OPERATIONS is
     ceq transform del(M,I,N) del(M',I',N') = del(M,sd(I,1),N) if I > I' .
 
     eq  transform O O' = nop [owise] .
+
+    eq transformlist O nil     = O .
+    eq transformlist O O'      = transform O O' .
+    eq transformlist O (O' OS) = transform (transformlist O OS) O' .
 endm
 
 mod CLIENTDATA is
