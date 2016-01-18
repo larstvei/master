@@ -1,5 +1,6 @@
 load model-checker
 
+--- Redefine CONFIGURATION in order to add formatting to objects.
 mod CONFIGURATION is
     sorts Attribute AttributeSet .
     subsort Attribute < AttributeSet .
@@ -19,6 +20,14 @@ view Oid from TRIV to CONFIGURATION is
     sort Elt to Oid .
 endv
 
+--- A string, in our model, is simply a blob; we are not interested in the
+--- contents of it. We want every string to be unique, so we model strings
+--- using natural numbers. NextStr keeps a single string, that should always be
+--- unique (i.e. it has not occurred in any buffer before).
+
+--- System just provides a way of encapsulating a configuration. This is useful
+--- when we check for properties that concerns the entire configuration (not
+--- just a subset).
 mod GLOBAL is
     including NAT .
     including CONFIGURATION .
@@ -34,6 +43,9 @@ mod GLOBAL is
     op next_ : Str           -> NextStr [format (n s n)] .
 endm
 
+--- Messages take the form of operations and acks. The server should perform
+--- transformations and redistribute messages, clients should generate messages
+--- and receive (possibly transformed) messages.
 mod MSG is
     including GLOBAL .
 
@@ -55,6 +67,7 @@ mod MSG is
     [format (r d d d d o)] .
 endm
 
+--- A simple message queue.
 mod QUEUE is
     including MSG .
     sort MsgQueue .
@@ -64,6 +77,11 @@ mod QUEUE is
     op _~_   : MsgQueue MsgQueue -> MsgQueue [ctor assoc id: empty] .
 endm
 
+--- Operations works on buffers (NOTE: remember to rename). We have two types
+--- of operations, insertions and deletions. Operations can be received, if so,
+--- they are applied. Given two operations, they can be transformed in a way
+--- that satisfy the property
+---     T(Oi, Oj) = T(Oj, Oi)
 mod OPERATIONS is
     including QUEUE .
     including LIST{Nat} .
