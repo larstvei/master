@@ -290,7 +290,7 @@ mod TEST is
     eq init = init nil ("C1","C2") .
 
     eq init C OS =
-        { < "S" : Server | clients : initclients OS >
+        { < "S" : Server | seqNo : 0, clients : initclients OS, operations : nil >
           (initclients C OS)
           next if C == nil then 0 else s(max(C)) fi } .
 
@@ -304,10 +304,7 @@ mod TEST is
         (initclients C OS) .
 
     eq initclients empty = empty .
-    eq initclients (O, OS) = < O | ackedSeqNo : 0,
-                                   in-queue   : empty,
-                                   out-queue  : empty > ,
-        initclients OS .
+    eq initclients (O, OS) = < O | ackedSeqNo : 0 >, initclients OS .
 endm
 
 mod PREDICATES is
@@ -363,7 +360,7 @@ mod LOOP-STATE is
     eq endstate(< O : Client | in-channel : (M ~ Q'), A > CF) = false .
     eq endstate(CF) = true [owise] .
 
-    crl { < O : Server | clients : CS > CF }
+    crl { < O : Server | clients : CS, A > CF }
       =>
         init nil oids(CS)
       if endstate(CF) and ({ < O : Server | clients : CS > CF } |= consistent) .
