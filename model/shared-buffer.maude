@@ -52,6 +52,7 @@ mod MSG is
     sort Operation .
 
     op ack : Nat -> Msg [ctor] .
+    op nack : Nat -> Msg [ctor] .
     op nop : -> Operation [ctor] .
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
@@ -255,14 +256,25 @@ mod CLIENT-RULES is
                         operations-left : sd(NZ, 1), A >
         < O' : Server | A' > .
 
-    rl [user-receive] :
+    crl [user-receive] :
         < O : Client | content : C,
-                       out-channel : Q',
+                       seqNo : N,
                        in-channel : (Q ~ (M from O' to O)), A >
       =>
         < O : Client | content : (receive M C),
-                       out-channel : (ack(seq(M)) ~ Q'),
-                       in-channel : Q, A > .
+                       seqNo : s N,
+                       in-channel : Q, A >
+      if seq(M) >= N .
+
+    crl [user-receive] :
+        < O : Client | seqNo : N,
+                       in-channel : (Q ~ (M from O' to O)),
+                       out-channel : Q', A >
+      =>
+        < O : Client | seqNo : N,
+                       in-channel : Q,
+                       out-channel : (nack(seq(M)) ~ Q'), A >
+      if seq(M) < N .
 endm
 
 mod TEST is
