@@ -240,6 +240,17 @@ mod SERVER-RULES is
                         clients : (< O | A' >, CS) >
         multicast receive(O, M, OPS, N) from O' to oids(CS) .
 
+    rl [server-receive-nack] :
+        < O  : Client | out-channel : (Q ~ nack(N)),
+                        in-channel  : Q', A >
+        < O' : Server | operations  : OPS,
+                        seqNo : I, A' >
+      =>
+        < O  : Client | out-channel : Q,
+                        in-channel  : ((retransmit(find(N, OPS), OPS, I) from O' to O) ~ Q'), A >
+        < O' : Server | operations  : OPS,
+                        seqNo : I, A' > .
+
     eq multicast M from O' to empty = none .
 
     eq < O : Client | in-channel : Q, A >
