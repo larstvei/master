@@ -94,6 +94,7 @@ endv
 mod OPERATIONS is
     including QUEUE .
     including LIST{Nat} .
+    including LIST{Operation} .
 
     sort Content .
     subsort List{Nat} < Content .
@@ -146,10 +147,16 @@ mod CLIENTDATA is
     including OPERATIONS .
 
     sort Clientdata .
+    sort IdOperation .
 
     op <_ | _ > : Oid AttributeSet -> Clientdata .
     op ackedSeqNo :_ : Nat -> Attribute .
+    op (_, _) : Oid Operation -> IdOperation .
 endm
+
+view IdOperation from TRIV to CLIENTDATA is
+    sort Elt to IdOperation .
+endv
 
 view Clientdata from TRIV to CLIENTDATA is
     sort Elt to Clientdata .
@@ -159,9 +166,13 @@ mod SERVER is
     including CLIENTDATA .
     including SET{Oid} .
     including SET{Clientdata} .
+    including LIST{IdOperation} .
+
 
     op Server : -> Cid .
     op clients :_ : Set{Clientdata} -> Attribute .
+    op seqNo :_ : Nat -> Attribute .
+    op operations :_ : List{IdOperation} -> Attribute .
 
     op oids : Set{Clientdata} -> Set{Oid} .
 
