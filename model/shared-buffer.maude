@@ -208,12 +208,14 @@ mod SERVER-RULES is
     op retransmit : IdOperation List{IdOperation} Nat -> Operation .
 
     vars A A' : AttributeSet .
+    vars Q Q' : MsgQueue .
     vars O O' : Oid .
+    vars I N  : Nat .
     var  OPS  : List{IdOperation} .
     var  OS   : Set{Oid} .
     var  CS   : Set{Clientdata} .
-    var  Q    : MsgQueue .
     var  M    : Operation .
+    var  S    : Str .
     eq  filterops(O, N, nil)   = nil .
     ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if seq(M) >= N and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
@@ -228,11 +230,15 @@ mod SERVER-RULES is
 
     rl [server-receive] :
         < O  : Client | out-channel : (Q ~ (M from O to O')), A >
-        < O' : Server | clients : (< O | A' >, CS) >
+        < O' : Server | seqNo : N,
+                        operations : OPS,
+                        clients : (< O | A' >, CS) >
       =>
         < O  : Client | out-channel : Q, A >
-        < O' : Server | clients : (< O | A' >, CS) >
-        multicast M from O' to oids(CS) .
+        < O' : Server | seqNo : s N,
+                        operations : ((O, assignSeqNo(M, N)) OPS),
+                        clients : (< O | A' >, CS) >
+        multicast receive(O, M, OPS, N) from O' to oids(CS) .
 
     eq multicast M from O' to empty = none .
 
