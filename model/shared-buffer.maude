@@ -202,13 +202,29 @@ mod SERVER-RULES is
     subsort Multicast < Configuration .
 
     op multicast_from_to_ : Operation Oid Set{Oid} -> Multicast .
+    op filterops : Oid Nat List{IdOperation} -> List{Operation} .
+    op receive : Oid Operation List{IdOperation} Nat -> Operation .
+    op find : Nat List{IdOperation} -> IdOperation .
+    op retransmit : IdOperation List{IdOperation} Nat -> Operation .
 
     vars A A' : AttributeSet .
     vars O O' : Oid .
+    var  OPS  : List{IdOperation} .
     var  OS   : Set{Oid} .
     var  CS   : Set{Clientdata} .
     var  Q    : MsgQueue .
     var  M    : Operation .
+    eq  filterops(O, N, nil)   = nil .
+    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if seq(M) >= N and O =/= O' .
+    eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
+
+    --- eq receive(O, M, OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) [owise] .
+    eq receive(O, M, OPS, N) = assignSeqNo(transformlist M filterops(O, seq(M), OPS), N) [owise] .
+
+    ceq find(N, (O, M) OPS) = (O, M) if seq(M) == N .
+    eq  find(N, (O, M) OPS) = find(N, OPS) [owise] .
+
+    eq retransmit((O, M), OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) .
 
     rl [server-receive] :
         < O  : Client | out-channel : (Q ~ (M from O to O')), A >
