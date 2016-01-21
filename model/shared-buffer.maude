@@ -33,14 +33,15 @@ mod GLOBAL is
     including CONFIGURATION .
     including STRING .
 
-    sorts NextStr Str System .
+    sorts NextStr OpsLeft Str System .
 
     subsort  Nat             < Str .
     subsort  String          < Oid .
-    subsorts NextStr System  < Configuration .
+    subsorts NextStr OpsLeft System  < Configuration .
 
-    op {_}   : Configuration -> System .
-    op next_ : Str           -> NextStr [format (n s n)] .
+    op {_}              : Configuration  -> System .
+    op next_            : Str            -> NextStr [format (n s n)] .
+    op operations-left_ : Nat            -> OpsLeft .
 endm
 
 --- Messages take the form of operations and acks. The server should perform
@@ -192,7 +193,6 @@ mod CLIENT is
     op seqNo :_       : Nat     -> Attribute .
     op out-channel :_ : MsgQueue -> Attribute .
     op in-channel :_  : MsgQueue -> Attribute .
-    op operations-left :_ : Nat -> Attribute .
 endm
 
 mod SERVER-RULES is
@@ -275,30 +275,30 @@ mod CLIENT-RULES is
     rl [user-inserts] :
         < O  : Client | content : (C C'),
                         seqNo : N,
-                        out-channel : Q,
-                        operations-left : NZ, A >
+                        out-channel : Q, A >
         < O' : Server | A' >
+        operations-left NZ
         next S
       =>
         < O  : Client | content : (C S C'),
                         seqNo : s N,
-                        out-channel : ((ins(S, size(C), N) from O to O') ~ Q),
-                        operations-left : sd(NZ, 1), A >
+                        out-channel : ((ins(S, size(C), N) from O to O') ~ Q), A >
         < O' : Server | A' >
+        operations-left sd(NZ, 1)
         next s S .
 
     rl [user-deletes] :
         < O  : Client | content : (C S C'),
                         seqNo : N,
-                        out-channel : Q,
-                        operations-left : NZ, A >
+                        out-channel : Q, A >
         < O' : Server | A' >
+        operations-left NZ
       =>
         < O  : Client | content : (C C'),
                         seqNo : s N,
-                        out-channel : ((del(1, size(C), N) from O to O') ~ Q),
-                        operations-left : sd(NZ, 1), A >
-        < O' : Server | A' > .
+                        out-channel : ((del(1, size(C), N) from O to O') ~ Q), A >
+        < O' : Server | A' >
+        operations-left sd(NZ, 1) .
 
     crl [user-receive] :
         < O : Client | content : C,
@@ -348,6 +348,7 @@ mod TEST is
     eq init C OS =
         { < "S" : Server | seqNo : 0, clients : initclients OS, operations : nil >
           (initclients C OS)
+          operations-left 3
           next if C == nil then 0 else s(max(C)) fi } .
 
     eq initclients C empty   = none .
@@ -355,8 +356,7 @@ mod TEST is
         < O : Client | content : C,
                        seqNo : 0,
                        out-channel : empty,
-                       in-channel : empty,
-                       operations-left : 3 >
+                       in-channel : empty >
         (initclients C OS) .
 
     eq initclients empty = empty .
@@ -411,7 +411,7 @@ mod LOOP-STATE is
     var CS    : Set{Clientdata} .
     var NZ    : NzNat .
 
-    eq endstate(< O : Client | operations-left : NZ, A > CF)  = false .
+    eq endstate(CF operations-left NZ) = false .
     eq endstate(< O : Client | out-channel : (M ~ Q), A > CF) = false .
     eq endstate(< O : Client | in-channel : (M ~ Q'), A > CF) = false .
     eq endstate(CF) = true [owise] .
