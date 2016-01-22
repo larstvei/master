@@ -1,6 +1,7 @@
 #+TITLE: Real-Time Collaborative Editing
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
+#+DATE: Summer 2015
 #+OPTIONS: num:3 H:5 todo:nil
 #+LaTeX_CLASS_OPTIONS: [USenglish]
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
