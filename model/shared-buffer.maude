@@ -128,7 +128,10 @@ mod OPERATIONS is
     ceq transform ins(S,I,N) ins(S',I',N') = ins(S,s I,N) if N > N' .
     eq  transform ins(S,I,N) ins(S',I',N') = ins(S,I,N) [owise] .
 
-    ceq transform ins(S,I,N) del(M,I',N') = ins(S,I,N) if I < I' .
+    --- From original paper by Ellis et al.
+    --- ceq transform ins(S,I,N) del(M,I',N') = ins(S,I,N) if I < I' .
+    --- Fixed version introduced in formalOT by Imine et al.
+    ceq transform ins(S,I,N) del(M,I',N') = ins(S,I,N) if I <= I' .
     eq  transform ins(S,I,N) del(M,I',N') = ins(S,sd(I,1),N) [owise] .
 
     ceq transform del(M,I,N) ins(S,I',N') = del(M,I,N) if I < I' .
@@ -216,6 +219,7 @@ mod SERVER-RULES is
     var  CS   : Set{Clientdata} .
     var  M    : Operation .
     var  S    : Str .
+
     eq  filterops(O, N, nil)   = nil .
     ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if seq(M) >= N and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
