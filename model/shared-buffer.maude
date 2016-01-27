@@ -52,8 +52,6 @@ mod MSG is
 
     sort Operation .
 
-    op ack : Nat -> Msg [ctor] .
-    op nack : Nat -> Msg [ctor] .
     op nop : -> Operation [ctor] .
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
@@ -243,17 +241,6 @@ mod SERVER-RULES is
                         operations : ((O, assignSeqNo(M, N)) OPS),
                         clients : (< O | A' >, CS) >
         multicast receive(O, M, OPS, N) from O' to oids(CS) .
-
-    rl [server-receive-nack] :
-        < O  : Client | out-channel : (Q ~ nack(N)),
-                        in-channel  : Q', A >
-        < O' : Server | operations  : OPS,
-                        seqNo : I, A' >
-      =>
-        < O  : Client | out-channel : Q,
-                        in-channel  : ((retransmit(find(N, OPS), OPS, I) from O' to O) ~ Q'), A >
-        < O' : Server | operations  : OPS,
-                        seqNo : I, A' > .
 
     eq multicast M from O' to empty = none .
 
