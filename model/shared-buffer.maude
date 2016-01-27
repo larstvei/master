@@ -102,7 +102,7 @@ mod OPERATIONS is
 
     op ins_at_in_      : Str Nat    Content        -> Content .
     op del_at_in_      : Nat Nat    Content        -> Content .
-    op receive__       : Operation  Content        -> Content .
+    op apply__         : Operation  Content        -> Content .
     op transform__     : Operation  Operation      -> Operation .
     op transformlist__ : Operation List{Operation} -> Operation .
 
@@ -119,9 +119,9 @@ mod OPERATIONS is
     eq del 1 at 0 in C   = tail(C) .
     eq del 1 at s I in C = head(C) (del 1 at I in tail(C)) .
 
-    eq receive nop C = C .
-    eq receive ins(S,I,N) C = ins S at I in C .
-    eq receive del(M,I,N) C = del M at I in C .
+    eq apply nop C = C .
+    eq apply ins(S,I,N) C = ins S at I in C .
+    eq apply del(M,I,N) C = del M at I in C .
 
     ceq transform ins(S,I,N) ins(S',I',N') = ins(S,I,N) if I < I' .
     ceq transform ins(S,I,N) ins(S',I',N') = ins(S,s I,N) if I > I' .
@@ -309,7 +309,7 @@ mod CLIENT-RULES is
                        seqNo : N,
                        in-channel : (Q ~ (M from O' to O)), A >
       =>
-        < O : Client | content : (receive M C),
+        < O : Client | content : (apply M C),
                        seqNo : s N,
                        in-channel : Q, A >
       if seq(M) >= N .
@@ -393,11 +393,11 @@ mod PREDICATES is
 
     eq S |= consistent = not S |= inconsistent .
 
-    ceq { < O  : Client | content : (receive (transform OI OJ) (receive OJ C)), A >
-          < O' : Client | content : (receive (transform OJ OI) (receive OI C)), A >
+    ceq { < O  : Client | content : (apply (transform OI OJ) (apply OJ C)), A >
+          < O' : Client | content : (apply (transform OJ OI) (apply OI C)), A >
           CF } |= ot-function = false
-        if receive (transform OI OJ) (receive OJ C) =/=
-            receive (transform OJ OI) (receive OI C) .
+        if apply (transform OI OJ) (apply OJ C) =/=
+            apply (transform OJ OI) (apply OI C) .
 
     eq S |= ot-function = true [owise] .
 endm
