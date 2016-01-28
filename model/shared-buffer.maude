@@ -170,7 +170,6 @@ mod SERVER is
     including SET{Clientdata} .
     including LIST{IdOperation} .
 
-
     op Server : -> Cid .
     op clients :_ : Set{Clientdata} -> Attribute .
     op seqNo :_ : Nat -> Attribute .
@@ -189,9 +188,15 @@ endm
 mod CLIENT is
     including SERVER .
 
-    op Client : -> Cid .
+    sort NNat .
+    subsort Nat < NNat .
+
+    op None           : -> NNat [ctor] .
+    op Client         : -> Cid .
     op content :_     : Content -> Attribute .
     op seqNo :_       : Nat     -> Attribute .
+    op rejectUntil :_ : NNat    -> Attribute .
+    op rejected :_    : Nat     -> Attribute .
     op out-channel :_ : MsgQueue -> Attribute .
     op in-channel :_  : MsgQueue -> Attribute .
 endm
@@ -258,9 +263,9 @@ mod CLIENT-RULES is
     vars C C' : Content .
     vars O O' : Oid .
     vars Q Q' : MsgQueue .
+    vars N N' : Nat .
     var  NZ   : NzNat .
     var  M    : Operation .
-    var  N    : Nat .
     var  S    : Str .
 
     rl [user-inserts] :
@@ -291,25 +296,71 @@ mod CLIENT-RULES is
         < O' : Server | A' >
         operations-left sd(NZ, 1) .
 
-    crl [user-receive] :
+    --- Receives msg with expected seqno in non-conflict state
+    crl [user-receive-expected] :
         < O : Client | content : C,
                        seqNo : N,
+                       rejected : 0,
                        in-channel : (Q ~ (M from O' to O)), A >
       =>
         < O : Client | content : (apply M C),
                        seqNo : s N,
+                       rejected : 0,
                        in-channel : Q, A >
-      if seq(M) >= N .
+        if seq(M) == N .
 
-    crl [user-receive] :
+    --- Detects conflict
+    crl [user-receive-detect-conflict] :
         < O : Client | seqNo : N,
-                       in-channel : (Q ~ (M from O' to O)),
-                       out-channel : Q', A >
+                       rejected : 0,
+                       rejectUntil : None,
+                       in-channel : (Q ~ (M from O' to O)), A >
       =>
         < O : Client | seqNo : N,
-                       in-channel : Q,
-                       out-channel : (nack(seq(M)) ~ Q'), A >
-      if seq(M) < N .
+                       rejected : 1,
+                       rejectUntil : seq(M),
+                       in-channel : Q, A >
+        if seq(M) < N .
+
+    --- Discard messages when in conflict state
+    crl [user-receive-discard] :
+        < O : Client | rejected : NZ,
+                       rejectUntil : N',
+                       in-channel : (Q ~ (M from O' to O)), A >
+      =>
+        < O : Client | rejected : s NZ,
+                       rejectUntil : N',
+                       in-channel : Q, A >
+        if seq(M) =/= N' and N' =/= None .
+
+    --- Receive the transformed operation that initially was rejected
+    crl [user-receive-rejected] :
+        < O : Client | content : C,
+                       seqNo : N,
+                       rejectUntil : N',
+                       rejected : NZ,
+                       in-channel : (Q ~ (M from O' to O)), A >
+      =>
+        < O : Client | content : (apply M C),
+                       seqNo : s N,
+                       rejectUntil : None,
+                       rejected : sd(NZ, 1),
+                       in-channel : Q, A >
+        if seq(M) == N' .
+
+    --- Receive further transformed operations
+    rl [user-receive-further-rejected] :
+        < O : Client | content : C,
+                       seqNo : N,
+                       rejected : NZ,
+                       rejectUntil : None,
+                       in-channel : (Q ~ (M from O' to O)), A >
+      =>
+        < O : Client | content : (apply M C),
+                       seqNo : s N,
+                       rejected : sd(NZ, 1),
+                       rejectUntil : None,
+                       in-channel : Q, A > .
 endm
 
 mod TEST is
@@ -346,6 +397,8 @@ mod TEST is
     eq initclients C (O, OS) =
         < O : Client | content : C,
                        seqNo : 0,
+                       rejected : 0,
+                       rejectUntil : None,
                        out-channel : empty,
                        in-channel : empty >
         (initclients C OS) .
