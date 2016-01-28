@@ -8,5 +8,5 @@ states = [map(lambda x: x.strip(), s.split('\n')) \
           for s in findall(r'\{(.*?)\}', res, DOTALL)]
 
 for r, (s, t) in zip(rules, zip(states, states[1:])):
-    diff = [x for x in t if x not in s and x is not '']
+    diff = [x for i,x in enumerate(t) if x is not '' and x != s[i]]
     print '[' + r + '] :' + '\n\t' + '\n\t'.join(diff) + '\n'
