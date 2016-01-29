@@ -211,39 +211,44 @@ mod SERVER-RULES is
     op filterops : Oid Nat List{IdOperation} -> List{Operation} .
     op receive : Oid Operation List{IdOperation} Nat -> Operation .
     op find : Nat List{IdOperation} -> IdOperation .
-    op retransmit : IdOperation List{IdOperation} Nat -> Operation .
+    op retransmit : List{Operation} Operation Oid Oid -> MsgQueue .
 
     vars A A' : AttributeSet .
     vars Q Q' : MsgQueue .
     vars O O' : Oid .
     vars I N  : Nat .
+    vars M M' : Operation .
     var  OPS  : List{IdOperation} .
     var  OS   : Set{Oid} .
     var  CS   : Set{Clientdata} .
-    var  M    : Operation .
+    var  MS   : List{Operation} .
     var  S    : Str .
 
     eq  filterops(O, N, nil)   = nil .
     ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if seq(M) >= N and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
 
-    --- eq receive(O, M, OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) [owise] .
-    eq receive(O, M, OPS, N) = assignSeqNo(transformlist M filterops(O, seq(M), OPS), N) [owise] .
+    eq receive(O, M, OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) .
+
+    eq retransmit(nil, M', O, O') = empty .
+    eq retransmit(M, M', O, O') = transform M M' from O' to O .
+    eq retransmit((M MS), M', O, O') = (transform M (transformlist M' MS)
+          from O' to O) ~ retransmit(MS, M', O, O') .
 
     ceq find(N, (O, M) OPS) = (O, M) if seq(M) == N .
     eq  find(N, (O, M) OPS) = find(N, OPS) [owise] .
 
-    eq retransmit((O, M), OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) .
-
     rl [server-receive] :
-        < O  : Client | out-channel : (Q ~ (M from O to O')), A >
+        < O  : Client | out-channel : (Q ~ (M from O to O')),
+                        in-channel : Q', A >
         < O' : Server | seqNo : N,
                         operations : OPS,
                         clients : (< O | A' >, CS) >
       =>
-        < O  : Client | out-channel : Q, A >
+        < O  : Client | out-channel : Q,
+                        in-channel : (retransmit(filterops(O, seq(M), OPS), assignSeqNo(M, N), O, O') ~ Q'), A >
         < O' : Server | seqNo : s N,
-                        operations : ((O, assignSeqNo(M, N)) OPS),
+                        operations : ((O, receive(O, M, OPS, N)) OPS),
                         clients : (< O | A' >, CS) >
         multicast receive(O, M, OPS, N) from O' to oids(CS) .
 
