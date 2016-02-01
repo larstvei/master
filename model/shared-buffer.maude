@@ -219,7 +219,6 @@ mod SERVER-RULES is
 
     op multicast_from_to_ : Operation Oid List{OidSeq} -> Multicast .
     op filterops : Oid Nat List{IdOperation} -> List{Operation} .
-    op filterops2 : Oid Nat List{IdOperation} -> List{Operation} .
     op receive : Oid Operation List{IdOperation} Nat -> Operation .
     op find : Nat List{IdOperation} -> IdOperation .
     op retransmit : List{Operation} Operation Oid Oid Nat -> MsgQueue .
@@ -237,12 +236,8 @@ mod SERVER-RULES is
     var  S    : Str .
 
     eq  filterops(O, N, nil) = nil .
-    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if pri(M) >= N . ---and O =/= O' .
+    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if pri(M) >= N and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
-
-    eq  filterops2(O, 0, OPS) = nil .
-    ceq filterops2(O, s N, (O', M) OPS) = M filterops2(O, N, OPS) if O =/= O' .
-    eq  filterops2(O, N, (O', M) OPS) = filterops2(O, N, OPS) [owise] .
 
     eq receive(O, M, OPS, N) = transformlist assignPri(M, N) filterops(O, pri(M), OPS) .
 
@@ -254,7 +249,7 @@ mod SERVER-RULES is
     ceq find(N, (O, M) OPS) = (O, M) if pri(M) == N .
     eq  find(N, (O, M) OPS) = find(N, OPS) [owise] .
 
-    rl [server-receive] :
+    crl [server-receive] :
         < O  : Client | out-channel : (Q ~ (M from O to O' seqNo N')),
                         in-channel : Q', A >
         < O' : Server | opsApplied : N,
@@ -263,14 +258,14 @@ mod SERVER-RULES is
       =>
         < O  : Client | out-channel : Q,
                         in-channel :
-                        (retransmit(filterops2(O, sd(pri(M), N), OPS),
-                            assignPri(M, N), O, O', I + sd(pri(M), N)) ~ Q'), A >
+                        (retransmit(MS, assignPri(M,N), O, O', I + size(MS)) ~ Q') , A >
         < O' : Server | opsApplied : s N,
                         operations : ((O, receive(O, M, OPS, N)) OPS),
-                        clients : (< O | seqNo : (sd(pri(M), N) + s I),
+                        clients : (< O | seqNo : (size(MS) + s I),
                           A' >, incSeqs(CS)) >
-        multicast receive(O, M, OPS, N) from O' to oidseqs(CS) .
-    ---                                            ^ fiks   ^
+        multicast receive(O, M, OPS, N) from O' to oidseqs(CS)
+      if MS := filterops(O, pri(M), OPS) .
+
     eq multicast M from O' to nil = none .
 
     eq < O : Client | in-channel : Q, A >
@@ -302,7 +297,7 @@ mod CLIENT-RULES is
         next S
       =>
         < O  : Client | content : (C S C'),
-                        opsApplied : s N,
+                        opsApplied : N,
                         expectedSeq : s N',
                         out-channel :
                         ((ins(S, size(C), N) from O to O' seqNo N') ~ Q), A >
@@ -319,7 +314,7 @@ mod CLIENT-RULES is
         operations-left NZ
       =>
         < O  : Client | content : (C C'),
-                        opsApplied : s N,
+                        opsApplied : N,
                         expectedSeq : s N',
                         out-channel :
                         ((del(1, size(C), N) from O to O' seqNo N') ~ Q), A >
@@ -333,7 +328,7 @@ mod CLIENT-RULES is
                        in-channel : (Q ~ (M from O' to O seqNo N)), A >
       =>
         < O : Client | content : (apply M C),
-                       opsApplied : s N',
+                       opsApplied : s pri(M),
                        expectedSeq : s N,
                        in-channel : Q, A > .
 
