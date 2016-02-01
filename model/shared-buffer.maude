@@ -55,20 +55,20 @@ mod MSG is
     op nop : -> Operation [ctor] .
     op ins : Str Nat Nat -> Operation [ctor] .
     op del : Nat Nat Nat -> Operation [ctor] .
-    op seq : Operation -> Nat .
-    op assignSeqNo : Operation Nat -> Operation .
+    op pri : Operation -> Nat .
+    op assignPri : Operation Nat -> Operation .
 
     var S : Str .
     vars I N N' N'' : Nat .
 
-    eq seq(ins(S,N',N)) = N .
-    eq seq(del(N',I,N)) = N .
+    eq pri(ins(S,N',N)) = N .
+    eq pri(del(N',I,N)) = N .
 
-    eq assignSeqNo(ins(N', S, N''), N) = ins(N', S, N) .
-    eq assignSeqNo(del(N', I, N''), N) = del(N', I, N) .
+    eq assignPri(ins(S, N', N''), N) = ins(S, N', N) .
+    eq assignPri(del(N', I, N''), N) = del(N', I, N) .
 
-    msg _from_to_ : Operation Oid Oid -> Msg
-    [format (r d d d d o)] .
+    msg _from_to_seqNo_ : Operation Oid Oid Nat -> Msg .
+    --- [format (r d d d d o)] .
 endm
 
 --- A simple message queue.
@@ -148,16 +148,20 @@ endm
 mod CLIENTDATA is
     including OPERATIONS .
 
-    sort Clientdata .
-    sort IdOperation .
+    sorts OidSeq Clientdata IdOperation .
 
     op <_ | _ > : Oid AttributeSet -> Clientdata .
-    op ackedSeqNo :_ : Nat -> Attribute .
+    op seqNo :_ : Nat -> Attribute .
     op (_, _) : Oid Operation -> IdOperation .
+    op (_, _) : Oid Nat -> OidSeq .
 endm
 
 view IdOperation from TRIV to CLIENTDATA is
     sort Elt to IdOperation .
+endv
+
+view OidSeq from TRIV to CLIENTDATA is
+    sort Elt to OidSeq .
 endv
 
 view Clientdata from TRIV to CLIENTDATA is
@@ -166,37 +170,43 @@ endv
 
 mod SERVER is
     including CLIENTDATA .
-    including SET{Oid} .
+    including LIST{Oid} .
     including SET{Clientdata} .
     including LIST{IdOperation} .
+    including LIST{OidSeq} .
+    including SET{Oid} .
 
     op Server : -> Cid .
     op clients :_ : Set{Clientdata} -> Attribute .
-    op seqNo :_ : Nat -> Attribute .
+    op opsApplied :_ : Nat -> Attribute .
     op operations :_ : List{IdOperation} -> Attribute .
 
-    op oids : Set{Clientdata} -> Set{Oid} .
+    op oids    : Set{Clientdata} -> Set{Oid} .
+    op oidseqs : Set{Clientdata} -> List{OidSeq} .
+    op incSeqs : Set{Clientdata} -> Set{Clientdata} .
 
     var O  : Oid .
+    var N  : Nat .
     var A  : AttributeSet .
     var CS : Set{Clientdata} .
 
     eq oids(empty) = empty .
-    eq oids((< O | A > , CS)) = O, oids(CS) .
+    eq oids((< O | seqNo : N, A > , CS)) = O, oids(CS) .
+
+    eq oidseqs(empty) = nil .
+    eq oidseqs((< O | seqNo : N, A > , CS)) = (O,N) oidseqs(CS) .
+
+    eq incSeqs(empty) = empty .
+    eq incSeqs((< O | seqNo : N, A > , CS)) = < O | seqNo : s N, A >, incSeqs(CS) .
 endm
 
 mod CLIENT is
     including SERVER .
 
-    sort NNat .
-    subsort Nat < NNat .
-
-    op None           : -> NNat [ctor] .
     op Client         : -> Cid .
-    op content :_     : Content -> Attribute .
-    op seqNo :_       : Nat     -> Attribute .
-    op rejectUntil :_ : NNat    -> Attribute .
-    op rejected :_    : Nat     -> Attribute .
+    op content :_     : Content  -> Attribute .
+    op opsApplied :_  : Nat      -> Attribute .
+    op expectedSeq :_ : Nat      -> Attribute .
     op out-channel :_ : MsgQueue -> Attribute .
     op in-channel :_  : MsgQueue -> Attribute .
 endm
@@ -207,57 +217,66 @@ mod SERVER-RULES is
     sort Multicast .
     subsort Multicast < Configuration .
 
-    op multicast_from_to_ : Operation Oid Set{Oid} -> Multicast .
+    op multicast_from_to_ : Operation Oid List{OidSeq} -> Multicast .
     op filterops : Oid Nat List{IdOperation} -> List{Operation} .
+    op filterops2 : Oid Nat List{IdOperation} -> List{Operation} .
     op receive : Oid Operation List{IdOperation} Nat -> Operation .
     op find : Nat List{IdOperation} -> IdOperation .
-    op retransmit : List{Operation} Operation Oid Oid -> MsgQueue .
+    op retransmit : List{Operation} Operation Oid Oid Nat -> MsgQueue .
 
     vars A A' : AttributeSet .
     vars Q Q' : MsgQueue .
     vars O O' : Oid .
-    vars I N  : Nat .
+    vars I N N'  : Nat .
     vars M M' : Operation .
     var  OPS  : List{IdOperation} .
-    var  OS   : Set{Oid} .
+    var  OS   : List{OidSeq} .
+    var  NS   : List{Nat} .
     var  CS   : Set{Clientdata} .
     var  MS   : List{Operation} .
     var  S    : Str .
 
-    eq  filterops(O, N, nil)   = nil .
-    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if seq(M) >= N and O =/= O' .
+    eq  filterops(O, N, nil) = nil .
+    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if pri(M) >= N . ---and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
 
-    eq receive(O, M, OPS, N) = transformlist assignSeqNo(M, N) filterops(O, seq(M), OPS) .
+    eq  filterops2(O, 0, OPS) = nil .
+    ceq filterops2(O, s N, (O', M) OPS) = M filterops2(O, N, OPS) if O =/= O' .
+    eq  filterops2(O, N, (O', M) OPS) = filterops2(O, N, OPS) [owise] .
 
-    eq retransmit(nil, M', O, O') = empty .
-    eq retransmit(M, M', O, O') = transform M M' from O' to O .
-    eq retransmit((M MS), M', O, O') = (transform M (transformlist M' MS)
-          from O' to O) ~ retransmit(MS, M', O, O') .
+    eq receive(O, M, OPS, N) = transformlist assignPri(M, N) filterops(O, pri(M), OPS) .
 
-    ceq find(N, (O, M) OPS) = (O, M) if seq(M) == N .
+    eq retransmit(nil, M', O, O', N) = empty .
+    eq retransmit(M, M', O, O', N) = transform M M' from O' to O seqNo N .
+    eq retransmit((M MS), M', O, O', s N) = (transform M (transformlist M' MS)
+          from O' to O seqNo s N) ~ retransmit(MS, M', O, O', N) .
+
+    ceq find(N, (O, M) OPS) = (O, M) if pri(M) == N .
     eq  find(N, (O, M) OPS) = find(N, OPS) [owise] .
 
     rl [server-receive] :
-        < O  : Client | out-channel : (Q ~ (M from O to O')),
+        < O  : Client | out-channel : (Q ~ (M from O to O' seqNo N')),
                         in-channel : Q', A >
-        < O' : Server | seqNo : N,
+        < O' : Server | opsApplied : N,
                         operations : OPS,
-                        clients : (< O | A' >, CS) >
+                        clients : (< O | seqNo : I, A' >, CS) >
       =>
         < O  : Client | out-channel : Q,
-                        in-channel : (retransmit(filterops(O, seq(M), OPS), assignSeqNo(M, N), O, O') ~ Q'), A >
-        < O' : Server | seqNo : s N,
+                        in-channel :
+                        (retransmit(filterops2(O, sd(pri(M), N), OPS),
+                            assignPri(M, N), O, O', I + sd(pri(M), N)) ~ Q'), A >
+        < O' : Server | opsApplied : s N,
                         operations : ((O, receive(O, M, OPS, N)) OPS),
-                        clients : (< O | A' >, CS) >
-        multicast receive(O, M, OPS, N) from O' to oids(CS) .
-
-    eq multicast M from O' to empty = none .
+                        clients : (< O | seqNo : (sd(pri(M), N) + s I),
+                          A' >, incSeqs(CS)) >
+        multicast receive(O, M, OPS, N) from O' to oidseqs(CS) .
+    ---                                            ^ fiks   ^
+    eq multicast M from O' to nil = none .
 
     eq < O : Client | in-channel : Q, A >
-        multicast M from O' to (O, OS)
+        multicast M from O' to ((O,N) OS)
       =
-        < O : Client | in-channel : ((M from O' to O) ~ Q), A >
+        < O : Client | in-channel : ((M from O' to O seqNo N) ~ Q), A >
         multicast M from O' to OS .
 endm
 
@@ -275,101 +294,60 @@ mod CLIENT-RULES is
 
     rl [user-inserts] :
         < O  : Client | content : (C C'),
-                        seqNo : N,
+                        opsApplied : N,
+                        expectedSeq : N',
                         out-channel : Q, A >
         < O' : Server | A' >
         operations-left NZ
         next S
       =>
         < O  : Client | content : (C S C'),
-                        seqNo : s N,
-                        out-channel : ((ins(S, size(C), N) from O to O') ~ Q), A >
+                        opsApplied : s N,
+                        expectedSeq : s N',
+                        out-channel :
+                        ((ins(S, size(C), N) from O to O' seqNo N') ~ Q), A >
         < O' : Server | A' >
         operations-left sd(NZ, 1)
         next s S .
 
     rl [user-deletes] :
         < O  : Client | content : (C S C'),
-                        seqNo : N,
+                        opsApplied : N,
+                        expectedSeq : N',
                         out-channel : Q, A >
         < O' : Server | A' >
         operations-left NZ
       =>
         < O  : Client | content : (C C'),
-                        seqNo : s N,
-                        out-channel : ((del(1, size(C), N) from O to O') ~ Q), A >
+                        opsApplied : s N,
+                        expectedSeq : s N',
+                        out-channel :
+                        ((del(1, size(C), N) from O to O' seqNo N') ~ Q), A >
         < O' : Server | A' >
         operations-left sd(NZ, 1) .
 
-    --- Receives msg with expected seqno in non-conflict state
-    crl [user-receive-expected] :
+    rl [user-receive] :
         < O : Client | content : C,
-                       seqNo : N,
-                       rejected : 0,
-                       in-channel : (Q ~ (M from O' to O)), A >
+                       opsApplied : N',
+                       expectedSeq : N,
+                       in-channel : (Q ~ (M from O' to O seqNo N)), A >
       =>
         < O : Client | content : (apply M C),
-                       seqNo : s N,
-                       rejected : 0,
-                       in-channel : Q, A >
-        if seq(M) == N .
-
-    --- Detects conflict
-    crl [user-receive-detect-conflict] :
-        < O : Client | seqNo : N,
-                       rejected : 0,
-                       rejectUntil : None,
-                       in-channel : (Q ~ (M from O' to O)), A >
-      =>
-        < O : Client | seqNo : N,
-                       rejected : 1,
-                       rejectUntil : seq(M),
-                       in-channel : Q, A >
-        if seq(M) < N .
-
-    --- Discard messages when in conflict state
-    crl [user-receive-discard] :
-        < O : Client | rejected : NZ,
-                       rejectUntil : N',
-                       in-channel : (Q ~ (M from O' to O)), A >
-      =>
-        < O : Client | rejected : s NZ,
-                       rejectUntil : N',
-                       in-channel : Q, A >
-        if seq(M) =/= N' and N' =/= None .
-
-    --- Receive the transformed operation that initially was rejected
-    crl [user-receive-rejected] :
-        < O : Client | content : C,
-                       seqNo : N,
-                       rejectUntil : N',
-                       rejected : NZ,
-                       in-channel : (Q ~ (M from O' to O)), A >
-      =>
-        < O : Client | content : (apply M C),
-                       seqNo : s N,
-                       rejectUntil : None,
-                       rejected : sd(NZ, 1),
-                       in-channel : Q, A >
-        if seq(M) == N' .
-
-    --- Receive further transformed operations
-    rl [user-receive-further-rejected] :
-        < O : Client | content : C,
-                       seqNo : N,
-                       rejected : NZ,
-                       rejectUntil : None,
-                       in-channel : (Q ~ (M from O' to O)), A >
-      =>
-        < O : Client | content : (apply M C),
-                       seqNo : s N,
-                       rejected : sd(NZ, 1),
-                       rejectUntil : None,
+                       opsApplied : s N',
+                       expectedSeq : s N,
                        in-channel : Q, A > .
+
+    crl [user-receive-reject] :
+        < O : Client | expectedSeq : N,
+                       in-channel : (Q ~ (M from O' to O seqNo N')), A >
+      =>
+        < O : Client | expectedSeq : s N,
+                       in-channel : Q, A > if N =/= N' .
 endm
 
 mod TEST is
     including CLIENT-RULES .
+    including SET{Oid} .
 
     subsort String < Oid .
 
@@ -393,7 +371,7 @@ mod TEST is
     eq init = init nil ("C1","C2") .
 
     eq init C OS =
-        { < "S" : Server | seqNo : 0, clients : initclients OS, operations : nil >
+        { < "S" : Server | opsApplied : 0, clients : initclients OS, operations : nil >
           (initclients C OS)
           operations-left 3
           next if C == nil then 0 else s(max(C)) fi } .
@@ -401,15 +379,14 @@ mod TEST is
     eq initclients C empty   = none .
     eq initclients C (O, OS) =
         < O : Client | content : C,
-                       seqNo : 0,
-                       rejected : 0,
-                       rejectUntil : None,
+                       opsApplied : 0,
+                       expectedSeq : 0,
                        out-channel : empty,
                        in-channel : empty >
         (initclients C OS) .
 
     eq initclients empty = empty .
-    eq initclients (O, OS) = < O | ackedSeqNo : 0 >, initclients OS .
+    eq initclients (O, OS) = < O | seqNo : 0 >, initclients OS .
 endm
 
 mod PREDICATES is
