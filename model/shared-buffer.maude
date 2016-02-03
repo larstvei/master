@@ -61,9 +61,11 @@ mod MSG is
     var S : Str .
     vars I N N' N'' : Nat .
 
+    eq pri(nop) = 0 .
     eq pri(ins(S,N',N)) = N .
     eq pri(del(N',I,N)) = N .
 
+    eq assignPri(nop, N) = nop .
     eq assignPri(ins(S, N', N''), N) = ins(S, N', N) .
     eq assignPri(del(N', I, N''), N) = del(N', I, N) .
 
