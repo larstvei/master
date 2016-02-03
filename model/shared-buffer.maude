@@ -91,7 +91,7 @@ endv
 --- of operations, insertions and deletions. Operations can be received, if so,
 --- they are applied. Given two operations, they can be transformed in a way
 --- that satisfy the property
----     T(Oi, Oj) = T(Oj, Oi)
+---     Oj ∘ T(Oi, Oj) ≡ Oi ∘ T(Oj, Oi)
 mod OPERATIONS is
     including QUEUE .
     including LIST{Nat} .
