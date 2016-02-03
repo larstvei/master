@@ -220,17 +220,18 @@ mod SERVER-RULES is
     subsort Multicast < Configuration .
 
     op multicast_from_to_ : Operation Oid List{OidSeq} -> Multicast .
-    op filterops : Oid Nat List{IdOperation} -> List{Operation} .
-    op receive : Oid Operation List{IdOperation} Nat -> Operation .
-    op find : Nat List{IdOperation} -> IdOperation .
-    op retransmit : List{Operation} Operation Oid Oid Nat -> MsgQueue .
+    op filterops : Oid Nat List{IdOperation} -> List{IdOperation} .
+    op extractops : List{IdOperation} -> List{Operation} .
+    op updateops : List{IdOperation} List{IdOperation} Operation -> List{Operation} .
+    op retransmit : List{Operation} Oid Oid Nat -> MsgQueue .
+    op del : IdOperation List{IdOperation} -> List{IdOperation} .
 
+    vars OPS OPS' : List{IdOperation} .
     vars A A' : AttributeSet .
     vars Q Q' : MsgQueue .
     vars O O' : Oid .
     vars I N N'  : Nat .
     vars M M' : Operation .
-    var  OPS  : List{IdOperation} .
     var  OS   : List{OidSeq} .
     var  NS   : List{Nat} .
     var  CS   : Set{Clientdata} .
@@ -238,18 +239,24 @@ mod SERVER-RULES is
     var  S    : Str .
 
     eq  filterops(O, N, nil) = nil .
-    ceq filterops(O, N, (O', M) OPS) = M filterops(O, N, OPS) if pri(M) >= N and O =/= O' .
+    ceq filterops(O, N, (O', M) OPS) = (O', M) filterops(O, N, OPS) if pri(M) >= N and O =/= O' .
     eq  filterops(O, N, (O', M) OPS) = filterops(O, N, OPS) [owise] .
 
-    eq receive(O, M, OPS, N) = transformlist assignPri(M, N) filterops(O, pri(M), OPS) .
+    eq extractops(nil) = nil .
+    eq extractops((O', M) OPS) = M extractops(OPS) .
 
-    eq retransmit(nil, M', O, O', N) = empty .
-    eq retransmit(M, M', O, O', N) = transform M M' from O' to O seqNo N .
-    eq retransmit((M MS), M', O, O', s N) = (transform M (transformlist M' MS)
-          from O' to O seqNo s N) ~ retransmit(MS, M', O, O', N) .
+    eq del((O,M), OPS (O,M) OPS') = OPS OPS' .
+    eq del((O,M), OPS) = OPS [owise] .
 
-    ceq find(N, (O, M) OPS) = (O, M) if pri(M) == N .
-    eq  find(N, (O, M) OPS) = find(N, OPS) [owise] .
+    eq  updateops(nil, OPS', M') = nil .
+    ceq updateops(((O, M) OPS), OPS', M') =
+        assignPri((transform M (transformlist M' MS)), pri(M'))
+        updateops(OPS, OPS', M')
+      if MS := extractops(del((O,M),OPS')) .
+
+    eq retransmit(nil, O, O', N) = empty .
+    eq retransmit((M MS), O, O', s N) =
+        (M from O' to O seqNo s N) ~ retransmit(MS, O, O', N) .
 
     crl [server-receive] :
         < O  : Client | out-channel : (Q ~ (M from O to O' seqNo N')),
@@ -260,13 +267,14 @@ mod SERVER-RULES is
       =>
         < O  : Client | out-channel : Q,
                         in-channel :
-                        (retransmit(MS, assignPri(M,N), O, O', I + size(MS)) ~ Q') , A >
+                        ((retransmit(updateops(OPS',OPS',assignPri(M,N)), O, O', I + size(MS))) ~ Q'), A >
         < O' : Server | opsApplied : s N,
-                        operations : ((O, receive(O, M, OPS, N)) OPS),
-                        clients : (< O | seqNo : (size(MS) + s I),
-                          A' >, incSeqs(CS)) >
-        multicast receive(O, M, OPS, N) from O' to oidseqs(CS)
-      if MS := filterops(O, pri(M), OPS) .
+                        operations : ((O, M') OPS),
+                        clients : (< O | seqNo : (size(MS) + s I), A' >, incSeqs(CS)) >
+        multicast M' from O' to oidseqs(CS)
+      if OPS' := filterops(O, pri(M), OPS) /\
+          MS  := extractops(OPS') /\
+          M'  := transformlist assignPri(M, N) MS .
 
     eq multicast M from O' to nil = none .
 
