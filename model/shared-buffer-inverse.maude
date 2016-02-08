@@ -1,0 +1,397 @@
+load model-checker
+
+--- Redefine CONFIGURATION for format
+mod CONFIGURATION is
+    sorts Attribute AttributeSet .
+    subsort Attribute < AttributeSet .
+    op none : -> AttributeSet  [ctor] .
+    op _,_ : AttributeSet AttributeSet -> AttributeSet
+        [ctor assoc comm id: none format (d d ntsss d)] .
+
+    --- Removed Msg
+    sorts Oid Cid Object Portal Configuration .
+    subsort Object Portal < Configuration .
+    op <_:_|_> : Oid Cid AttributeSet -> Object [ctor object] .
+    op none : -> Configuration [ctor] .
+    op __ : Configuration Configuration -> Configuration
+        [ctor config assoc comm id: none format (d nn d)] .
+    op <> : -> Portal [ctor] .
+endm
+
+fmod STR is
+    sort Str .
+    ops a b c d e f g h i : -> Str .
+endfm
+
+view Str from TRIV to STR is
+    sort Elt to Str .
+endv
+
+fmod BUFFER is
+    pr LIST{Str} .
+    pr STR .
+
+    sort Buffer .
+    subsort List{Str} < Buffer .
+endfm
+
+fmod ERROR is
+    pr BUFFER .
+
+    sort Error .
+    subsort Buffer < Error .
+
+    op error : -> Error [format (r o)] .
+endfm
+
+mod UNIQUE is
+    pr CONFIGURATION .
+    pr LIST{Str} .
+
+    sorts Unique .
+
+    subsort Unique < Configuration .
+
+    op < _ > : List{Str} -> Unique .
+endm
+
+mod ACTIONS is
+    pr CONFIGURATION .
+    pr NAT .
+
+    sort Actions .
+    subsort Actions < Configuration .
+
+    op actions_ : Nat -> Actions .
+endm
+
+fmod USER is
+    pr NAT .
+
+    sort User .
+    op user_ : Nat -> User .
+endfm
+
+view User from TRIV to USER is
+    sort Elt to User .
+endv
+
+fmod OPERATION is
+    pr NAT .
+    pr STR .
+
+    sort Op .
+
+    op nop : -> Op [ctor] .
+    op inv : Op -> Op .
+    op ins : Nat Str -> Op [ctor format (g o)] .
+    op del : Nat Str -> Op [ctor format (r o)] .
+    op _o_ : Op Op -> Op [assoc id: nop] .
+
+    var O : Op .
+    eq O o inv(O) = nop .
+endfm
+
+view Op from TRIV to OPERATION is
+    sort Elt to Op .
+endv
+
+fmod HISTORYITEM is
+    pr BOOL .
+    pr OPERATION .
+    
+    sort Hst .
+
+    op __ : Op Nat -> Hst .
+
+    vars I I' N N' : Nat .
+    vars S S' : Str .
+
+    op _<_ : Hst Hst -> Bool .
+    eq ins(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
+    eq ins(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
+    eq del(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
+    eq del(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
+endfm
+
+view Hst< from STRICT-TOTAL-ORDER to HISTORYITEM is
+    sort Elt to Hst .
+endv
+
+fmod TRANSFORMATIONS is
+    pr LIST{Op} .
+    pr OPERATION .
+    pr SORTABLE-LIST{Hst<} .
+
+    vars O O' : Op .
+    vars N N' : Nat .
+    var H : List{Hst<} .
+
+    op transform : List{Hst<} Hst -> Op .
+    eq transform(nil, O N) = O .
+
+    eq transform((O' N') H, O N) = O .
+
+    --- eq transform(OS, O) = compose(OS) o O .
+    --- eq transform(OS, O) = compose(OS) o O o compose(reverse(invert(OS))) .
+    --- eq transform((Oj OS), Oi) = Oj o transform(OS, Oi) o inv(Oj) .
+
+    --- op compose : List{Op} -> Op .
+    --- eq compose(O) = O .
+    --- eq compose(Oi Oj) = Oi o Oj .
+    --- eq compose(Oi Oj OS) = Oi o Oj o compose(OS) .
+
+    --- op invert : List{Op} -> List{Op} .
+    --- eq invert(nil) = nil .
+    --- eq invert(Oi OS) = inv(Oi) invert(OS) .
+endfm
+
+fmod APPLY is
+    pr BUFFER .
+    pr ERROR .
+    pr OPERATION .
+
+    vars Oi Oj : Op .
+    vars S T : Str .
+    var B : Buffer .
+    var I : Nat .
+
+    op apply_on_ : Op Buffer -> Buffer .
+    eq apply nop on B = B .
+
+    eq apply inv(ins(I,S)) on B = apply del(I,S) on B .
+    eq apply inv(del(I,S)) on B = apply ins(I,S) on B .
+
+    eq apply ins(0, S) on B = S B .
+    eq apply ins(s I, S) on T B = T (apply ins(I, S) on B) .
+    eq apply ins(s I, S) on nil = error .
+
+    eq apply del(0, S) on S B = B .
+    ceq apply del(0, S) on T B = error if S =/= T .
+    eq apply del(s I, S) on T B = T (apply del(I, S) on B) .
+    eq apply del(I, S) on nil = error .
+
+    eq apply Oi o Oj on B = apply Oi on (apply Oj on B) .
+
+    eq apply Oi on error = error .
+endfm
+
+fmod MSG is
+    pr NAT .
+    pr OPERATION .
+
+    sort Msg .
+
+    op msg : Op Nat Nat -> Msg .
+endfm
+
+view Msg from TRIV to MSG is
+    sort Elt to Msg .
+endv
+
+mod SITE is
+    pr ACTIONS .
+    pr APPLY .
+    pr BUFFER .
+    pr CONFIGURATION .
+    pr LIST{Msg} .
+    pr MSG .
+    pr OPERATION .
+    pr UNIQUE .
+    pr USER .
+
+    sort Site .
+    subsort Site < Configuration  .
+
+    op <_|_> : User AttributeSet -> Object [ctor object] .
+    op buffer :_ : Buffer -> Attribute .
+    op seqno :_ : Nat -> Attribute .
+    op state :_ : Nat -> Attribute .
+    op in-queue :_ : List{Msg} -> Attribute .
+    op out-queue :_ : List{Msg} -> Attribute .
+
+    vars B B' B'' : Buffer .
+    vars I I' N M : Nat .
+    var Q : List{Msg} .
+    var O : Op .
+    var S : Str .
+    var U : User .
+    var A : AttributeSet .
+
+    rl [user-inserts] :
+        actions s M
+        < S B'' >
+        < U | buffer : (B B'), seqno : N, state : I, out-queue : Q, A >
+      =>
+        actions M
+        < B'' >
+        < U | buffer : (B S B'), seqno : s N, state : I,
+        out-queue : (msg(ins(size(B), S), I, N) Q), A > .
+
+    rl [user-deletes] :
+        actions s M
+        < U | buffer : (B S B'), seqno : N, state : I, out-queue : Q, A >
+      =>
+        actions M
+        < U | buffer : (B B'), seqno : s N, state : I,
+        out-queue : (msg(del(size(B), S), I, N) Q), A > .
+
+    crl [user-receive] :
+        < U | buffer : B, seqno : N, state : I, in-queue : (Q msg(O,I',N)), A >
+      =>
+        < U | buffer : B', seqno : s N, state : I', in-queue : Q, A >
+      if B' := apply O on B .
+
+    crl [user-receive-reject] :
+        < U | buffer : B, seqno : N, in-queue : (Q msg(O,I',M)), A >
+      =>
+        < U | buffer : B, seqno : N, in-queue : Q, A >
+      if N =/= M .
+endm
+
+mod SERVER is
+    pr CONFIGURATION .
+    pr MAP{User,Nat} .
+    pr NAT .
+    pr SORTABLE-LIST{Hst<} .
+
+    op < server |_> : AttributeSet -> Object [ctor object] .
+    op history :_ : List{Hst<} -> Attribute .
+    op sites :_ : Map{User,Nat} -> Attribute .
+endm
+
+mod MULTICAST is
+    pr CONFIGURATION .
+    pr LIST{Msg} .
+    pr MAP{User,Nat} .
+    pr MSG .
+    pr OPERATION .
+    pr SERVER .
+    pr SITE .
+    pr USER .
+
+    sort Multicast .
+    subsort Multicast < Configuration .
+
+    op multicast_to_ : Op Map{User,Nat} -> Multicast .
+
+    var O : Op .
+    var Q : List{Msg} .
+    var U : User .
+    vars A A' : AttributeSet .
+    vars I N : Nat .
+    vars US US' : Map{User,Nat} .
+
+    eq [multicast] : multicast O to empty = none .
+    eq [multicast] :
+        < U | in-queue : Q, A >
+        < server | state : I, sites : (U |-> N, US'), A' >
+        multicast O to (U |-> N, US)
+      =
+        < U | in-queue : (msg(O, I, N) Q), A >
+        < server | state : I, sites : (U |-> s N, US'), A' >
+        multicast O to US .
+endm
+
+mod SERVER-RULES is
+    pr CONFIGURATION .
+    pr LIST{Msg} .
+    pr MAP{User,Nat} .
+    pr MULTICAST .
+    pr OPERATION .
+    pr SERVER .
+    pr SITE .
+    pr SORTABLE-LIST{Hst<} .
+    pr TRANSFORMATIONS .
+
+    vars A A' : AttributeSet .
+    vars Q Q' : List{Msg} .
+    vars O O' : Op .
+    vars I N N' S S' : Nat .
+    var U  : User .
+    var H  : List{Hst<} .
+    var US : Map{User,Nat} .
+
+    crl [server-receive] :
+        < U | out-queue : (Q msg(O,S,N)), in-queue : Q', A >
+        < server | history : H, sites : (U |-> N', US), state : I, A' >
+      =>
+        < U | out-queue : Q, in-queue : (msg(O' o inv(O), s I, s N) Q'), A >
+        < server | history : ((O I) H), sites : (U |-> S', US), state : s I, A' >
+        multicast O' to US
+      if S' := s N + sd(size(H), N) /\ O' := transform(H, O S) .
+endm
+
+mod PREDICATES is
+    pr CONFIGURATION .
+    pr LTL-SIMPLIFIER .
+    pr MODEL-CHECKER .
+    pr SATISFACTION .
+    pr SITE .
+
+    subsort Configuration < State .
+
+    ops consistent inconsistent : -> Prop .
+
+    vars A A' : AttributeSet .
+    vars B B' : Buffer .
+    vars U U' : User .
+    var C : Configuration .
+    
+    ceq < U  | buffer : B,  A  >
+        < U' | buffer : B', A' >
+        C |= inconsistent = true if B =/= B' .
+
+    eq C |= inconsistent = false [owise] .
+
+    eq C |= consistent = not C |= inconsistent .
+endm
+
+mod TEST is
+    pr ACTIONS .
+    pr APPLY .
+    pr BUFFER .
+    pr CONFIGURATION .
+    pr ERROR .
+    pr MSG .
+    pr MULTICAST .
+    pr OPERATION .
+    pr PREDICATES .
+    pr SERVER .
+    pr SERVER-RULES .
+    pr SITE .
+    pr STR .
+    pr TRANSFORMATIONS .
+    pr UNIQUE .
+    pr USER .
+
+    op init : -> Configuration .
+
+    var C : Configuration .
+    var I : Nat .
+    var N : Nat .
+    var N' : Nat .
+    var O : Op .
+    var OS : List{Op} .
+    vars Q Q' : List{Msg} .
+    var U : User .
+    var US : Map{User,Nat} .
+    vars A A' : AttributeSet .
+    vars B B' B'' : Buffer .
+    vars Oi Oj : Op .
+    vars S T : Str .
+
+    eq init =
+        < a b c d >
+        actions 2
+        < user 0 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < user 1 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < server | history : nil, state : 0,
+                   sites : (user 0 |-> 0, user 1 |-> 0) > .
+endm
+
+--- search init =>*
+--- < user 0 | buffer : B, out-queue : nil, in-queue : nil, state : N, A >
+--- < user 1 | buffer : B', out-queue : nil, in-queue : nil, state : N', A' >
+--- C
+--- such that B =/= B' and N =/= N' .
