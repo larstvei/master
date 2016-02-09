@@ -52,7 +52,7 @@ mod UNIQUE is
 
     subsort Unique < Configuration .
 
-    op < _ > : List{Str} -> Unique .
+    op [ _ ] : List{Str} -> Unique .
 endm
 
 mod ACTIONS is
@@ -220,11 +220,11 @@ mod SITE is
 
     rl [user-inserts] :
         actions s M
-        < S B'' >
+        [ S B'' ]
         < U | buffer : (B B'), seqno : N, state : I, out-queue : Q, A >
       =>
         actions M
-        < B'' >
+        [ B'' ]
         < U | buffer : (B S B'), seqno : s N, state : I,
         out-queue : (msg(ins(size(B), S), I, N) Q), A > .
 
@@ -382,7 +382,7 @@ mod TEST is
     vars S T : Str .
 
     eq init =
-        < a b c d >
+        [ a b c d ]
         actions 2
         < user 0 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < user 1 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
