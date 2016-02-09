@@ -190,14 +190,11 @@ view Msg from TRIV to MSG is
 endv
 
 mod SITE is
-    pr ACTIONS .
-    pr APPLY .
-    pr BUFFER .
     pr CONFIGURATION .
+    pr BUFFER .
     pr LIST{Msg} .
     pr MSG .
     pr OPERATION .
-    pr UNIQUE .
     pr USER .
 
     sort Site .
@@ -209,6 +206,18 @@ mod SITE is
     op state :_ : Nat -> Attribute .
     op in-queue :_ : List{Msg} -> Attribute .
     op out-queue :_ : List{Msg} -> Attribute .
+endm
+
+mod SITE-RULES is
+    pr ACTIONS .
+    pr APPLY .
+    pr BUFFER .
+    pr LIST{Msg} .
+    pr MSG .
+    pr OPERATION .
+    pr USER .
+    pr UNIQUE .
+    pr SITE .
 
     vars B B' B'' : Buffer .
     vars I I' N M : Nat .
@@ -377,6 +386,7 @@ mod TEST is
     pr SERVER .
     pr SERVER-RULES .
     pr SITE .
+    pr SITE-RULES .
     pr STR .
     pr TRANSFORMATIONS .
     pr UNIQUE .
