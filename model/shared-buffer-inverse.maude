@@ -392,7 +392,8 @@ mod TEST is
     pr UNIQUE .
     pr USER .
 
-    op init : -> Configuration .
+    op init  : -> Configuration .
+    op init_ : Buffer -> Configuration .
 
     var C : Configuration .
     var I : Nat .
@@ -408,11 +409,13 @@ mod TEST is
     vars Oi Oj : Op .
     vars S T : Str .
 
-    eq init =
+    eq init = init nil .
+
+    eq init B =
         [ a b c d ]
         actions 2
-        < user 0 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
-        < user 1 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < user 0 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < user 1 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < server | history : nil, state : 0,
                    sites : (user 0 |-> [0, 0, nil], user 1 |-> [0, 0, nil]) > .
 endm
