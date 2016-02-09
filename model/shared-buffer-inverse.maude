@@ -249,15 +249,29 @@ mod SITE is
       if N =/= M .
 endm
 
+mod SITE-INFO is
+    pr LIST{Op} .
+    pr NAT .
+
+    sort Siteinfo .
+    --- [State, seqno, operations]
+    op [_,_,_] : Nat Nat List{Op} -> Siteinfo .
+endm
+
+view Siteinfo from TRIV to SITE-INFO is
+    sort Elt to Siteinfo .
+endv
+
 mod SERVER is
     pr CONFIGURATION .
-    pr MAP{User,Nat} .
+    pr MAP{User,Siteinfo} .
+    pr SITE-INFO .
     pr NAT .
     pr SORTABLE-LIST{Hst<} .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
     op history :_ : List{Hst<} -> Attribute .
-    op sites :_ : Map{User,Nat} -> Attribute .
+    op sites :_ : Map{User,Siteinfo} -> Attribute .
 endm
 
 mod MULTICAST is
@@ -267,36 +281,38 @@ mod MULTICAST is
     pr MSG .
     pr OPERATION .
     pr SERVER .
+    pr SITE-INFO .
     pr SITE .
     pr USER .
 
     sort Multicast .
     subsort Multicast < Configuration .
 
-    op multicast_to_ : Op Map{User,Nat} -> Multicast .
+    op multicast_to_ : Op Map{User,Siteinfo} -> Multicast .
 
     var O : Op .
+    vars OPS OPS' : List{Op} .
     var Q : List{Msg} .
     var U : User .
     vars A A' : AttributeSet .
     vars I N : Nat .
-    vars US US' : Map{User,Nat} .
+    vars US US' : Map{User,Siteinfo} .
 
     eq [multicast] : multicast O to empty = none .
     eq [multicast] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> N, US'), A' >
-        multicast O to (U |-> N, US)
+        < server | sites : (U |-> [I, N, OPS'], US'), A' >
+        multicast O to (U |-> [I, N, OPS], US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> s N, US'), A' >
+        < server | sites : (U |-> [I, s N, OPS'], US'), A' >
         multicast O to US .
 endm
 
 mod SERVER-RULES is
     pr CONFIGURATION .
     pr LIST{Msg} .
-    pr MAP{User,Nat} .
+    pr MAP{User,Siteinfo} .
     pr MULTICAST .
     pr OPERATION .
     pr SERVER .
@@ -309,16 +325,17 @@ mod SERVER-RULES is
     vars O O' : Op .
     vars I N N' S S' : Nat .
     var U  : User .
+    var OPS : List{Op} .
     var H  : List{Hst<} .
-    var US : Map{User,Nat} .
+    var US : Map{User,Siteinfo} .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,S,N)), in-queue : Q', A >
-        < server | history : H, sites : (U |-> N', US), state : I, A' >
+        < server | history : H, state : I, sites : (U |-> [I, N', OPS], US), A' >
       =>
         < U | out-queue : Q, in-queue : (msg(O' o inv(O), s I, s N) Q'), A >
-        < server | history : ((O I) H), sites : (U |-> S', US), state : s I, A' >
-        multicast O' to US
+        < server | history : ((O I) H), state : s I, sites : (U |-> [S, S', (O OPS)], US), A' >
+        multicast O to US
       if S' := s N + sd(size(H), N) /\ O' := transform(H, O S) .
 endm
 
@@ -372,10 +389,10 @@ mod TEST is
     var N : Nat .
     var N' : Nat .
     var O : Op .
-    var OS : List{Op} .
+    var OPS : List{Op} .
     vars Q Q' : List{Msg} .
     var U : User .
-    var US : Map{User,Nat} .
+    var US : Map{User,Siteinfo} .
     vars A A' : AttributeSet .
     vars B B' B'' : Buffer .
     vars Oi Oj : Op .
@@ -387,7 +404,7 @@ mod TEST is
         < user 0 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < user 1 | buffer : nil, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < server | history : nil, state : 0,
-                   sites : (user 0 |-> 0, user 1 |-> 0) > .
+                   sites : (user 0 |-> [0, 0, nil], user 1 |-> [0, 0, nil]) > .
 endm
 
 --- search init =>*
