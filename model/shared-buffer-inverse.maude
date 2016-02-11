@@ -254,7 +254,7 @@ mod SITE-RULES is
     crl [user-receive-reject] :
         < U | buffer : B, seqno : N, in-queue : (Q msg(O,I',M)), A >
       =>
-        < U | buffer : B, seqno : N, in-queue : Q, A >
+        < U | buffer : B, seqno : s N, in-queue : Q, A >
       if N =/= M .
 endm
 
