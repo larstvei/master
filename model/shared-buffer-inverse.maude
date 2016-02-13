@@ -110,42 +110,63 @@ view User from TRIV to USER is
     sort Elt to User .
 endv
 
-fmod OPERATION is
-    pr NAT .
-    pr STR .
+fmod ABSTRACT-OPERATION is
 
     sort Op .
 
     op nop : -> Op [ctor] .
-    op inv : Op -> Op .
-    op ins : Nat Str -> Op [ctor format (g o)] .
-    op del : Nat Str -> Op [ctor format (r o)] .
-    op _o_ : Op Op -> Op [assoc id: nop] .
 
-    var O : Op .
+    vars O O' O'' O''' : Op .
+
+    op inv : Op -> Op .
+    eq inv(nop) = nop .
+    eq inv(inv(O)) = O .
+    eq inv(O o O') = inv(O') o inv(O) .
+
+    op _o_ : Op Op -> Op [assoc] .
+    eq O o nop = O .
+    eq nop o O = O .
     eq O o inv(O) = nop .
 endfm
 
-view Op from TRIV to OPERATION is
+view Op from TRIV to ABSTRACT-OPERATION is
     sort Elt to Op .
 endv
 
+fmod INSERT-DELETE is
+    pr ABSTRACT-OPERATION .
+    pr NAT .
+    pr STR .
+
+    op ins : Nat Str -> Op [ctor format (g o)] .
+    op del : Nat Str -> Op [ctor format (r o)] .
+
+    var N : Nat .
+    var S : Str .
+
+    --- eq inv(ins(N,S)) = del(N,S) .
+    --- eq inv(del(N,S)) = ins(N,S) .
+endfm
+
 fmod HISTORYITEM is
     pr BOOL .
-    pr OPERATION .
-    
+    pr NAT .
+    pr ABSTRACT-OPERATION .
+    pr LIST{Op} .
+
     sort Hst .
 
     op __ : Op Nat -> Hst .
 
-    vars I I' N N' : Nat .
-    vars S S' : Str .
+    vars O O' : Op .
+    vars N N' : Nat .
 
     op _<_ : Hst Hst -> Bool .
-    eq ins(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
-    eq ins(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
-    eq del(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
-    eq del(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
+    eq O N < O' N' = N < N' .
+    --- eq ins(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
+    --- eq ins(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
+    --- eq del(I,S) N < ins(I',S') N' = I < I' or (I == I' and N < N') .
+    --- eq del(I,S) N < del(I',S') N' = I < I' or (I == I' and N < N') .
 endfm
 
 view Hst< from STRICT-TOTAL-ORDER to HISTORYITEM is
@@ -154,7 +175,7 @@ endv
 
 fmod TRANSFORMATIONS is
     pr LIST{Op} .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr SORTABLE-LIST{Hst<} .
 
     vars O O' : Op .
@@ -183,7 +204,7 @@ endfm
 fmod APPLY is
     pr BUFFER .
     pr ERROR .
-    pr OPERATION .
+    pr INSERT-DELETE .
 
     vars Oi Oj : Op .
     vars S T : Str .
@@ -212,7 +233,7 @@ endfm
 
 fmod MSG is
     pr NAT .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
 
     sort Msg .
 
@@ -228,7 +249,7 @@ mod SITE is
     pr BUFFER .
     pr LIST{Msg} .
     pr MSG .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr USER .
 
     sort Site .
@@ -248,7 +269,7 @@ mod SITE-RULES is
     pr BUFFER .
     pr LIST{Msg} .
     pr MSG .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr USER .
     pr UNIQUE .
     pr SITE .
@@ -322,10 +343,11 @@ mod MULTICAST is
     pr LIST{Msg} .
     pr MAP{User,Nat} .
     pr MSG .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr SERVER .
     pr SITE-INFO .
     pr SITE .
+    pr TRANSFORMATIONS .
     pr USER .
 
     sort Multicast .
@@ -357,7 +379,7 @@ mod SERVER-RULES is
     pr LIST{Msg} .
     pr MAP{User,Siteinfo} .
     pr MULTICAST .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr SERVER .
     pr SITE .
     pr SORTABLE-LIST{Hst<} .
@@ -415,7 +437,7 @@ mod TEST is
     pr ERROR .
     pr MSG .
     pr MULTICAST .
-    pr OPERATION .
+    pr ABSTRACT-OPERATION .
     pr PREDICATES .
     pr SERVER .
     pr SERVER-RULES .
