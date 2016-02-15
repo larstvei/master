@@ -325,48 +325,46 @@ mod SERVER is
     op sites :_ : Map{User,Siteinfo} -> Attribute .
 endm
 
-mod MULTICAST is
+mod SEND is
     pr CONFIGURATION .
+    pr HISTORYITEM .
     pr LIST{Msg} .
-    pr MAP{User,Nat} .
-    pr MSG .
-    pr ABSTRACT-OPERATION .
+    pr MAP{User,Siteinfo} .
     pr SERVER .
-    pr SITE-INFO .
     pr SITE .
+    pr SORTABLE-LIST{Hst<} .
     pr TRANSFORMATIONS .
-    pr USER .
 
-    sort Multicast .
-    subsort Multicast < Configuration .
+    sort Send .
+    subsort Send < Configuration .
 
-    op multicast_to_ : Op Map{User,Siteinfo} -> Multicast .
+    op send_to_ : Op Map{User, Siteinfo} -> Send .
 
-    var O : Op .
-    vars OPS OPS' : List{Op} .
-    var Q : List{Msg} .
-    var U : User .
     vars A A' : AttributeSet .
+    vars O O' : Op .
     vars I N : Nat .
     vars US US' : Map{User,Siteinfo} .
+    var U : User .
+    var Q : List{Msg} .
+    var OPS : List{Op} .
 
-    eq [multicast] : multicast O to empty = none .
-    eq [multicast] :
+    eq  [send] : send O to empty = none .
+    eq [send] :
         < U | in-queue : Q, A >
-        < server | sites : (U |-> [I, N, OPS'], US'), A' >
-        multicast O to (U |-> [I, N, OPS], US)
+        < server | state : I, sites : (U |-> [N, OPS], US'), A' >
+        send O to (U |-> [N, OPS], US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | sites : (U |-> [I, s N, OPS'], US'), A' >
-        multicast O to US .
+        < server | state : I, sites : (U |-> [s N, OPS], US'), A' >
+        send O to US .
 endm
 
 mod SERVER-RULES is
     pr CONFIGURATION .
     pr LIST{Msg} .
     pr MAP{User,Siteinfo} .
-    pr MULTICAST .
     pr ABSTRACT-OPERATION .
+    pr SEND .
     pr SERVER .
     pr SITE .
     pr SORTABLE-LIST{Hst<} .
