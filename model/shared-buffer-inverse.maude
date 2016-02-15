@@ -372,21 +372,31 @@ mod SERVER-RULES is
 
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
-    vars O O' : Op .
-    vars I N N' S S' : Nat .
+    vars O O' O'' : Op .
+    vars I I' N N' S S' : Nat .
+    vars OPS OPS' : List{Op} .
     var U  : User .
-    var OPS : List{Op} .
-    var H  : List{Hst<} .
-    var US : Map{User,Siteinfo} .
+    vars H H'  : List{Hst<} .
+    vars US US' : Map{User,Siteinfo} .
+
+    op totalorder : List{Hst<} Nat -> Op .
+    ceq totalorder((O N) H, I) = O o totalorder(H, I) if N >= I .
+    eq totalorder(H, I) = nop [owise] .
 
     crl [server-receive] :
-        < U | out-queue : (Q msg(O,S,N)), in-queue : Q', A >
-        < server | history : H, state : I, sites : (U |-> [I, N', OPS], US), A' >
+        < U | out-queue : (Q msg(O,I,N)), A >
+        < server | history : H, state : I', sites : (U |-> [N', OPS], US), A' >
       =>
-        < U | out-queue : Q, in-queue : (msg(O' o inv(O), s I, s N) Q'), A >
-        < server | history : ((O I) H), state : s I, sites : (U |-> [S, S', (O OPS)], US), A' >
-        multicast O to US
-      if S' := s N + sd(size(H), N) /\ O' := transform(H, O S) .
+        < U | out-queue : Q, A >
+        < server | history : H', state : s I', sites : US', A' >
+        (send O' o O'' to US)
+        (send O' o inv(compose(O OPS')) to (U |-> [S', O OPS']))
+      if S'   := s N + sd(I, I') /\
+         OPS' := if I == I' then nil else OPS fi /\
+         US'  := (U |-> [S', O OPS'], US) /\
+         H'   := (O I) H /\
+         O'   := totalorder(H', I) /\
+         O''  := inv(totalorder(H, I)) .
 endm
 
 mod PREDICATES is
@@ -421,7 +431,6 @@ mod TEST is
     pr CONFIGURATION .
     pr ERROR .
     pr MSG .
-    pr MULTICAST .
     pr ABSTRACT-OPERATION .
     pr PREDICATES .
     pr SERVER .
