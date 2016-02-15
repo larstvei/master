@@ -179,26 +179,13 @@ fmod TRANSFORMATIONS is
     pr SORTABLE-LIST{Hst<} .
 
     vars O O' : Op .
-    vars N N' : Nat .
-    var H : List{Hst<} .
+    var OPS : List{Op} .
 
-    op transform : List{Hst<} Hst -> Op .
-    eq transform(nil, O N) = O .
-
-    eq transform((O' N') H, O N) = O .
-
-    --- eq transform(OS, O) = compose(OS) o O .
-    --- eq transform(OS, O) = compose(OS) o O o compose(reverse(invert(OS))) .
-    --- eq transform((Oj OS), Oi) = Oj o transform(OS, Oi) o inv(Oj) .
-
-    --- op compose : List{Op} -> Op .
-    --- eq compose(O) = O .
-    --- eq compose(Oi Oj) = Oi o Oj .
-    --- eq compose(Oi Oj OS) = Oi o Oj o compose(OS) .
-
-    --- op invert : List{Op} -> List{Op} .
-    --- eq invert(nil) = nil .
-    --- eq invert(Oi OS) = inv(Oi) invert(OS) .
+    op compose : List{Op} -> Op .
+    eq compose(nil) = nop .
+    eq compose(O) = O .
+    eq compose(O O') = O o O' .
+    eq compose(O O' OPS) = O o O' o compose(OPS) .
 endfm
 
 fmod APPLY is
