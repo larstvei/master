@@ -345,7 +345,9 @@ fmod TOTALORDER is
     eq takeop((O I U) T, s N) = O o takeop(T, N) .
 
     op getop : Totalorder Nat -> Op .
-    eq getop(T, I) = takeop(T, sd(size(T), I)) .
+    ceq getop((O I U) T, I') = O o getop(T, I') if I >= I' .
+    eq getop(T, I') = nop [owise] .
+    ---eq getop(T, I) = takeop(T, sd(size(T), I)) .
 endfm
 
 mod SERVER is
