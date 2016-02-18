@@ -325,6 +325,9 @@ fmod TOTALORDER is
     ceq put(O I U, (O' I' U') T) = (O I U) (O' I' U') T
       if U == U' .
 
+    ceq put(O I U, (O I U') T) = (O I U) T
+      if U =/= U' .
+
     ceq put(O I U, (O' I' U') T) = (O' I' U') (O I U) T
       if point(O) > point(O') /\ I == I' /\ U =/= U' .
 
