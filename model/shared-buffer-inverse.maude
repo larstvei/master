@@ -320,16 +320,16 @@ fmod TOTALORDER is
     eq put(IT, empty) = IT .
 
     ceq put(O I U, (O' I' U') T) = (O' I' U') put(O I U, T)
-      if I < I' .
+      if I < I' /\ U =/= U' .
 
     ceq put(O I U, (O' I' U') T) = (O I U) (O' I' U') T
-      if I == I' /\ U == U' .
+      if U == U' .
 
     ceq put(O I U, (O' I' U') T) = (O' I' U') (O I U) T
       if point(O) > point(O') /\ I == I' /\ U =/= U' .
 
     ceq put(O I U, (O' I' U') T) = (O' I' U') (O I U) T
-      if type(O') == del /\ point(O) == point(O') /\ I == I' /\ U =/= U' .
+      if type(O) == del /\ point(O) == point(O') /\ I == I' /\ U =/= U' .
 
     eq put(O I U, (O' I' U') T) = (O I U) (O' I' U') T [owise] .
 
