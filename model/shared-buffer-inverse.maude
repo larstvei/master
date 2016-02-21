@@ -295,59 +295,62 @@ view Siteinfo from TRIV to SITE-INFO is
     sort Elt to Siteinfo .
 endv
 
-fmod TOTALORDER is
+fmod ORDERING is
     pr ABSTRACT-OPERATION .
+    pr BOOL .
     pr INSERT-DELETE .
     pr NAT .
-    pr STR .
     pr USER .
 
-    sorts Item Totalorder .
-    subsort Item < Totalorder .
+    sort Item .
 
-    op empty : -> Totalorder .
-    op __ : Totalorder Totalorder -> Totalorder [assoc id: empty] .
-    op ___ : Op Nat User -> Item .
+    op ____ : Op Nat Nat User -> Item .
+    op _<_ : Item Item -> Bool .
 
-    vars N I N' I' : Nat .
-    var IT : Item .
+    vars I I' M M' : Nat .
     vars O O' : Op .
-    vars S S' : Str .
     vars U U' : User .
-    var T : Totalorder .
+
+    op concurrent : Item Item -> Bool .
+    eq concurrent(O I M U, O' I' M' U') = U =/= U' and
+        ((I <= I' and I' <= M) or (I' <= I and I <= M')) .
+
+    ceq O I M U < O' I' M' U' = pos(O) > pos(O')
+        or (pos(O) == pos(O') and type(O) == del)
+        or (pos(O) == pos(O') and type(O) == type(O') and M < M')
+      if concurrent(O I M U, O' I' M' U') .
+    eq O I M U < O' I' M' U' = M < M' [owise] .
+
+endfm
+
+view Item< from STRICT-TOTAL-ORDER to ORDERING is
+    sort Elt to Item .
+endv
+
+fmod TOTALORDER is
+    pr ORDERING .
+    pr SORTABLE-LIST{Item<} .
+
+    sort Totalorder .
+    subsort List{Item<} < Totalorder .
+
+    vars M N I M' N' I' : Nat .
+    vars O O' : Op .
+    vars T T' : Totalorder .
+    vars U U' : User .
+    var IT : Item .
 
     op put : Item Totalorder -> Totalorder .
-    eq put(IT, empty) = IT .
+    eq put(IT, T) = reverse(sort(IT T)) .
 
-    ceq put(O I U, (O' I' U') T) = (O' I' U') put(O I U, T)
-      if I < I' /\ U =/= U' .
-
-    ceq put(O I U, (O' I' U') T) = (O I U) (O' I' U') T
-      if U == U' .
-
-    ceq put(O I U, (O I U') T) = (O I U) T
-      if U =/= U' .
-
-    ceq put(O I U, (O' I' U') T) = (O' I' U') (O I U) T
-      if pos(O) > pos(O') /\ I == I' /\ U =/= U' .
-
-    ceq put(O I U, (O' I' U') T) = (O' I' U') (O I U) T
-      if type(O) == del /\ pos(O) == pos(O') /\ I == I' /\ U =/= U' .
-
-    eq put(O I U, (O' I' U') T) = (O I U) (O' I' U') T [owise] .
-
-    op size : Totalorder -> Nat .
-    eq size(empty) = 0 .
-    eq size(IT T) = s size(T) .
-
-    op takeop : Totalorder Nat -> Op .
-    eq takeop(T, 0) = nop .
-    eq takeop((O I U) T, s N) = O o takeop(T, N) .
+    op compose : Totalorder -> Op .
+    eq compose(nil) = nop .
+    eq compose(T (O I M U)) = compose(T) o O .
 
     op getop : Totalorder Nat -> Op .
-    ceq getop((O I U) T, I') = O o getop(T, I') if I >= I' .
-    eq getop(T, I') = nop [owise] .
-    ---eq getop(T, I) = takeop(T, sd(size(T), I)) .
+    eq  getop(nil, I') = nop .
+    ceq getop(T (O I M U), I') = compose(T (O I M U)) if M >= I' .
+    eq  getop(T (O I M U), I') = getop(T, I') [owise] .
 endfm
 
 mod SERVER is
@@ -409,24 +412,24 @@ mod SERVER-RULES is
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
     vars O O' O'' : Op .
-    vars I I' N N' S S' : Nat .
+    vars I M N N' S S' : Nat .
     vars OPS OPS' : List{Op} .
     var U  : User .
-    vars T T'  : Totalorder .
+    vars T T' : Totalorder .
     vars US US' : Map{User,Siteinfo} .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : I', sites : (U |-> [N', OPS], US), A' >
+        < server | history : T, state : M, sites : (U |-> [N', OPS], US), A' >
       =>
         < U | out-queue : Q, A >
-        < server | history : T', state : s I', sites : US', A' >
+        < server | history : T', state : s M, sites : US', A' >
         (send O' o O'' to US)
         (send O' o inv(compose(O OPS')) to (U |-> [S', O OPS']))
-      if S'   := s N + sd(I, I') /\
-         OPS' := if I == I' then nil else OPS fi /\
+      if S'   := s N + sd(I, M) /\
+         OPS' := if I == M then nil else OPS fi /\
          US'  := (U |-> [S', O OPS'], US) /\
-         T'   := put(O I U, T) /\
+         T'   := put(O I M U, T) /\
          O'   := getop(T', I) /\
          O''  := inv(getop(T, I)) .
 endm
@@ -471,6 +474,7 @@ mod TEST is
     pr SITE-RULES .
     pr STR .
     pr TRANSFORMATIONS .
+    pr TOTALORDER .
     pr UNIQUE .
     pr USER .
 
@@ -496,10 +500,10 @@ mod TEST is
 
     eq init B =
         [ a b c d ]
-        actions 2
+        actions 3
         < user 0 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < user 1 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
-        < server | history : empty, state : 0,
+        < server | history : nil, state : 0,
                    sites : (user 0 |-> [0, nil], user 1 |-> [0, nil]) > .
 endm
 
