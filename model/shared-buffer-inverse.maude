@@ -287,8 +287,8 @@ mod SITE-INFO is
     pr NAT .
 
     sort Siteinfo .
-    --- [seqno, operations]
-    op [_,_] : Nat List{Op} -> Siteinfo .
+    --- [state, seqno, operations]
+    op [_,_,_] : Nat Nat List{Op} -> Siteinfo .
 endm
 
 view Siteinfo from TRIV to SITE-INFO is
@@ -381,20 +381,20 @@ mod SEND is
 
     vars A A' : AttributeSet .
     vars O O' : Op .
-    vars I N : Nat .
+    vars I I' N : Nat .
     vars US US' : Map{User,Siteinfo} .
     var U : User .
     var Q : List{Msg} .
     var OPS : List{Op} .
 
-    eq  [send] : send O to empty = none .
+    eq [send] : send O to empty = none .
     eq [send] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> [N, OPS], US'), A' >
-        send O to (U |-> [N, OPS], US)
+        < server | state : I, sites : (U |-> [I', N, OPS], US'), A' >
+        send O to (U |-> [I', N, OPS], US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> [s N, OPS], US'), A' >
+        < server | state : I, sites : (U |-> [I', s N, OPS], US'), A' >
         send O to US .
 endm
 
@@ -412,7 +412,7 @@ mod SERVER-RULES is
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
     vars O O' O'' : Op .
-    vars I M N N' S S' : Nat .
+    vars I I' M N N' S S' : Nat .
     vars OPS OPS' : List{Op} .
     var U  : User .
     vars T T' : Totalorder .
@@ -420,15 +420,15 @@ mod SERVER-RULES is
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : M, sites : (U |-> [N', OPS], US), A' >
+        < server | history : T, state : M, sites : (U |-> [I', N', OPS], US), A' >
       =>
         < U | out-queue : Q, A >
         < server | history : T', state : s M, sites : US', A' >
         (send O' o O'' to US)
-        (send O' o inv(compose(O OPS')) to (U |-> [S', O OPS']))
          OPS' := if I == M then nil else OPS fi /\
-         US'  := (U |-> [S', O OPS'], US) /\
+        (send O' o inv(compose(O OPS')) to (U |-> [I, S', O OPS']))
       if S'   := s N + sd(N, N') /\
+         US'  := (U |-> [I, S', O OPS'], US) /\
          T'   := put(O I M U, T) /\
          O'   := getop(T', I) /\
          O''  := inv(getop(T, I)) .
@@ -504,7 +504,7 @@ mod TEST is
         < user 0 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < user 1 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < server | history : nil, state : 0,
-                   sites : (user 0 |-> [0, nil], user 1 |-> [0, nil]) > .
+                   sites : (user 0 |-> [0, 0, nil], user 1 |-> [0, 0, nil]) > .
 endm
 
 --- search init =>*
