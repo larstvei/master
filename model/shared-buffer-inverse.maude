@@ -360,6 +360,9 @@ fmod TOTALORDER is
     eq  getop(nil, I') = nop .
     ceq getop(T (O I M U), I') = compose(T (O I M U)) if M >= I' .
     eq  getop(T (O I M U), I') = getop(T, I') [owise] .
+
+    ceq T (O I M U) (O I' M' U') T' = T (O I M U) T'
+      if concurrent(O I M U, O I' M' U') .
 endfm
 
 mod SERVER is
