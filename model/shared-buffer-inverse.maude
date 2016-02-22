@@ -487,9 +487,6 @@ mod TEST is
     pr UNIQUE .
     pr USER .
 
-    op init  : -> Configuration .
-    op init_ : Buffer -> Configuration .
-
     var C : Configuration .
     var I : Nat .
     var I' : Nat .
@@ -505,19 +502,36 @@ mod TEST is
     vars Oi Oj : Op .
     vars S T : Str .
 
-    eq init = init nil .
+    op init  : -> Configuration .
+    eq init = init nil 2 .
 
-    eq init B =
+    op init_ : Buffer -> Configuration .
+    eq init B = init B 2 .
+
+    op init__ : Buffer Nat -> Configuration .
+    eq init B N =
         [ a b c d ]
         actions 3
-        < user 0 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
-        < user 1 | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         < server | history : nil, state : 0,
-                   sites : (user 0 |-> [0, 0, nil], user 1 |-> [0, 0, nil]) > .
+                   sites : sites N >
+        clients B N .
+
+    op clients__ : Buffer Nat -> Configuration .
+    eq clients B 0 = none .
+    eq clients B s N =
+        < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        clients B N .
+
+    op sites_ : Nat -> Map{User,Siteinfo} .
+    eq sites 0 = empty .
+    eq sites s N = user N |-> [0, 0, nil], sites N .
 endm
 
 --- search init =>*
 --- < user 0 | buffer : B, out-queue : nil, in-queue : nil, state : N, A >
 --- < user 1 | buffer : B', out-queue : nil, in-queue : nil, state : N', A' >
 --- C
---- such that B =/= B' and N =/= N' .
+--- such that B == B' .
+
+--- red modelCheck(init, [] <> consistent) .
+
