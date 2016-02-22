@@ -426,9 +426,9 @@ mod SERVER-RULES is
         < server | history : T', state : s M, sites : US', A' >
         (send O' o O'' to US)
         (send O' o inv(compose(O OPS')) to (U |-> [S', O OPS']))
-      if S'   := s N + sd(I, M) /\
          OPS' := if I == M then nil else OPS fi /\
          US'  := (U |-> [S', O OPS'], US) /\
+      if S'   := s N + sd(N, N') /\
          T'   := put(O I M U, T) /\
          O'   := getop(T', I) /\
          O''  := inv(getop(T, I)) .
