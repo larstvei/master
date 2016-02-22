@@ -289,6 +289,15 @@ mod SITE-INFO is
     sort Siteinfo .
     --- [state, seqno, operations]
     op [_,_,_] : Nat Nat List{Op} -> Siteinfo .
+
+    var N : Nat .
+    var O : Op .
+    var OPS : List{Op} .
+
+    op dropLast : Nat List{Op} -> List{Op} .
+    eq dropLast(0, OPS) = OPS .
+    eq dropLast(s N, nil) = nil .
+    eq dropLast(s N, OPS O) = dropLast(N, OPS) .
 endm
 
 view Siteinfo from TRIV to SITE-INFO is
@@ -425,9 +434,9 @@ mod SERVER-RULES is
         < U | out-queue : Q, A >
         < server | history : T', state : s M, sites : US', A' >
         (send O' o O'' to US)
-         OPS' := if I == M then nil else OPS fi /\
         (send O' o inv(compose(O OPS')) to (U |-> [I, S', O OPS']))
       if S'   := s N + sd(N, N') /\
+         OPS' := dropLast(sd(I, I'), OPS) /\
          US'  := (U |-> [I, S', O OPS'], US) /\
          T'   := put(O I M U, T) /\
          O'   := getop(T', I) /\
