@@ -283,21 +283,11 @@ mod SITE-RULES is
 endm
 
 mod SITE-INFO is
-    pr LIST{Op} .
     pr NAT .
 
     sort Siteinfo .
-    --- [state, seqno, operations]
-    op [_,_,_] : Nat Nat List{Op} -> Siteinfo .
-
-    var N : Nat .
-    var O : Op .
-    var OPS : List{Op} .
-
-    op dropLast : Nat List{Op} -> List{Op} .
-    eq dropLast(0, OPS) = OPS .
-    eq dropLast(s N, nil) = nil .
-    eq dropLast(s N, OPS O) = dropLast(N, OPS) .
+     --- [state, seqno]
+    op [_,_] : Nat Nat -> Siteinfo .
 endm
 
 view Siteinfo from TRIV to SITE-INFO is
@@ -356,10 +346,15 @@ fmod TOTALORDER is
     eq compose(nil) = nop .
     eq compose(T (O I M U)) = compose(T) o O .
 
-    op getop : Totalorder Nat -> Op .
-    eq  getop(nil, I') = nop .
-    ceq getop(T (O I M U), I') = compose(T (O I M U)) if M >= I' .
-    eq  getop(T (O I M U), I') = getop(T, I') [owise] .
+    op  until : Totalorder Nat -> Totalorder .
+    eq  until(nil, I') = nil .
+    ceq until(T (O I M U), I') = T (O I M U) if M >= I' .
+    eq  until(T (O I M U), I') = until(T, I') [owise] .
+
+    op filter : User Totalorder -> Totalorder .
+    eq filter(U, nil) = nil .
+    eq filter(U,  (O I M U) T) = (O I M U) filter(U, T) .
+    eq filter(U', (O I M U) T) = filter(U', T) [owise] .
 
     ceq T (O I M U) (O I' M' U') T' = T (O I M U) T'
       if concurrent(O I M U, O I' M' U') .
@@ -397,16 +392,15 @@ mod SEND is
     vars US US' : Map{User,Siteinfo} .
     var U : User .
     var Q : List{Msg} .
-    var OPS : List{Op} .
 
     eq [send] : send O to empty = none .
     eq [send] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> [I', N, OPS], US'), A' >
-        send O to (U |-> [I', N, OPS], US)
+        < server | state : I, sites : (U |-> [I', N], US'), A' >
+        send O to (U |-> [I', N], US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> [I', s N, OPS], US'), A' >
+        < server | state : I, sites : (U |-> [I', s N], US'), A' >
         send O to US .
 endm
 
@@ -423,27 +417,29 @@ mod SERVER-RULES is
 
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
-    vars O O' O'' : Op .
+    vars O O' : Op .
+    vars O-1 O-1' : Op .
     vars I I' M N N' S S' : Nat .
-    vars OPS OPS' : List{Op} .
     var U  : User .
+    var IT : Item .
     vars T T' : Totalorder .
     vars US US' : Map{User,Siteinfo} .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : M, sites : (U |-> [I', N', OPS], US), A' >
+        < server | history : T, state : M, sites : (U |-> [I', N'], US), A' >
       =>
         < U | out-queue : Q, A >
         < server | history : T', state : s M, sites : US', A' >
-        (send O' o O'' to US)
-        (send O' o inv(compose(O OPS')) to (U |-> [I, S', O OPS']))
+        (send O' o O-1  to US)
+        (send O' o O-1' to (U |-> [I, S']))
       if S'   := s N + sd(N, N') /\
-         OPS' := dropLast(sd(I, I'), OPS) /\
-         US'  := (U |-> [I, S', O OPS'], US) /\
-         T'   := put(O I M U, T) /\
-         O'   := getop(T', I) /\
-         O''  := inv(getop(T, I)) .
+         IT   := O I M U /\
+         US'  := (U |-> [I, S'], US) /\
+         T'   := put(IT, T) /\
+         O'   := compose(until(T', I)) /\
+         O-1  := inv(compose(until(T, I))) /\
+         O-1' := inv(compose(filter(U, until(T', I)))) .
 endm
 
 mod PREDICATES is
@@ -527,14 +523,14 @@ mod TEST is
 
     op sites_ : Nat -> Map{User,Siteinfo} .
     eq sites 0 = empty .
-    eq sites s N = user N |-> [0, 0, nil], sites N .
+    eq sites s N = user N |-> [0, 0], sites N .
 endm
 
 --- search init =>*
 --- < user 0 | buffer : B, out-queue : nil, in-queue : nil, state : N, A >
 --- < user 1 | buffer : B', out-queue : nil, in-queue : nil, state : N', A' >
 --- C
---- such that B == B' .
+--- such that B =/= B' .
 
 --- red modelCheck(init, [] <> consistent) .
 
