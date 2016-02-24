@@ -304,7 +304,6 @@ fmod ORDERING is
     sort Item .
 
     op ____ : Op Nat Nat User -> Item .
-    op _<_ : Item Item -> Bool .
 
     vars I I' M M' : Nat .
     vars O O' : Op .
@@ -314,6 +313,7 @@ fmod ORDERING is
     eq concurrent(O I M U, O' I' M' U') = U =/= U' and
         ((I <= I' and I' <= M) or (I' <= I and I <= M')) .
 
+    op _<_ : Item Item -> Bool .
     ceq O I M U < O' I' M' U' = pos(O) > pos(O')
         or (pos(O) == pos(O') and type(O) == del)
         or (pos(O) == pos(O') and type(O) == type(O') and M < M')
@@ -533,4 +533,3 @@ endm
 --- such that B =/= B' .
 
 --- red modelCheck(init, [] <> consistent) .
-
