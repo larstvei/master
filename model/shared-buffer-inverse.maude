@@ -156,20 +156,6 @@ fmod INSERT-DELETE is
     eq type(del(N,S)) = del .
 endfm
 
-fmod TRANSFORMATIONS is
-    pr LIST{Op} .
-    pr ABSTRACT-OPERATION .
-
-    vars O O' : Op .
-    var OPS : List{Op} .
-
-    op compose : List{Op} -> Op .
-    eq compose(nil) = nop .
-    eq compose(O) = O .
-    eq compose(O O') = O o O' .
-    eq compose(O O' OPS) = O o O' o compose(OPS) .
-endfm
-
 fmod APPLY is
     pr BUFFER .
     pr ERROR .
@@ -379,7 +365,6 @@ mod SEND is
     pr SERVER .
     pr SITE .
     pr TOTALORDER .
-    pr TRANSFORMATIONS .
 
     sort Send .
     subsort Send < Configuration .
@@ -413,7 +398,6 @@ mod SERVER-RULES is
     pr SERVER .
     pr SITE .
     pr TOTALORDER .
-    pr TRANSFORMATIONS .
 
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
@@ -481,7 +465,6 @@ mod TEST is
     pr SITE .
     pr SITE-RULES .
     pr STR .
-    pr TRANSFORMATIONS .
     pr TOTALORDER .
     pr UNIQUE .
     pr USER .
@@ -492,7 +475,6 @@ mod TEST is
     var N : Nat .
     var N' : Nat .
     var O : Op .
-    var OPS : List{Op} .
     vars Q Q' : List{Msg} .
     var U : User .
     var US : Map{User,Siteinfo} .
