@@ -82,7 +82,7 @@ mod UNIQUE is
     pr CONFIGURATION .
     pr LIST{Str} .
 
-    sorts Unique .
+    sort Unique .
 
     subsort Unique < Configuration .
 
