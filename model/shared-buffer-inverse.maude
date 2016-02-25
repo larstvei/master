@@ -287,19 +287,20 @@ fmod ORDERING is
     pr NAT .
     pr USER .
 
-    sort Item .
+    sort Event .
 
     op ____ : Op Nat Nat User -> Item .
 
     vars I I' M M' : Nat .
+    vars E E' : Event .
     vars O O' : Op .
     vars U U' : User .
 
-    op concurrent : Item Item -> Bool .
     eq concurrent(O I M U, O' I' M' U') = U =/= U' and
+    op concurrent : Event Event -> Bool .
         ((I <= I' and I' <= M) or (I' <= I and I <= M')) .
 
-    op _<_ : Item Item -> Bool .
+    op _<_ : Event Event -> Bool .
     ceq O I M U < O' I' M' U' = pos(O) > pos(O')
         or (pos(O) == pos(O') and type(O) == del)
         or (pos(O) == pos(O') and type(O) == type(O') and M < M')
@@ -308,22 +309,21 @@ fmod ORDERING is
 
 endfm
 
-view Item< from STRICT-TOTAL-ORDER to ORDERING is
-    sort Elt to Item .
+view Event from TRIV to ORDERING is
+    sort Elt to Event .
 endv
 
 fmod TOTALORDER is
     pr ORDERING .
-    pr SORTABLE-LIST{Item<} .
+    pr LIST{Event} .
 
     sort Totalorder .
-    subsort List{Item<} < Totalorder .
+    subsort List{Event} < Totalorder .
 
     vars M N I M' N' I' : Nat .
     vars O O' : Op .
     vars T T' : Totalorder .
     vars U U' : User .
-    var IT : Item .
 
     op put : Item Totalorder -> Totalorder .
     eq put(IT, T) = reverse(sort(IT T)) .
@@ -405,7 +405,7 @@ mod SERVER-RULES is
     vars O-1 O-1' : Op .
     vars I I' M N N' S S' : Nat .
     var U  : User .
-    var IT : Item .
+    var E : Event .
     vars T T' : Totalorder .
     vars US US' : Map{User,Siteinfo} .
 
@@ -418,9 +418,9 @@ mod SERVER-RULES is
         (send O' o O-1  to US)
         (send O' o O-1' to (U |-> [I, S']))
       if S'   := s N + sd(N, N') /\
-         IT   := O I M U /\
+         E    := O I M U /\
          US'  := (U |-> [I, S'], US) /\
-         T'   := put(IT, T) /\
+         T'   := put(E, T) /\
          O'   := compose(until(T', I)) /\
          O-1  := inv(compose(until(T, I))) /\
          O-1' := inv(compose(filter(U, until(T', I)))) .
