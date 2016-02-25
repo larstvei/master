@@ -285,19 +285,20 @@ fmod ORDERING is
     pr BOOL .
     pr INSERT-DELETE .
     pr NAT .
-    pr USER .
+    pr SET{User} .
 
     sort Event .
 
-    op ____ : Op Nat Nat User -> Item .
+    op ____ : Op Nat Nat Set{User} -> Event .
 
     vars I I' M M' : Nat .
     vars E E' : Event .
     vars O O' : Op .
-    vars U U' : User .
+    vars U U' : Set{User} .
 
-    eq concurrent(O I M U, O' I' M' U') = U =/= U' and
     op concurrent : Event Event -> Bool .
+    eq concurrent(O I M U, O' I' M' U') =
+        intersection(U, U') == empty and
         ((I <= I' and I' <= M) or (I' <= I and I <= M')) .
 
     op _<_ : Event Event -> Bool .
@@ -306,6 +307,9 @@ fmod ORDERING is
         or (pos(O) == pos(O') and type(O) == type(O') and M < M')
       if concurrent(O I M U, O' I' M' U') .
     eq O I M U < O' I' M' U' = M < M' [owise] .
+
+    op _>_ : Event Event -> Bool .
+    eq E > E' = E' < E .
 
 endfm
 
@@ -323,7 +327,7 @@ fmod TOTALORDER is
     vars M N I M' N' I' : Nat .
     vars O O' : Op .
     vars T T' : Totalorder .
-    vars U U' : User .
+    vars U U' : Set{User} .
 
     op put : Item Totalorder -> Totalorder .
     eq put(IT, T) = reverse(sort(IT T)) .
@@ -339,10 +343,10 @@ fmod TOTALORDER is
 
     op filter : User Totalorder -> Totalorder .
     eq filter(U, nil) = nil .
-    eq filter(U,  (O I M U) T) = (O I M U) filter(U, T) .
-    eq filter(U', (O I M U) T) = filter(U', T) [owise] .
+    eq filter(U, (O I M (U, U')) T) = (O I M U) filter(U, T) .
+    eq filter(U, (O I M U') T) = filter(U, T) [owise] .
 
-    ceq T (O I M U) (O I' M' U') T' = T (O I M U) T'
+    ceq T (O I M U) (O I' M' U') T' = T (O I M union(U, U')) T'
       if concurrent(O I M U, O I' M' U') .
 endfm
 
