@@ -76,6 +76,11 @@ fmod ERROR is
     subsort Buffer < Error .
 
     op error : -> Error [format (r o)] .
+
+    var S : Str .
+
+    eq S error = error .
+    eq error S = error .
 endfm
 
 mod UNIQUE is
