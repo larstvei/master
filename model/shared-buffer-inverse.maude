@@ -546,6 +546,7 @@ mod TEST is
     pr SITE-RULES .
     pr STR .
     pr TOTALORDER .
+    pr TRANSFORMATION .
     pr UNIQUE .
     pr USER .
 
