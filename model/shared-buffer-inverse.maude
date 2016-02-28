@@ -161,6 +161,33 @@ fmod INSERT-DELETE is
     eq type(del(N,S)) = del .
 endfm
 
+fmod TRANSFORMATION is
+    pr INSERT-DELETE .
+
+    vars N N' : Nat .
+    vars S S' : Str .
+    vars O O' O'' : Op .
+
+    op  transform : Op Op -> Op .
+
+    ceq transform(ins(N, S), ins(N', S')) = ins(N, S) if N < N' .
+    eq  transform(ins(N, S), ins(N', S')) = ins(s N, S) [owise] .
+
+    ceq transform(ins(N, S), del(N', S')) = ins(N, S) if N <= N' .
+    eq  transform(ins(N, S), del(N', S')) = ins(sd(N, 1), S) [owise] .
+
+    ceq transform(del(N, S), ins(N', S')) = del(N, S) if N < N' .
+    eq  transform(del(N, S), ins(N', S')) = del(s N, S) [owise] .
+
+    ceq transform(del(N, S), del(N', S')) = del(N, S) if N < N' .
+    ceq transform(del(N, S), del(N', S')) = del(sd(N, 1), S) if N > N' .
+    eq  transform(del(N, S), del(N', S')) = nop [owise] .
+
+    eq  transform(O, nop) = O .
+    eq  transform(nop, O) = nop .
+    eq  transform(O, O' o O'') = transform(transform(O, O''), O') .
+endfm
+
 fmod APPLY is
     pr BUFFER .
     pr ERROR .
