@@ -368,13 +368,14 @@ endv
 fmod TOTALORDER is
     pr ORDERING .
     pr LIST{Event} .
+    pr TRANSFORMATION .
 
     sort Totalorder .
     subsort List{Event} < Totalorder .
 
     vars M N I M' N' I' : Nat .
     vars O O' : Op .
-    vars T T' : Totalorder .
+    vars T T' T'' : Totalorder .
     vars U U' : Set{User} .
     vars E E' : Event .
 
@@ -400,13 +401,29 @@ fmod TOTALORDER is
     ceq until(T (O I M U), I') = T (O I M U) if M >= I' .
     eq  until(T (O I M U), I') = until(T, I') [owise] .
 
+    op  fix : Totalorder -> Totalorder .
+    eq  fix(nil) = nil .
+    ceq fix((O I M U) T) = (O' I M U) T
+      if O' := it(O, compose(filter((O I M U), T))) .
+
+    op  filter : Event Totalorder -> Totalorder .
+    eq  filter(E, nil) = nil .
+    ceq filter(E, E' T) = E' filter(E, T) if concurrent(E, E') .
+    eq  filter(E, (O I M U') T) = filter(E, T) [owise] .
+
     op filter : User Totalorder -> Totalorder .
     eq filter(U, nil) = nil .
     eq filter(U, (O I M (U, U')) T) = (O I M U) filter(U, T) .
     eq filter(U, (O I M U') T) = filter(U, T) [owise] .
 
-    ceq T (O I M U) (O I' M' U') T' = T (O I M union(U, U')) T'
-      if concurrent(O I M U, O I' M' U') .
+    op reset : Event Totalorder -> Op .
+    eq reset(O I M U, T) = et(O, compose(filter(U, until(T, min(I, sd(I, 1)))))) .
+
+    op same : Event Event Totalorder -> Bool .
+    eq same(E, E', T) = concurrent(E, E') and reset(E, T) == reset(E', T) .
+
+    ceq T (O I M U) T' (O' I' M' U') T'' =  T T' (O' I M union(U, U')) T''
+      if same(O I M U, O' I' M' U', T' T'') .
 endfm
 
 mod SERVER is
