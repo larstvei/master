@@ -168,24 +168,41 @@ fmod TRANSFORMATION is
     vars S S' : Str .
     vars O O' O'' : Op .
 
-    op  transform : Op Op -> Op .
+    op  it : Op Op -> Op .
+    ceq it(ins(N, S), ins(N', S')) = ins(N, S) if N < N' .
+    eq  it(ins(N, S), ins(N', S')) = ins(s N, S) [owise] .
 
-    ceq transform(ins(N, S), ins(N', S')) = ins(N, S) if N < N' .
-    eq  transform(ins(N, S), ins(N', S')) = ins(s N, S) [owise] .
+    ceq it(ins(N, S), del(N', S')) = ins(N, S) if N <= N' .
+    eq  it(ins(N, S), del(N', S')) = ins(sd(N, 1), S) [owise] .
 
-    ceq transform(ins(N, S), del(N', S')) = ins(N, S) if N <= N' .
-    eq  transform(ins(N, S), del(N', S')) = ins(sd(N, 1), S) [owise] .
+    ceq it(del(N, S), ins(N', S')) = del(N, S) if N < N' .
+    eq  it(del(N, S), ins(N', S')) = del(s N, S) [owise] .
 
-    ceq transform(del(N, S), ins(N', S')) = del(N, S) if N < N' .
-    eq  transform(del(N, S), ins(N', S')) = del(s N, S) [owise] .
+    ceq it(del(N, S), del(N', S')) = del(N, S) if N < N' .
+    ceq it(del(N, S), del(N', S')) = del(sd(N, 1), S) if N > N' .
+    eq  it(del(N, S), del(N', S')) = nop [owise] .
 
-    ceq transform(del(N, S), del(N', S')) = del(N, S) if N < N' .
-    ceq transform(del(N, S), del(N', S')) = del(sd(N, 1), S) if N > N' .
-    eq  transform(del(N, S), del(N', S')) = nop [owise] .
+    eq  it(O, nop) = O .
+    eq  it(nop, O) = nop .
+    eq  it(O, O' o O'') = it(it(O, O''), O') .
 
-    eq  transform(O, nop) = O .
-    eq  transform(nop, O) = nop .
-    eq  transform(O, O' o O'') = transform(transform(O, O''), O') .
+    op  et : Op Op -> Op .
+    ceq et(ins(N, S), ins(N', S')) = ins(N, S) if N < N' .
+    eq  et(ins(N, S), ins(N', S')) = ins(sd(N, 1), S) [owise] .
+
+    ceq et(ins(N, S), del(N', S')) = ins(N, S) if N <= N' .
+    eq  et(ins(N, S), del(N', S')) = ins(s N, S) [owise] .
+
+    ceq et(del(N, S), ins(N', S')) = del(N, S) if N < N' .
+    eq  et(del(N, S), ins(N', S')) = del(sd(N, 1), S) [owise] .
+
+    ceq et(del(N, S), del(N', S')) = del(N, S) if N < N' .
+    ceq et(del(N, S), del(N', S')) = del(s N, S) if N >= N' .
+    eq  et(del(N, S), del(N', S')) = nop [owise] .
+
+    eq  et(O, nop) = O .
+    eq  et(nop, O) = nop .
+    eq  et(O, O' o O'') = et(et(O, O''), O') .
 endfm
 
 fmod APPLY is
