@@ -84,6 +84,46 @@ implementation of the program I wished I had written back in 2013.
 ** TODO Background and Related Work
 ** TODO Outline of the Thesis
 * TODO Formal Specification and Verification
+
+  In this thesis we aim at /formally/ specifying our system in order to verify
+  its correctness.
+
+  Specifying a system is the act of expressing what the system does and how it
+  does so. For sufficiently small programs, solving simple problems, a comment
+  in the source code of the program might suffice as a specification. For
+  instance "This program takes a natural number as input and output the number
+  incremented by one." is a perfectly good specification of a program, because
+  by reading it you now know exactly what the program does. Most programs are
+  of course more complex than this and requires more than a single sentence in
+  order to express what it does. Documentation of code is a common way to
+  specify what a program does, and writing documentation comes with many
+  benefits.
+
+  Many programmers learn that writing down documentation for a function in a
+  program /before/ an implementation takes place, requires that you first
+  fundamentally understand what the function should do. As Dick Guindon states:
+  "Writing is nature's way of letting you know how sloppy your thinking is".
+  This can allow programmers to detect problems that /would/ manifest itself in
+  the code, before any code is written. This is clearly preferable to compile
+  time which again is preferable to run time.
+
+  However, /even if/ a programmer were to specify each part of a system before
+  an implementation would take place, there is no guarantee that the system
+  will perform as expected as a whole. Perhaps one part of the system that one
+  thought was independent from another, turned out to have an unexpected
+  coupling. Software may be complected in an infinite different ways, and so it
+  is not a surprise that the software might not always work exactly as
+  expected.
+
+  Though writing documentation is preferable to not writing anything at all
+  before an implementation takes place, it seems that for a sufficiently
+  complex system, a bigger hammer is needed. Leslie Lamport in
+  \cite{Lamport:2002} plays on Guidon's quote, stating that "Mathematics is
+  nature's way of letting you know how sloppy your writing is".
+
+  A /formal/ specification is a specification relieved of ambiguity. This is
+  where mathematics presents itself as the hammer we need.
+
 ** TODO Formal Methods and Model Checking
 ** TODO An informal Protocol Specification
 ** TODO Formalizing the Specification
