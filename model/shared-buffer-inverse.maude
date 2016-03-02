@@ -392,6 +392,11 @@ fmod TOTALORDER is
     ceq fix((O I M U) T) = (O' I M U) T
       if O' := it(O, compose(filter((O I M U), T))) .
 
+    op  unfix : Totalorder -> Totalorder .
+    eq  unfix(nil) = nil .
+    ceq unfix((O I M U) T) = (O' I M U) T
+      if O' := et(O, compose(filter((O I M U), T))) .
+
     op  filter : Event Totalorder -> Totalorder .
     eq  filter(E, nil) = nil .
     ceq filter(E, E' T) = E' filter(E, T) if concurrent(E, E') .
@@ -486,10 +491,10 @@ mod SERVER-RULES is
       if S'   := s N + sd(N, N') /\
          E    := O I M U /\
          US'  := (U |-> [I, S'], US) /\
-         T'   := put(E, T) /\
+         T'   := fix(put(E, T)) /\
          O'   := compose(until(T', I)) /\
          O-1  := inv(compose(until(T, I))) /\
-         O-1' := inv(compose(filter(U, until(T', I)))) .
+         O-1' := inv(O o compose(filter(U, unfix(until(T, I))))) .
 endm
 
 mod PREDICATES is
