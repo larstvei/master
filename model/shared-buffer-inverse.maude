@@ -498,11 +498,15 @@ mod SERVER-RULES is
 endm
 
 mod PREDICATES is
+    pr APPLY .
+    pr BUFFER .
     pr CONFIGURATION .
     pr LTL-SIMPLIFIER .
     pr MODEL-CHECKER .
     pr SATISFACTION .
+    pr SERVER .
     pr SITE .
+    pr TOTALORDER .
 
     subsort Configuration < State .
 
@@ -512,6 +516,7 @@ mod PREDICATES is
     vars B B' : Buffer .
     vars U U' : User .
     var C : Configuration .
+    var T : Totalorder .
     
     ceq < U  | buffer : B,  A  >
         < U' | buffer : B', A' >
@@ -520,6 +525,11 @@ mod PREDICATES is
     eq C |= inconsistent = false [owise] .
 
     eq C |= consistent = not C |= inconsistent .
+
+    op legal : Buffer -> Prop .
+    eq < server | history : T, A > C |= legal(B) =
+        apply compose(T) on B =/= error .
+    eq C |= legal(B) = false [owise] .
 endm
 
 mod TEST is
