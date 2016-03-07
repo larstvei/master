@@ -563,7 +563,8 @@ mod TEST is
     vars A A' : AttributeSet .
     vars B B' B'' : Buffer .
     vars Oi Oj : Op .
-    vars S T : Str .
+    var S : Str .
+    vars T T' : Totalorder .
 
     op init  : -> Configuration .
     eq init = init nil 2 .
