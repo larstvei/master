@@ -375,8 +375,8 @@ fmod TOTALORDER is
 
     op  put' : Event Totalorder -> Totalorder .
     eq  put'(E, nil) = E .
-    ceq put'(E, T E') = put'(E, T) E' if E > E' .
-    eq  put'(E, T E') = T E' E [owise] .
+    ceq put'(E, E' T) = E E' T if E > E' .
+    eq  put'(E, E' T) = E' put(E, T) [owise] .
 
     op compose : Totalorder -> Op .
     eq compose(nil) = nop .
