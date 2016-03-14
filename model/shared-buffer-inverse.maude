@@ -518,11 +518,9 @@ mod PREDICATES is
     var C : Configuration .
     var T : Totalorder .
     
-    ceq < U  | buffer : B,  A  >
-        < U' | buffer : B', A' >
-        C |= inconsistent = true if B =/= B' .
-
-    eq C |= inconsistent = false [owise] .
+    eq < U  | buffer : B,  A  >
+       < U' | buffer : B', A' >
+       C |= inconsistent = B =/= B' .
 
     eq C |= consistent = not C |= inconsistent .
 
