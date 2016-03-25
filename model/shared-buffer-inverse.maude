@@ -389,7 +389,7 @@ fmod TOTALORDER is
 
     op  fix : Totalorder -> Totalorder .
     eq  fix(nil) = nil .
-    ceq fix((O I M U) T) = (O' I M U) T
+    ceq fix((O I M U) T) = (O' I M U) fix(T)
       if O' := it(O, compose(filter((O I M U), T))) .
 
     op  unfix : Totalorder -> Totalorder .
