@@ -407,14 +407,21 @@ fmod TOTALORDER is
     eq filter(U, (O I M (U, U')) T) = (O I M U) filter(U, T) .
     eq filter(U, (O I M U') T) = filter(U, T) [owise] .
 
-    op reset : Event Totalorder -> Op .
-    eq reset(O I M U, T) = et(O, compose(filter(U, until(T, min(I, sd(I, 1)))))) .
+    op  opsIn : User Nat Nat Totalorder -> Totalorder .
+    eq  opsIn(U, I, I', nil) = nil .
+    ceq opsIn(U, I, I', (O N M U') T) = (O I M U) opsIn(U, I, I', T)
+      if (M < I and M >= I') or (U == U' and I == N) .
+    eq  opsIn(U, I, I', E T) = opsIn(U, I, I', T) [owise] .
+
+    op reset : Event Event Totalorder -> Op .
+    ceq reset((O I M U), (O' I' M' U'), T) = et(O, compose(T'))
+        if T' := opsIn(U, I, I', T) .
 
     op same : Event Event Totalorder -> Bool .
-    eq same(E, E', T) = concurrent(E, E') and reset(E, T) == reset(E', T) .
+    eq same(E, E', T) = concurrent(E, E') and reset(E, E', T) == reset(E', E, T) .
 
-    ceq T (O I M U) T' (O' I' M' U') T'' =  T T' (O' I M union(U, U')) T''
-      if same(O I M U, O' I' M' U', T' T'') .
+    ceq T (O I M U) T' (O' I' M' U') T'' = put((O I M union(U, U')), T T' T'')
+      if same(O I M U, O' I' M' U', T T' T'') .
 endfm
 
 mod SERVER is
