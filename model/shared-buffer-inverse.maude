@@ -344,7 +344,6 @@ fmod ORDERING is
 
     op _>_ : Event Event -> Bool .
     eq E > E' = E' < E .
-
 endfm
 
 view Event from TRIV to ORDERING is
@@ -420,7 +419,7 @@ fmod TOTALORDER is
     op same : Event Event Totalorder -> Bool .
     eq same(E, E', T) = concurrent(E, E') and reset(E, E', T) == reset(E', E, T) .
 
-    ceq T (O I M U) T' (O' I' M' U') T'' = put((O I M union(U, U')), T T' T'')
+    ceq T (O I M U) T' (O' I' M' U') T'' = T T' (O' I' M' union(U, U')) T''
       if same(O I M U, O' I' M' U', T T' T'') .
 endfm
 
