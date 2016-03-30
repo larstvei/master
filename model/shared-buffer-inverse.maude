@@ -120,6 +120,7 @@ fmod ABSTRACT-OPERATION is
     sort Op .
 
     op nop : -> Op [ctor] .
+    op nop : Op -> Op [ctor] .
 
     vars O O' : Op .
 
@@ -174,7 +175,7 @@ fmod TRANSFORMATION is
 
     ceq it(del(N, S), del(N', S')) = del(N, S) if N < N' .
     ceq it(del(N, S), del(N', S')) = del(sd(N, 1), S) if N > N' .
-    eq  it(del(N, S), del(N', S')) = nop [owise] .
+    eq  it(del(N, S), del(N', S')) = nop(del(N, S) o del(N', S')) [owise] .
 
     eq  it(O, O' o O'') = it(it(O, O''), O') .
     eq  it(O, O') = O [owise] .
@@ -184,8 +185,9 @@ fmod TRANSFORMATION is
     eq  et(ins(N, S), del(N', S')) = ins(s N, S) [owise] .
 
     ceq et(del(N, S), del(N', S')) = del(N, S) if N < N' .
-    ceq et(del(N, S), del(N', S')) = del(s N, S) if N >= N' .
-    eq  et(del(N, S), del(N', S')) = nop [owise] .
+    eq  et(del(N, S), del(N', S')) = del(s N, S) [owise] .
+
+    eq et(nop(O o O'), O') = O .
 
     eq  et(O, O' o O'') = et(et(O, O''), O') .
     eq  et(O, O') = O [owise] .
@@ -379,7 +381,8 @@ fmod TOTALORDER is
 
     op compose : Totalorder -> Op .
     eq compose(nil) = nop .
-    eq compose(T (O I M U)) = compose(T) o O .
+    eq compose(T (nop(O) I M U)) = compose(T) .
+    eq compose(T (O I M U)) = compose(T) o O [owise] .
 
     op  until : Totalorder Nat -> Totalorder .
     eq  until(nil, I') = nil .
