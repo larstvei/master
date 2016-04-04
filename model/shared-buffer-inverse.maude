@@ -574,15 +574,18 @@ mod TEST is
     vars T T' : Totalorder .
 
     op init  : -> Configuration .
-    eq init = init nil 2 .
+    eq init = init nil 2 3 .
 
     op init_ : Buffer -> Configuration .
-    eq init B = init B 2 .
+    eq init B = init B 2 3 .
 
     op init__ : Buffer Nat -> Configuration .
-    eq init B N =
+    eq init B N = init B N 3 .
+
+    op init___ : Buffer Nat Nat -> Configuration .
+    eq init B N N' =
         [ a b c d ]
-        actions 3
+        actions N'
         < server | history : nil, state : 0,
                    sites : sites N >
         clients B N .
