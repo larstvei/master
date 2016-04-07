@@ -304,18 +304,6 @@ mod SITE-RULES is
       if N =/= M .
 endm
 
-mod SITE-INFO is
-    pr NAT .
-
-    sort Siteinfo .
-     --- [state, seqno]
-    op [_,_] : Nat Nat -> Siteinfo .
-endm
-
-view Siteinfo from TRIV to SITE-INFO is
-    sort Elt to Siteinfo .
-endv
-
 fmod ORDERING is
     pr ABSTRACT-OPERATION .
     pr BOOL .
@@ -430,20 +418,19 @@ endfm
 
 mod SERVER is
     pr CONFIGURATION .
-    pr MAP{User,Siteinfo} .
-    pr SITE-INFO .
+    pr MAP{User,Msg} .
     pr NAT .
     pr TOTALORDER .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
     op history :_ : Totalorder -> Attribute .
-    op sites :_ : Map{User,Siteinfo} -> Attribute .
+    op sites :_ : Map{User,Msg} -> Attribute .
 endm
 
 mod SEND is
     pr CONFIGURATION .
     pr LIST{Msg} .
-    pr MAP{User,Siteinfo} .
+    pr MAP{User,Msg} .
     pr SERVER .
     pr SITE .
     pr TOTALORDER .
@@ -451,30 +438,30 @@ mod SEND is
     sort Send .
     subsort Send < Configuration .
 
-    op send_to_ : Op Map{User, Siteinfo} -> Send .
+    op send_to_ : Op Map{User, Msg} -> Send .
 
     vars A A' : AttributeSet .
     vars O O' : Op .
     vars I I' N : Nat .
-    vars US US' : Map{User,Siteinfo} .
+    vars US US' : Map{User,Msg} .
     var U : User .
     var Q : List{Msg} .
 
     eq [send] : send O to empty = none .
     eq [send] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> [I', N], US'), A' >
-        send O to (U |-> [I', N], US)
+        < server | state : I, sites : (U |-> msg(nop, I', N), US'), A' >
+        send O to (U |-> msg(nop, I', N), US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> [I', s N], US'), A' >
+        < server | state : I, sites : (U |-> msg(nop, I', s N), US'), A' >
         send O to US .
 endm
 
 mod SERVER-RULES is
     pr CONFIGURATION .
     pr LIST{Msg} .
-    pr MAP{User,Siteinfo} .
+    pr MAP{User,Msg} .
     pr ABSTRACT-OPERATION .
     pr SEND .
     pr SERVER .
@@ -483,25 +470,25 @@ mod SERVER-RULES is
 
     vars A A' : AttributeSet .
     vars Q Q' : List{Msg} .
-    vars O O' : Op .
+    vars O O' Or : Op .
     vars O-1 O-1' : Op .
     vars I I' M N N' S S' : Nat .
     var U  : User .
     var E : Event .
     vars T T' : Totalorder .
-    vars US US' : Map{User,Siteinfo} .
+    vars US US' : Map{User,Msg} .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : M, sites : (U |-> [I', N'], US), A' >
+        < server | history : T, state : M, sites : (U |-> msg(nop, I', N'), US), A' >
       =>
         < U | out-queue : Q, A >
         < server | history : T', state : s M, sites : US', A' >
         (send O' o O-1  to US)
-        (send O' o O-1' to (U |-> [I, S']))
+        (send O' o O-1' to (U |-> msg(nop, I, S')))
       if S'   := s N + sd(N, N') /\
          E    := O I M U /\
-         US'  := (U |-> [I, S'], US) /\
+         US'  := (U |-> msg(nop, I, S'), US) /\
          T'   := fix(put(E, T)) /\
          O'   := compose(until(T', I)) /\
          O-1  := inv(compose(until(T, I))) /\
@@ -565,10 +552,10 @@ mod TEST is
     var I' : Nat .
     var N : Nat .
     var N' : Nat .
-    var O : Op .
+    vars O O' : Op .
     vars Q Q' : List{Msg} .
     var U : User .
-    var US : Map{User,Siteinfo} .
+    var US : Map{User,Msg} .
     vars A A' : AttributeSet .
     vars B B' B'' : Buffer .
     vars Oi Oj : Op .
@@ -598,9 +585,9 @@ mod TEST is
         < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         clients B N .
 
-    op sites_ : Nat -> Map{User,Siteinfo} .
+    op sites_ : Nat -> Map{User,Msg} .
     eq sites 0 = empty .
-    eq sites s N = user N |-> [0, 0], sites N .
+    eq sites s N = user N |-> msg(nop, 0, 0), sites N .
 endm
 
 --- search init =>*
