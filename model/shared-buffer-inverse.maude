@@ -243,15 +243,16 @@ mod SITE is
     pr ABSTRACT-OPERATION .
     pr USER .
 
-    sort Site .
+    sorts Site Queue .
     subsort Site < Configuration  .
+    subsort List{Msg} < Queue .
 
     op <_|_> : User AttributeSet -> Object [ctor object] .
     op buffer :_ : Buffer -> Attribute .
     op seqno :_ : Nat -> Attribute .
     op state :_ : Nat -> Attribute .
-    op in-queue :_ : List{Msg} -> Attribute .
-    op out-queue :_ : List{Msg} -> Attribute .
+    op in-queue :_ : Queue -> Attribute .
+    op out-queue :_ : Queue -> Attribute .
 endm
 
 mod SITE-RULES is
@@ -267,7 +268,7 @@ mod SITE-RULES is
 
     vars B B' B'' : Buffer .
     vars I I' N M : Nat .
-    var Q : List{Msg} .
+    var Q : Queue .
     var O : Op .
     var S : Str .
     var U : User .
@@ -445,7 +446,7 @@ mod SEND is
     vars I I' N : Nat .
     vars US US' : Map{User,Msg} .
     var U : User .
-    var Q : List{Msg} .
+    var Q : Queue .
 
     eq [send] : send O to empty = none .
     eq [send] :
@@ -469,7 +470,7 @@ mod SERVER-RULES is
     pr TOTALORDER .
 
     vars A A' : AttributeSet .
-    vars Q Q' : List{Msg} .
+    vars Q Q' : Queue .
     vars O O' Or : Op .
     vars O-1 O-1' : Op .
     vars I I' M N N' S S' : Nat .
@@ -553,7 +554,7 @@ mod TEST is
     var N : Nat .
     var N' : Nat .
     vars O O' : Op .
-    vars Q Q' : List{Msg} .
+    vars Q Q' : Queue .
     var U : User .
     var US : Map{User,Msg} .
     vars A A' : AttributeSet .
