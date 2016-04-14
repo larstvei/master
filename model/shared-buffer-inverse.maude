@@ -255,6 +255,10 @@ mod SITE is
     op out-queue :_ : Queue -> Attribute .
 endm
 
+view Queue from TRIV to SITE is
+    sort Elt to Queue .
+endv
+
 mod SITE-RULES is
     pr ACTIONS .
     pr APPLY .
@@ -419,19 +423,19 @@ endfm
 
 mod SERVER is
     pr CONFIGURATION .
-    pr MAP{User,Msg} .
+    pr MAP{User,Queue} .
     pr NAT .
     pr TOTALORDER .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
     op history :_ : Totalorder -> Attribute .
-    op sites :_ : Map{User,Msg} -> Attribute .
+    op sites :_ : Map{User,Queue} -> Attribute .
 endm
 
 mod SEND is
     pr CONFIGURATION .
     pr LIST{Msg} .
-    pr MAP{User,Msg} .
+    pr MAP{User,Queue} .
     pr SERVER .
     pr SITE .
     pr TOTALORDER .
@@ -439,12 +443,12 @@ mod SEND is
     sort Send .
     subsort Send < Configuration .
 
-    op send_to_ : Op Map{User, Msg} -> Send .
+    op send_to_ : Op Map{User,Queue} -> Send .
 
     vars A A' : AttributeSet .
     vars O O' : Op .
     vars I I' N : Nat .
-    vars US US' : Map{User,Msg} .
+    vars US US' : Map{User,Queue} .
     var U : User .
     var Q : Queue .
 
@@ -462,7 +466,7 @@ endm
 mod SERVER-RULES is
     pr CONFIGURATION .
     pr LIST{Msg} .
-    pr MAP{User,Msg} .
+    pr MAP{User,Queue} .
     pr ABSTRACT-OPERATION .
     pr SEND .
     pr SERVER .
@@ -477,7 +481,7 @@ mod SERVER-RULES is
     var U  : User .
     var E : Event .
     vars T T' : Totalorder .
-    vars US US' : Map{User,Msg} .
+    vars US US' : Map{User,Queue} .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
@@ -556,7 +560,7 @@ mod TEST is
     vars O O' : Op .
     vars Q Q' : Queue .
     var U : User .
-    var US : Map{User,Msg} .
+    var US : Map{User,Queue} .
     vars A A' : AttributeSet .
     vars B B' B'' : Buffer .
     vars Oi Oj : Op .
@@ -586,7 +590,7 @@ mod TEST is
         < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         clients B N .
 
-    op sites_ : Nat -> Map{User,Msg} .
+    op sites_ : Nat -> Map{User,Queue} .
     eq sites 0 = empty .
     eq sites s N = user N |-> msg(nop, 0, 0), sites N .
 endm
