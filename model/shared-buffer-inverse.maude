@@ -449,17 +449,17 @@ mod SEND is
     vars O O' : Op .
     vars I I' N : Nat .
     vars US US' : Map{User,Queue} .
+    vars Q Q' : Queue .
     var U : User .
-    var Q : Queue .
 
     eq [send] : send O to empty = none .
     eq [send] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> msg(nop, I', N), US'), A' >
-        send O to (U |-> msg(nop, I', N), US)
+        < server | state : I, sites : (U |-> msg(O', I', N) Q', US'), A' >
+        send O to (U |-> msg(O', I', N) Q', US)
       =
         < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> msg(nop, I', s N), US'), A' >
+        < server | state : I, sites : (U |-> msg(O, I, s N) msg(O', I', N) Q', US'), A' >
         send O to US .
 endm
 
@@ -483,21 +483,18 @@ mod SERVER-RULES is
     vars T T' : Totalorder .
     vars US US' : Map{User,Queue} .
 
+    op makeOp : Totalorder Totalorder Nat -> Op .
+    eq makeOp(T', T, I) = compose(until(T', I)) o inv(compose(until(T, I))) .
+
     crl [server-receive] :
         < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : M, sites : (U |-> msg(nop, I', N'), US), A' >
+        < server | history : T, state : M, sites : (U |-> Q', US), A' >
       =>
         < U | out-queue : Q, A >
         < server | history : T', state : s M, sites : US', A' >
-        (send O' o O-1  to US)
-        (send O' o O-1' to (U |-> msg(nop, I, S')))
-      if S'   := s N + sd(N, N') /\
-         E    := O I M U /\
-         US'  := (U |-> msg(nop, I, S'), US) /\
-         T'   := fix(put(E, T)) /\
-         O'   := compose(until(T', I)) /\
-         O-1  := inv(compose(until(T, I))) /\
-         O-1' := inv(O o compose(filter(U, unfix(until(T, I))))) .
+        (send makeOp(T', T, I) to US)
+      if  T'  := fix(put(O I M U, T)) /\
+          US' := (U |-> Q', US) .
 endm
 
 mod PREDICATES is
