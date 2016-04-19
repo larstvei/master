@@ -253,6 +253,21 @@ mod SITE is
     op state :_ : Nat -> Attribute .
     op in-queue :_ : Queue -> Attribute .
     op out-queue :_ : Queue -> Attribute .
+
+    vars I I' N N' : Nat .
+    vars Q Q'      : Queue .
+    var  O         : Op .
+
+    op compose : Queue -> Op .
+    eq compose(nil) = nop .
+    eq compose(Q msg(O, I, N)) = compose(Q) o O [owise] .
+
+    op until : Queue Nat -> Queue .
+    eq until(Q msg(O, I, N) Q', I) = Q .
+    eq until(Q, I) = Q [owise] .
+
+    op nextSeq : Queue Nat -> Nat .
+    eq nextSeq(msg(O, I, N') Q, N) = s N + sd(N, N') .
 endm
 
 view Queue from TRIV to SITE is
@@ -474,7 +489,7 @@ mod SERVER-RULES is
     pr TOTALORDER .
 
     vars A A' : AttributeSet .
-    vars Q Q' : Queue .
+    vars Q Q' Q'' : Queue .
     vars O O' Or : Op .
     vars O-1 O-1' : Op .
     vars I I' M N N' S S' : Nat .
@@ -486,15 +501,22 @@ mod SERVER-RULES is
     op makeOp : Totalorder Totalorder Nat -> Op .
     eq makeOp(T', T, I) = compose(until(T', I)) o inv(compose(until(T, I))) .
 
+    op makeResponse : Op Op Queue Nat -> Op .
+    eq makeResponse(O, O', Q, I) = O' o compose(until(Q, I)) o inv(O) .
+
     crl [server-receive] :
-        < U | out-queue : (Q msg(O,I,N)), A >
-        < server | history : T, state : M, sites : (U |-> Q', US), A' >
+        < U | out-queue : (Q msg(O, I, N)), in-queue : Q', A >
+        < server | history : T, state : M, sites : (U |-> Q'', US), A' >
       =>
-        < U | out-queue : Q, A >
+        < U | out-queue : Q,
+              in-queue  : (msg(Or, s M, S) Q'), A >
         < server | history : T', state : s M, sites : US', A' >
-        (send makeOp(T', T, I) to US)
+        (send O' to US)
       if  T'  := fix(put(O I M U, T)) /\
-          US' := (U |-> Q', US) .
+          O'  := makeOp(T', T, I) /\
+          S   := nextSeq(Q'', N) /\
+          Or  := makeResponse(O, O', Q'', I) /\
+          US' := (U |-> msg(Or, s M, s S), US) .
 endm
 
 mod PREDICATES is
