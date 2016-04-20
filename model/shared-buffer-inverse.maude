@@ -432,7 +432,9 @@ fmod TOTALORDER is
     op same : Event Event Totalorder -> Bool .
     eq same(E, E', T) = concurrent(E, E') and reset(E, E', T) == reset(E', E, T) .
 
-    ceq T (O I M U) T' (O' I' M' U') T'' = T T' (O' I' M' union(U, U')) T''
+    ceq T (O I M U) T' (O' I' M' U') T'' =
+      if pos(O) < pos(O') then T (O I M union(U, U')) T' T''
+                          else T  T' (O' I' M' union(U, U')) T'' fi
       if same(O I M U, O' I' M' U', T T' T'') .
 endfm
 
