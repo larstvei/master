@@ -94,16 +94,6 @@ mod UNIQUE is
     op [ _ ] : List{Str} -> Unique .
 endm
 
-mod ACTIONS is
-    pr CONFIGURATION .
-    pr NAT .
-
-    sort Actions .
-    subsort Actions < Configuration .
-
-    op actions_ : Nat -> Actions .
-endm
-
 fmod USER is
     pr NAT .
 
@@ -114,6 +104,20 @@ endfm
 view User from TRIV to USER is
     sort Elt to User .
 endv
+
+mod ACTIONS is
+    pr CONFIGURATION .
+    pr USER .
+    pr SET{User} .
+    pr NAT .
+
+    sorts Actions .
+    subsort Set{User} < Actions .
+    subsort Actions < Configuration .
+
+    op empty : -> Actions [ctor] .
+    op _-_ : Actions Actions -> Actions [ctor assoc id: empty] .
+endm
 
 fmod ABSTRACT-OPERATION is
 
@@ -287,27 +291,28 @@ mod SITE-RULES is
 
     vars B B' B'' : Buffer .
     vars I I' N M : Nat .
+    vars U U' : Set{User} .
+    var R : Actions .
     var Q : Queue .
     var O : Op .
     var S : Str .
-    var U : User .
     var A : AttributeSet .
 
     rl [user-inserts] :
-        actions s M
+        ((U, U') - R)
         [ S B'' ]
         < U | buffer : (B B'), seqno : N, state : I, out-queue : Q, A >
       =>
-        actions M
+        R
         [ B'' ]
         < U | buffer : (B S B'), seqno : s N, state : I,
         out-queue : (msg(ins(size(B), S), I, N) Q), A > .
 
     rl [user-deletes] :
-        actions s M
+        ((U, U') - R)
         < U | buffer : (B S B'), seqno : N, state : I, out-queue : Q, A >
       =>
-        actions M
+        R
         < U | buffer : (B B'), seqno : s N, state : I,
         out-queue : (msg(del(size(B), S), I, N) Q), A > .
 
@@ -601,7 +606,7 @@ mod TEST is
     op init___ : Buffer Nat Nat -> Configuration .
     eq init B N N' =
         [ a b c d ]
-        actions N'
+        (actions 0 N N')
         < server | history : nil, state : 0,
                    sites : sites N >
         clients B N .
@@ -615,6 +620,14 @@ mod TEST is
     op sites_ : Nat -> Map{User,Queue} .
     eq sites 0 = empty .
     eq sites s N = user N |-> msg(nop, 0, 0), sites N .
+
+    op actions___ : Nat Nat Nat -> Actions .
+    eq actions N I N = empty .
+    eq actions N I N' = users(min(s N, I)) - actions s N I N' [owise] .
+
+    op users : Nat -> Set{User} .
+    eq users(0) = empty .
+    eq users(s N) = user N, users(N) .
 endm
 
 --- search init =>*
