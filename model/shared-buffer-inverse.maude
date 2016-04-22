@@ -408,12 +408,6 @@ fmod TOTALORDER is
       if T' := fix(T) /\
          O' := it(O, compose(filter((O I M U), T'))) .
 
-    op  unfix : Totalorder -> Totalorder .
-    eq  unfix(nil) = nil .
-    ceq unfix((O I M U) T) = (O' I M U) T'
-      if T' := unfix(T) /\
-         O' := et(O, compose(filter((O I M U), T'))) .
-
     op  filter : Event Totalorder -> Totalorder .
     eq  filter(E, nil) = nil .
     ceq filter(E, E' T) = E' filter(E, T) if concurrent(E, E') .
