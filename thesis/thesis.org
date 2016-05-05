@@ -1,0 +1,340 @@
+#+TITLE: Developing a System for Real-Time Collaborative Editing With the Aid of Formal Methods
+#+AUTHOR: Lars Tveito
+#+EMAIL: larstvei@ifi.uio.no
+#+DATE: August 2016
+#+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil
+#+LaTeX_CLASS_OPTIONS: [USenglish]
+#+LaTeX_CLASS: ifimaster
+#+LATEX_HEADER: \usepackage{tikz}
+#+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
+#+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
+#+LATEX_HEADER: \usepackage{amsthm, parskip, inconsolata}
+#+LATEX_HEADER: \bibliography{ref}
+#+LaTeX_HEADER: \urlstyle{sf}
+
+#+LaTeX: \ififorside{}
+#+LaTeX: \frontmatter{}
+#+LaTeX: \maketitle{}
+
+#+BEGIN_abstract
+Placeholder for abstract.
+#+END_abstract
+
+#+LaTeX:\chapter*{Acknowledgments}
+
+Thanks to Rudi and Martin, Tore, Sigurd, Stian, Carl Martin, Kai, Jarle, Joshi,
+Fui, Sigmund, Jonny, Simen, my family, and so many more.
+
+#+LaTeX: \tableofcontents{}
+#+LaTeX: \listoffigures{}
+#+LaTeX: \listoftables{}
+#+LaTeX: \mainmatter{}
+
+* COMMENT Preface
+#+LaTeX:\chapter*{Preface}
+In 2013 [[http://lispnyc.org][LispNYC]], [[http://www.meetup.com/Clojure-NYC/][ClojureNYC]] and [[http://alu.org][Association of Lisp Users]] hosted a programming
+competition called [[http://lispinsummerprojects.org/][LISP In Summer Projects]], awarding cash prizes for
+Lisp-related projects. They gathered some great finalist judges: Matthias
+Felleisen, Richard Gabriel, Rich Hickey, Peter Norvig, Christian Queinnec and
+Taiichi Yuasa.
+
+Around the time of the announcement of the competition, I attended a course on
+functional programming, in which we were to collaborate on programming
+assignments in small teams (of two or three participants). Mostly, we
+programmed together whilst in the same room (physically), and at any given
+moment, the one with the most promising idea held the keyboard. Sometimes we
+all wanted to explore some idea, and we would have to type it out on separate
+computers, and synchronize our changes thereafter.
+
+At times we (or at least I) felt it broke our flow. I started investigating how
+to allow separate Emacs sessions communicate using network processes, and
+realized it was completely plausible to enable real-time collaboration in
+Emacs.
+
+Seeing the aforementioned competition announcement, I immediately decided that
+implementing real-time collaboration in Emacs would make the perfect project.
+
+My approach was quite naive, and it was developed in a "Ha! Now it seems to
+work!"-fashion. By the end of the summer I had a rough prototype that worked
+for what I deemed "the most common use-cases". It had a very serious problem:
+All changes were applied under the assumption of consistency between clients,
+but this assumption proved false in non-trivial use-cases. There was no
+recovery mechanism in place, and if consistency was breached, then it would be
+up to the /user/ to detect this, and reconnect.
+
+Still, the judges of the competition deemed the program worthy of second prize,
+awarding me 500$ for my efforts.
+
+It was by far the most ambitious project I've embarked on, and also the most
+rewarding. I was greatly honored for receiving the prize, and feel my gratitude
+should be expressed in /elegant/ Lisp code, that compose a working
+implementation of the program I wished I had written back in 2013.
+
+* Introduction
+
+  A real-time collaborative editor enables multiple users, at (potentially)
+  different locations, to simultaneously work on the same document. The idea
+  has been around for a long time, and was demoed by Douglas Engelbart in the
+  Mother of All Demos cite:engelbart1968mother already in 1968.
+
+  First, let us make it clear what we will characterize as a real-time
+  collaborative editor. An editor is a program that allows a user to manipulate
+  a document. The editor is considered collaborative if it has features that
+  makes it easier for multiple users to form a document together. Further, it
+  is considered /real-time/ if multiple users can edit the document
+  simultaneously cite:ellis1989concurrency, and that changes are propagated to
+  the other users within a reasonably small amount of time.
+
+  The first actual implementation of such an editor, that was documented in the
+  literature, came with GROVE (GROUP Outline Viewing Editor)
+  cite:ellis1989concurrency, which introduced the concept of /Operational
+  Transformation/ (OT) which we will cover thoroughly later (in section /sec/).
+  Previous systems
+  cite:Greif:1986:ADA:512644.512659,Fish:1988:QCT:45410.45414,Lewis:1988:SBC:45410.45431
+  that provided collaborative capabilities were not considered /real-time/
+  systems, because users could not edit the same section of the document
+  simultaneously.
+
+  The reader might be familiar with [[https://www.google.com/docs/about/][Google Docs]], which is an example of a
+  modern real-time collaborative document WYSIWYG[fn:1]-editor with over [[http://thenextweb.com/google/2014/10/01/google-announces-10-price-cut-compute-engine-instances-google-drive-passed-240m-active-users][240
+  million monthly active users]]. It is largely based on OT cite:WaveOT, but has
+  also initiated research in a technique called Differential Synchronization
+  cite:Fraser:09. Through its integration with [[https://www.google.com/drive/][Google Drive]], it offers a
+  collaborative platform, where users can both store and manipulate their
+  documents, as long as they have a internet connection, along with a (fairly
+  modern) browser.
+
+  We will present a tool for real-time collaborative editing called Shared
+  Buffer. It differs from Google Docs in many respects. Where Google Docs is a
+  tool which is targeted towards a very large audience, Shared Buffer is
+  directed towards developers. What most developers have in common is that they
+  spend a lot of time manipulating /plain text/, yet they use a [[http://stackoverflow.com/research/developer-survey-2016][lot of
+  different tools]] to do so. We aim to enable real-time collaboration in
+  /existing/ text editors, as opposed to developing an editor with real-time
+  collaborative features. Our prototype implementation is for the text editor
+  Emacs, and it is chosen for its remarkable extensibility. The name Shared
+  Buffer reflects a choice in design; Emacs stores text in a /buffer/; when a
+  file is opened, its contents is put inside a buffer, which the user can
+  manipulate. You may also have buffers that are not associated with any file.
+  In Shared Buffer, there are no files, meaning there is no centrally stored
+  copy of the document.
+
+  We want to develop a protocol, which should, ideally, be portable to any text
+  editor, or any program that embeds a text editor. A client-server model is
+  chosen, as opposed to a fully decentralized solution. The client-side
+  algorithm should be as simple as possible, even if this means moving
+  complexity to the server. This is chosen in order to ensure portability.
+  Furthermore, proving correctness for a fully decentralized solution has
+  proven to be very difficult
+  cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
+
+[fn:1] What You See Is What You Get
+** The Problem
+
+   Say we have two users, $u_0$ and $u_1$, who are both communicating with a
+   server $S$. They are editing a shared document, so they can both either
+   insert a character, or delete one from the document, and they can do so at
+   any time. When one user performs an operation on its local document, then
+   this should be communicated to $S$. It is useful to describe the scenarios
+   with a diagram:
+
+   #+BEGIN_LaTeX
+   \pgfdeclarelayer{bg}    % declare background layer
+   \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
+
+   \begin{center}
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+       \tikzstyle{op} = [near end, above=-3pt, sloped, text=black, font=\small]
+
+       %% Server receives operations in this order
+       \node (s) at (5, 4) {$S$};
+       \coordinate (se) at (5, 0) {};
+       \node[O_0, below = 2em of s] (s1) {};
+       \node[O_1, below = 3.2em of s1] (s2) {};
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (0, 4) {$u_0$};
+       \node (u0e) at (0, 0) {};
+       \node[O_0, below = of u0] (u00) {};
+       \node[O_1, above = 2em of u0e] (u01a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (10, 4) {$u_1$};
+       \node (u1e) at (10, 0) {};
+       \node[O_0, below = 3em of u1] (u10a) {};
+       \node[O_1, below = 1em of u10a] (u11) {};
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
+         \draw[to, color=black!30] (u0) -- (u00) -- (u01a) -- (u0e);
+         \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+         % Life of O_0
+         \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{ins(0,a)}^{O_0}$};
+         \draw[toO_0] (s1) -- (u10a) node [op] {$O_0$};
+
+         % Life of O_1
+         \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{ins(0,b)}^{O_1}$};
+         \draw[toO_1] (s2) -- (u01a) node [op] {$O_1$};
+       \end{pgfonlayer}
+     \end{tikzpicture}
+   \end{center}
+   #+END_LaTeX
+
+   # The goal of the thesis is to develop a protocol that will guarantee eventual
+   # consistency cite:Vogels:2009:EC:1435417.1435432 between participating
+   # clients.
+
+   # Imagine we have some users that are typing rapidly on a shared document;
+   # every time they type, a message is sent to the server. When the server
+   # receives a message, it sends a message to all the clients where it is
+   # processed. Eventually the clients takes a break. Due to some network latency,
+   # it takes about a hundred milliseconds before all messages are transferred.
+   # When all the messages have been processed, the users should be looking at the
+   # exact same document.
+
+   # For now, think of eventually consistency as: if the users stop
+   # typing long enough for all messages between the server and the clients
+   # arrive, then they will all be looking at the exact same document.
+   # I think what we have is "Read-your-writes consistency" specifically.
+   # Even more specifically it could be "Session consistency"
+   # We also have "Monotonic read consistency"
+   # I think we also have "Monotonic write consistency"
+   # We should see if we can model check these properties.
+
+   # Further we want to use formal verification tools to verify the protocol.
+   In the following sections we will come to realize that this is not at all
+   trivial, considering the highly concurrent and distributed nature of the
+   problem. In order to handle this level of complexity we will try to apply a
+   certain level of mathematical rigor, and rely heavily on the use of formal
+   methods.
+
+   cite:DBLP:journals/corr/Goodspeed15
+
+* Formal Specification
+
+#+LaTeX:\backmatter{}
+#+LaTeX:\printbibliography
+#+LaTeX:\appendix
+* LISP In Summer Projects contribution
+
+   The following is the project description submitted for the LISP In Summer
+   Projects contest.
+
+** Purpose
+
+    # What is your project? In about 50 words, describe your project.
+
+    Shared buffer is a project that enables real-time collaborative editing in
+    Emacs. It is split up in two parts, client and server. The client is an
+    Emacs extension entirely written in Emacs Lisp. The server is a small
+    Common Lisp program; there is currently a server running on 'virvel.de'.
+
+** Function
+
+    # What does your project do? In about 50 words, describe what your project
+    # does.
+
+    In Emacs one is simply able to share a buffer and connect to a buffer that
+    is already shared. This is done by requesting a connection to a shared
+    buffer server. Once a connection is established all changes in your buffer
+    is sent to the server. The server simply redirects these messages to all
+    Emacs clients connected to that shared buffer.
+
+** Motivation
+
+    # Why did you choose this project?  In about 50 words, describe what was
+    # your motivation was for doing this particular project?
+
+    Working on a small scale project with friends, fellow students and
+    coworkers was not simple enough to do with Emacs. Having recently started
+    learning Lisp, it seemed like a fun and ambitious project.
+
+** Audience
+
+    # Who did you write this for? In about 50 words, describe the intended
+    # target audience and anticipated users.
+
+    Initially me, and whomever I wanted to work with. After realizing I’d
+    might actually make it work, I think it can be useful for anyone using
+    Emacs in collaboration with others. It is written with small scale
+    software projects in mind, but can be used for all kinds of text editing.
+
+** Methodology
+
+    # How does it work?  In about 300-400 words, describe the technical details
+    # of how your software works.  This might include high-level algorithms, the
+    # technical stack and technical or social challenges you faced.
+
+    The project is divided into two parts, a client and a server. The server
+    is written in Common Lisp, and it's main job is to allow the clients to
+    communicate. The client is an Emacs extension written in Emacs Lisp which
+    mainly send changes to the server, or receives changes from the server.
+
+    The client may ask to establish a new session or connect to an existing
+    one. If a new session is required, the client provides a key. This key is
+    used by the server as key in a hash table, containing lists of clients. A
+    client asking to connect to a shared buffer is simply added to the list of
+    clients that corresponds to the given key.
+
+    When a new client connects to an already established session, a single
+    client is asked by the server to send it's entire buffer content. This
+    package is marked as being for new clients only. From that point on they
+    should keep synced. The session is kept alive as long as there are clients
+    connected to it.
+
+    The main challenge in this project was to figure out how to keep several
+    separate Emacs buffers mirrored. This is resolved by sending a message for
+    every command a user invokes (this is done by adding functions to
+    after-change-hook and post-command-hook, both built-in variables in
+    Emacs). These messages will dictate a change that happened in a
+    buffer. Assuming the shared buffers are identical to the one sending the
+    message prior of that change, we can safely apply that change to any
+    client that receives this message.
+
+    A problem arises if our assumption is wrong. The most common situation is
+    that a client has made changes in a buffer between the time the message
+    was sent and received. The point where the change should be applied is
+    then calculated by using the difference in the size of the buffer the
+    message was sent from, and the size of the buffer receiving the
+    message. This works in most cases.
+
+** Conclusion
+
+    # In 100-200 words, clearly summarize both the accomplishments and
+    # limitations of your software.  Describe future directions for your
+    # projects. This can include enhancements as well as extensions.
+
+    After a summers worth of coding I am glad to say that the core
+    functionality is up and running. It is fast and lightweight. A lot of time
+    has gone into finding the /right/ solution to the big problems, and
+    finding good workarounds for Emacs's many idiosyncrasies. I believe the
+    project has great potential.
+
+    The main issue that needs fixing is how to detect and resolve problems
+    with synchronization. As of now, once buffers go out of sync, there is
+    really no other solution than to disconnect and reconnect. There are also
+    quite a few bugs triggered by Emacs's many features and extensions, and
+    I'm hoping to resolve these after the competition is over.
+
+    I plan to make Shared buffer more user friendly, by supplying a Emacs
+    minor mode accompanied by a chat feature. When these things are in order
+    it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
+
+* COMMENT Local variables
+# Local Variables:
+# eval: (require 'org-ref)
+# org-ref-pdf-directory: "~/Dropbox/ifi/master/articles/"
+# dabbrev-check-all-buffers: nil
+# eval: (server-start)
+# eval: (add-hook 'after-save-hook 'org-latex-export-to-latex nil t)
+# eval: (compile "latexmk -pdf -pvc -pdflatex='pdflatex -shell-escape -interaction nonstopmode'")
+# End:
