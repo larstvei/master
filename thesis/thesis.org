@@ -12,6 +12,9 @@
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
+#+LaTeX: \pgfdeclarelayer{bg}    % declare background layer
+#+LaTeX: \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
+
 #+LaTeX: \ififorside{}
 #+LaTeX: \frontmatter{}
 #+LaTeX: \maketitle{}
@@ -139,9 +142,6 @@ implementation of the program I wished I had written back in 2013.
    with a diagram:
 
    #+BEGIN_LaTeX
-   \pgfdeclarelayer{bg}    % declare background layer
-   \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
-
    \begin{center}
      \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
        \tikzstyle{vertex} = [circle, scale=0.5]
