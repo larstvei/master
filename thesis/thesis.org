@@ -138,14 +138,23 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
 
 [fn:1] What You See Is What You Get
-** The Problem
+** Informally Introducing the Problem
 
    Say we have two users, $u_0$ and $u_1$, who are both communicating with a
-   server $S$. They are editing a shared document, so they can both either
-   insert a character, or delete one from the document, and they can do so at
-   any time. When one user performs an operation on its local document, then
-   this should be communicated to $S$. It is useful to describe the scenarios
-   with a diagram:
+   server $S$. They each have a copy of a shared buffer. Both may either insert
+   a character, or delete one from the buffer, and they may do so at any time.
+   When a user performs an operation (meaning insertion or deletion) on its
+   local buffer, then this should be communicated to $S$. When $S$ receives an
+   operation, it should communicate this to the other user. We can graphically
+   represent scenarios that can occur in the system by using a variation of
+   message sequence charts. The diagrams are read from top to bottom, with
+   regards to time, where directed edges represents the transfer of a message.
+
+   Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine our
+   European friend $u_0$ is looking at an empty buffer, which she precedes to
+   insert an ="a"= into. Meanwhile $u_1$, the American, inserts a ="b"= in
+   front of the ="a"= that just popped up in her buffer. The end result of this
+   interaction is that they both will be looking at a buffer containing ="ba"=.
 
    #+BEGIN_LaTeX
    \begin{figure}[h]
