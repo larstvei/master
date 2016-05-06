@@ -8,7 +8,7 @@
 #+LATEX_HEADER: \usepackage{tikz}
 #+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
-#+LATEX_HEADER: \usepackage{amsthm, parskip, inconsolata}
+#+LATEX_HEADER: \usepackage{amsthm, parskip}
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
