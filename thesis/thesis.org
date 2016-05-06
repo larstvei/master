@@ -148,7 +148,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    with a diagram:
 
    #+BEGIN_LaTeX
-   \begin{center}
+   \begin{figure}[h]
+     \centering
      \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
        \tikzstyle{vertex} = [circle, scale=0.5]
        \tikzstyle{O_0} = [vertex, fill=black!30!green]
@@ -158,25 +159,25 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
        \tikzstyle{toO_0} = [to, color=black!30!green]
        \tikzstyle{toO_1} = [to, color=black!30!blue]
 
-       \tikzstyle{op} = [near end, above=-3pt, sloped, text=black, font=\small]
+       \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\small]
 
        %% Server receives operations in this order
-       \node (s) at (5, 4) {$S$};
-       \coordinate (se) at (5, 0) {};
+       \node (s) at (3, 4) {$S$};
+       \coordinate (se) at (3, 0) {};
        \node[O_0, below = 2em of s] (s1) {};
        \node[O_1, below = 3.2em of s1] (s2) {};
 
        %% User 0 generates/receives in this order
        \node (u0) at (0, 4) {$u_0$};
        \node (u0e) at (0, 0) {};
-       \node[O_0, below = of u0] (u00) {};
-       \node[O_1, above = 2em of u0e] (u01a) {};
+       \node[O_0, below = of u0, label=left:{\texttt{a}}] (u00) {};
+       \node[O_1, above = 2em of u0e, label=left:{\texttt{ba}}] (u01a) {};
 
        %% User 1 generates/receives in this order
-       \node (u1) at (10, 4) {$u_1$};
-       \node (u1e) at (10, 0) {};
-       \node[O_0, below = 3em of u1] (u10a) {};
-       \node[O_1, below = 1em of u10a] (u11) {};
+       \node (u1) at (6, 4) {$u_1$};
+       \node (u1e) at (6, 0) {};
+       \node[O_0, below = 3em of u1, label=right:{\texttt{a}}] (u10a) {};
+       \node[O_1, below = 1em of u10a, label=right:{\texttt{ba}}] (u11) {};
 
        \begin{pgfonlayer}{bg} % select the background layer
          \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
@@ -192,7 +193,10 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          \draw[toO_1] (s2) -- (u01a) node [op] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
-   \end{center}
+     \caption{A conflict-free scenario, with two clients}
+     \label{fig:noconflict0}
+   \end{figure}
+   #+END_LaTeX
    #+END_LaTeX
 
    # The goal of the thesis is to develop a protocol that will guarantee eventual
