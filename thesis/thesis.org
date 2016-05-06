@@ -23,55 +23,61 @@
 Placeholder for abstract.
 #+END_abstract
 
-#+LaTeX:\chapter*{Acknowledgments}
-
-Thanks to Rudi and Martin, Tore, Sigurd, Stian, Carl Martin, Kai, Jarle, Joshi,
-Fui, Sigmund, Jonny, Simen, my family, and so many more.
-
 #+LaTeX: \tableofcontents{}
 #+LaTeX: \listoffigures{}
 #+LaTeX: \listoftables{}
 #+LaTeX: \mainmatter{}
 
-* COMMENT Preface
-#+LaTeX:\chapter*{Preface}
-In 2013 [[http://lispnyc.org][LispNYC]], [[http://www.meetup.com/Clojure-NYC/][ClojureNYC]] and [[http://alu.org][Association of Lisp Users]] hosted a programming
-competition called [[http://lispinsummerprojects.org/][LISP In Summer Projects]], awarding cash prizes for
-Lisp-related projects. They gathered some great finalist judges: Matthias
-Felleisen, Richard Gabriel, Rich Hickey, Peter Norvig, Christian Queinnec and
-Taiichi Yuasa.
+* Acknowledgments
+  :PROPERTIES:
+  :UNNUMBERED: t
+  :END:
 
-Around the time of the announcement of the competition, I attended a course on
-functional programming, in which we were to collaborate on programming
-assignments in small teams (of two or three participants). Mostly, we
-programmed together whilst in the same room (physically), and at any given
-moment, the one with the most promising idea held the keyboard. Sometimes we
-all wanted to explore some idea, and we would have to type it out on separate
-computers, and synchronize our changes thereafter.
+Thanks to Rudi and Martin, Tore, Sigurd, Stian, Carl Martin, Kai, Jarle, Joshi,
+Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
-At times we (or at least I) felt it broke our flow. I started investigating how
-to allow separate Emacs sessions communicate using network processes, and
-realized it was completely plausible to enable real-time collaboration in
-Emacs.
+* Preface
+  :PROPERTIES:
+  :UNNUMBERED: t
+  :END:
+  In 2013 [[http://lispnyc.org][LispNYC]], [[http://www.meetup.com/Clojure-NYC/][ClojureNYC]] and [[http://alu.org][Association of Lisp Users]] hosted a
+  programming competition called [[http://lispinsummerprojects.org/][LISP In Summer Projects]], awarding cash prizes
+  for Lisp-related projects. They gathered some great finalist judges: Matthias
+  Felleisen, Richard Gabriel, Rich Hickey, Peter Norvig, Christian Queinnec and
+  Taiichi Yuasa.
 
-Seeing the aforementioned competition announcement, I immediately decided that
-implementing real-time collaboration in Emacs would make the perfect project.
+  Around the time of the announcement of the competition, I attended a course
+  on functional programming, in which we were to collaborate on programming
+  assignments in small teams (of two or three participants). Mostly, we
+  programmed together whilst in the same room (physically), and at any given
+  moment, the one with the most promising idea held the keyboard. Sometimes we
+  all wanted to explore some idea, and we would have to type it out on separate
+  computers, and synchronize our changes thereafter.
 
-My approach was quite naive, and it was developed in a "Ha! Now it seems to
-work!"-fashion. By the end of the summer I had a rough prototype that worked
-for what I deemed "the most common use-cases". It had a very serious problem:
-All changes were applied under the assumption of consistency between clients,
-but this assumption proved false in non-trivial use-cases. There was no
-recovery mechanism in place, and if consistency was breached, then it would be
-up to the /user/ to detect this, and reconnect.
+  At times we (or at least I) felt it broke our flow. I started investigating
+  how to allow separate Emacs sessions communicate using network processes, and
+  realized it was completely plausible to enable real-time collaboration in
+  Emacs.
 
-Still, the judges of the competition deemed the program worthy of second prize,
-awarding me 500$ for my efforts.
+  Seeing the aforementioned competition announcement, I immediately decided
+  that implementing real-time collaboration in Emacs would make the perfect
+  project.
 
-It was by far the most ambitious project I've embarked on, and also the most
-rewarding. I was greatly honored for receiving the prize, and feel my gratitude
-should be expressed in /elegant/ Lisp code, that compose a working
-implementation of the program I wished I had written back in 2013.
+  My approach was quite naive, and it was developed using a trial and error
+  approach. By the end of the summer I had a rough prototype that worked for
+  what I deemed "the most common use-cases". It had a very serious problem: All
+  changes were applied under the assumption of consistency between clients, but
+  this assumption proved false in non-trivial use-cases. There was no recovery
+  mechanism in place, and if consistency was breached, then it would be up to
+  the /user/ to detect this, and reconnect.
+
+  Still, the judges of the competition deemed the program worthy of second
+  prize, awarding me 500$ for my efforts.
+
+  It was by far the most ambitious project I've embarked on, and also the most
+  rewarding. I was greatly honored for receiving the prize, and feel my
+  gratitude should be expressed in /elegant/ Lisp code, that compose a working
+  implementation of the program I wished I had written back in 2013.
 
 * Introduction
 
