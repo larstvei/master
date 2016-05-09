@@ -3,7 +3,7 @@
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
 #+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil
-#+LaTeX_CLASS_OPTIONS: [USenglish]
+#+LaTeX_CLASS_OPTIONS: [USenglish, hidelinks]
 #+LaTeX_CLASS: ifimaster
 #+LATEX_HEADER: \usepackage{tikz}
 #+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
