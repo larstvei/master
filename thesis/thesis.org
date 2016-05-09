@@ -195,11 +195,11 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
          % Life of O_0
          \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{ins(0,a)}^{O_0}$};
-         \draw[toO_0] (s1) -- (u10a) node [op] {$O_0$};
+         \draw[toO_0] (s1) -- (u10a) node [op, near end] {$O_0$};
 
          % Life of O_1
          \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{ins(0,b)}^{O_1}$};
-         \draw[toO_1] (s2) -- (u01a) node [op] {$O_1$};
+         \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
      \caption{A conflict-free scenario, with two clients}
