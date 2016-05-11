@@ -69,14 +69,14 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   changes were applied under the assumption of consistency between clients, but
   this assumption proved false in non-trivial use-cases. There was no recovery
   mechanism in place, and if consistency was breached, then it would be up to
-  the /user/ to detect this, and reconnect.
+  the user to detect this, and reconnect.
 
   Still, the judges of the competition deemed the program worthy of second
   prize, awarding me 500$ for my efforts.
 
   It was by far the most ambitious project I've embarked on, and also the most
   rewarding. I was greatly honored for receiving the prize, and feel my
-  gratitude should be expressed in /elegant/ Lisp code, that compose a working
+  gratitude should be expressed in elegant Lisp code, that compose a working
   implementation of the program I wished I had written back in 2013.
 
 * Introduction
@@ -105,7 +105,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   simultaneously.
 
   The reader might be familiar with [[https://www.google.com/docs/about/][Google Docs]], which is an example of a
-  modern real-time collaborative document WYSIWYG[fn:1]-editor with over [[http://thenextweb.com/google/2014/10/01/google-announces-10-price-cut-compute-engine-instances-google-drive-passed-240m-active-users][240
+  modern real-time collaborative document WYSIWYG[fn:1]-editor with over [[http://goo.gl/02ZGtV][240
   million monthly active users]]. It is largely based on OT cite:WaveOT, but has
   also initiated research in a technique called Differential Synchronization
   cite:Fraser:09. Through its integration with [[https://www.google.com/drive/][Google Drive]], it offers a
