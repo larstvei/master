@@ -152,9 +152,11 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine our
    European friend $u_0$ is looking at an empty buffer, which she precedes to
-   insert an ="a"= into. Meanwhile $u_1$, the American, inserts a ="b"= in
-   front of the ="a"= that just popped up in her buffer. The end result of this
-   interaction is that they both will be looking at a buffer containing ="ba"=.
+   insert an "=a=" into. Meanwhile $u_1$, the American, inserts a "=b=" in
+   front of the "=a=" that just popped up in her buffer. The "=b=" eventually
+   reaches $u_0$, and the end result of the interaction is that they both will
+   be looking at a buffer containing "=ba=". In this scenario the buffers ended
+   up identical, so we say that we reached a consistent state.
 
    #+BEGIN_LaTeX
    \begin{figure}[h]
@@ -206,37 +208,81 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \label{fig:noconflict0}
    \end{figure}
    #+END_LaTeX
+
+   Scenarios like the one we just saw are trivial, because there were no
+   concurrent edits. We can see that "=a=" was inserted before the "=b=" at
+   both $u_0$ and $u_1$, hence they cannot have been applied concurrently. The
+   non-trivial cases arise when we do have concurrent edits.
+
+   Let us return to the example, with a slight modification. The scenario is
+   unchanged at $u_0$, where she first inserts an "=a=", and later receives the
+   "=b=" which leaves her with a buffer containing "=ba=". Now say that $u_1$
+   inserts her "=b=" /before/ having received the "=a=". When she has already
+   typed a "=b=", she receives a message saying that she should place an "=a="
+   at the first point in her buffer. The resulting buffer is "=ab=". Now they
+   are looking at different buffers, so we say we have reached an inconsistent
+   state. The scenario is visualized in Figure [[ref:fig:conflict0]].
+
+   #+BEGIN_LaTeX
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+       \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\small]
+
+       %% Server receives operations in this order
+       \node (s) at (3, 4) {$S$};
+       \coordinate (se) at (3, 0) {};
+       \node[O_0, below = 3em of s] (s1) {};
+       \node[O_1, below = 1em of s1] (s2) {};
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (0, 4) {$u_0$};
+       \node (u0e) at (0, 0) {};
+       \node[O_0, below = of u0, label=left:{\texttt{a}}] (u00) {};
+       \node[O_1, above = 2em of u0e, label=left:{\texttt{ba}}] (u01a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (6, 4) {$u_1$};
+       \node (u1e) at (6, 0) {};
+       \node[O_1, below = 1.5em of u1, label=right:{\texttt{b}}] (u11) {} ;
+       \node[O_0, below = 3em of u11, label=right:{\texttt{ab}}] (u10a) {};
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
+         \draw[to, color=black!30] (u0) -- (u00) -- (u01a) -- (u0e);
+         \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+         % Life of O_0
+         \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{ins(0,a)}^{O_0}$};
+         \draw[toO_0] (s1) -- (u10a) node [op, near end] {$O_0$};
+
+         % Life of O_1
+         \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{ins(0,b)}^{O_1}$};
+         \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
+       \end{pgfonlayer}
+     \end{tikzpicture}
+     \caption{The smallest conflict with two clients}
+     \label{fig:conflict0}
+   \end{figure}
    #+END_LaTeX
 
-   # The goal of the thesis is to develop a protocol that will guarantee eventual
-   # consistency cite:Vogels:2009:EC:1435417.1435432 between participating
-   # clients.
+   The two examples are meant to give insight to how a naive implementation
+   (like the one briefly described in the [[Preface]]) might work, and where it
+   fails to produce a consistent result.
 
-   # Imagine we have some users that are typing rapidly on a shared document;
-   # every time they type, a message is sent to the server. When the server
-   # receives a message, it sends a message to all the clients where it is
-   # processed. Eventually the clients takes a break. Due to some network latency,
-   # it takes about a hundred milliseconds before all messages are transferred.
-   # When all the messages have been processed, the users should be looking at the
-   # exact same document.
-
-   # For now, think of eventually consistency as: if the users stop
-   # typing long enough for all messages between the server and the clients
-   # arrive, then they will all be looking at the exact same document.
-   # I think what we have is "Read-your-writes consistency" specifically.
-   # Even more specifically it could be "Session consistency"
-   # We also have "Monotonic read consistency"
-   # I think we also have "Monotonic write consistency"
-   # We should see if we can model check these properties.
-
-   # Further we want to use formal verification tools to verify the protocol.
-   In the following sections we will come to realize that this is not at all
-   trivial, considering the highly concurrent and distributed nature of the
-   problem. In order to handle this level of complexity we will try to apply a
-   certain level of mathematical rigor, and rely heavily on the use of formal
-   methods.
-
-   cite:DBLP:journals/corr/Goodspeed15
+   Our task is to create a protocol which guarantees eventual consistency
+   cite:Vogels:2009:EC:1435417.1435432 between participating clients.
+   Intuitively, this means that if all users stop typing at some point, then
+   given enough time for traveling messages to reach their destination, they
+   will all be looking at the same buffer.
 
 * Formal Specification
 
