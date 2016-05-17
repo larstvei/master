@@ -53,11 +53,12 @@
            (send! client)))))
 
 (defmethod receive :operation [msg client]
-  (let [o (select-keys msg [:pos :ins :del])
-        i (:state msg)
-        m (get-in @state [:rooms (:key msg) :state])
-        u #{(get-in @state [:clients client :id])}]
-    (swap! state update-in [:rooms (:key msg) :history] add-event [o i m u])))
+  (let [op (select-keys msg [:pos :ins :del])
+        token (:state msg)
+        time (get-in @state [:rooms (:key msg) :state])
+        user #{(get-in @state [:clients client :id])}
+        event [op token time user]]
+    (swap! state update-in [:rooms (:key msg) :history] add-event event)))
 
 (defmethod receive :default [msg client]
   (println "default" msg))
