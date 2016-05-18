@@ -158,7 +158,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    be looking at a buffer containing "=ba=". In this scenario the buffers ended
    up identical, so we say that we reached a consistent state.
 
-   #+BEGIN_LaTeX
+   #+BEGIN_EXPORT latex
    \begin{figure}[h]
      \centering
      \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
@@ -207,7 +207,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \caption{A conflict-free scenario, with two clients}
      \label{fig:noconflict0}
    \end{figure}
-   #+END_LaTeX
+   #+END_EXPORT
 
    Scenarios like the one we just saw are trivial, because there were no
    concurrent edits. We can see that "=a=" was inserted before the "=b=" at
@@ -223,7 +223,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    are looking at different buffers, so we say we have reached an inconsistent
    state. The scenario is visualized in Figure [[ref:fig:conflict0]].
 
-   #+BEGIN_LaTeX
+   #+BEGIN_EXPORT latex
    \begin{figure}[h]
      \centering
      \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
@@ -272,7 +272,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \caption{The smallest conflict with two clients}
      \label{fig:conflict0}
    \end{figure}
-   #+END_LaTeX
+   #+END_EXPORT
 
    The two examples are meant to give insight to how a naive implementation
    (like the one briefly described in the [[Preface]]) might work, and where it
