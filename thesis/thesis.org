@@ -283,6 +283,63 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    given enough time for traveling messages to reach their destination, they
    will all be looking at the same buffer.
 
+   In later chapters we will come to realize that this is not at all trivial,
+   considering the highly concurrent and distributed nature of the problem. In
+   order to handle this level of complexity we will try to apply a certain
+   level of mathematical rigor, and rely heavily on the use of formal methods.
+
+** Approach
+
+   Most non-trivial programs contain bugs. There are many classes of bugs,
+   which range in both seriousness and subtleness. If a bug is discovered in a
+   running system, it implies that time has been spent actually developing that
+   bug; now more time needs to be spent fixing the bug. Some bugs can even be
+   integrated in the system in such a way than correcting it requires large
+   parts of the system to be rewritten. Our goal is to avoid developing serious
+   bugs entirely, which of course is easier said than done.
+
+   To quote Rich Hickey's talk [[http://www.infoq.com/presentations/Simple-Made-Easy][Simple Made Easy]]:
+
+   #+BEGIN_QUOTE
+   What's true of every bug found in the field? It passed the type checker.
+   What else did it do? It passed all the tests.
+   #+END_QUOTE
+
+   This is not to undermine the merit these techniques, but rather to show that
+   there are limits to what they can do. The bugs that are caught by tests do
+   so because someone thought it was a good idea to write the test that caught
+   it. In other words, no matter what bug, no one thought to test the scenario
+   that would have shed light on it. We do not want to rely on ourselves to
+   think about every relevant scenario when developing our protocol, rather we
+   want to use tools that lends itself to that purpose.
+
+   We will use a formal verification technique called model checking. This is a
+   technique that requires us to write a mathematical representation of the
+   system, which will be our model. We can perform exploratory searches of the
+   model, and check whether certain properties holds true. A model is generally
+   an abstraction of a given system, where one carefully chooses what parts of
+   the system is necessary to represent, in order to prove the properties that
+   are of interest.
+
+   Moreover, we will use the model as a way of driving the development process,
+   or rather, solving the problem. When model checking a property, a counter
+   example is given if the property does not hold. By studying the example, we
+   can change the model in hope of resolving the issue, and see the effects of
+   the change. This resembles Test Driven Development (TDD), but instead of
+   testing our actual system we perform tests on a model, and rather than
+   testing a few selected scenarios, we check all possible scenarios.
+
+   [[http://maude.cs.illinois.edu/][The Maude System]] is our chosen modeling language and verification tool. It
+   provides an expressive language, that is well suited for modeling concurrent
+   and distributed systems [[cite:DBLP:conf/maude/2007]]. It allows us to represent
+   states in a system, and transitions between states. We can think of model
+   checking as a graph search, where the states acts as nodes, and edges
+   represent the possibility of going from one state to another. If the graph
+   is finite, we can prove that the model has a certain property by checking
+   whether or not the property holds true in every state. Further, we want to
+   use Linear Temporal Logic (LTL) to express properties over paths, which are
+   sequences of states.
+
 * Formal Specification
 
 #+LaTeX:\backmatter{}
