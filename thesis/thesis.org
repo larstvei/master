@@ -26,8 +26,6 @@ Placeholder for abstract.
 #+LaTeX: \tableofcontents{}
 #+LaTeX: \listoffigures{}
 #+LaTeX: \listoftables{}
-#+LaTeX: \mainmatter{}
-
 * Acknowledgments
   :PROPERTIES:
   :UNNUMBERED: t
@@ -79,6 +77,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   gratitude should be expressed in elegant Lisp code, that compose a working
   implementation of the program I wished I had written back in 2013.
 
+#+LaTeX: \mainmatter{}
 * Introduction
 
   A real-time collaborative editor enables multiple users, at (potentially)
