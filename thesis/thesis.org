@@ -88,12 +88,12 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   First, let us make it clear what we will characterize as a real-time
   collaborative editor. An editor is a program that allows a user to manipulate
   a document. The editor is considered collaborative if it has features that
-  makes it easier for multiple users to form a document together. Further, it
-  is considered /real-time/ if multiple users can edit the document
+  makes it easier for multiple users to form a document together. Furthermore,
+  it is considered /real-time/ if multiple users can edit the document
   simultaneously cite:ellis1989concurrency, and that changes are propagated to
-  the other users within a reasonably small amount of time.
+  the other users within a reasonably short amount of time.
 
-  The first actual implementation of such an editor, that was documented in the
+  The first actual implementation of such an editor that was documented in the
   literature, came with GROVE (GROUP Outline Viewing Editor)
   cite:ellis1989concurrency, which introduced the concept of /Operational
   Transformation/ (OT) which we will cover thoroughly later (in section /sec/).
@@ -113,31 +113,27 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   modern) browser.
 
   We will present a tool for real-time collaborative editing called Shared
-  Buffer. It differs from Google Docs in many respects. Where Google Docs is a
-  tool which is targeted towards a very large audience, Shared Buffer is
-  directed towards developers. What most developers have in common is that they
-  spend a lot of time manipulating /plain text/, yet they use a [[http://stackoverflow.com/research/developer-survey-2016][lot of
-  different tools]] to do so. We aim to enable real-time collaboration in
-  /existing/ text editors, as opposed to developing an editor with real-time
-  collaborative features. Our prototype implementation is for the text editor
-  Emacs, and it is chosen for its remarkable extensibility. The name Shared
-  Buffer reflects a choice in design; Emacs stores text in a /buffer/; when a
-  file is opened, its contents is put inside a buffer, which the user can
-  manipulate. You may also have buffers that are not associated with any file.
-  In Shared Buffer, there are no files, meaning there is no centrally stored
-  copy of the document.
+  Buffer. It is designed with developers in mind. What most developers have in
+  common is that they spend a lot of time manipulating /plain text/, yet they
+  use a [[http://stackoverflow.com/research/developer-survey-2016][lot of different tools]] to do so. We aim to enable real-time
+  collaboration in /existing/ text editors, as opposed to developing an editor
+  with real-time collaborative features. Our prototype implementation is for
+  the text editor Emacs. The name Shared Buffer reflects a choice in design;
+  Emacs stores text in a /buffer/; when a file is opened, its contents is put
+  inside a buffer, which the user can manipulate. You may also have buffers
+  that are not associated with any file. In Shared Buffer, there are is no
+  notion of a file, meaning there is no centrally stored copy of the document.
 
-  We want to develop a protocol, which should, ideally, be portable to any text
+  We want to develop a protocol which ideally should be portable to any text
   editor, or any program that embeds a text editor. A client-server model is
-  chosen, as opposed to a fully decentralized solution. The client-side
-  algorithm should be as simple as possible, even if this means moving
-  complexity to the server. This is chosen in order to ensure portability.
-  Furthermore, proving correctness for a fully decentralized solution has
-  proven to be very difficult
-  cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
+  chosen, as opposed to a fully decentralized solution. We will consequently
+  move complexity to the server, if this can simplify the client-side
+  algorithm. This is chosen in order to ensure portability. Furthermore,
+  proving correctness for a fully decentralized solution has proven to be very
+  difficult cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
 
 [fn:1] What You See Is What You Get
-** Informally Introducing the Problem
+** Introducing the Problem
 
    Say we have two users, $u_0$ and $u_1$, who are both communicating with a
    server $S$. They each have a copy of a shared buffer. Both may either insert
@@ -146,16 +142,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    local buffer, then this should be communicated to $S$. When $S$ receives an
    operation, it should communicate this to the other user. We can graphically
    represent scenarios that can occur in the system by using a variation of
-   message sequence charts. The diagrams are read from top to bottom, with
+   message sequence charts. The diagrams are read from top to bottom with
    regards to time, where directed edges represents the transfer of a message.
-
-   Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine our
-   European friend $u_0$ is looking at an empty buffer, which she precedes to
-   insert an "=a=" into. Meanwhile $u_1$, the American, inserts a "=b=" in
-   front of the "=a=" that just popped up in her buffer. The "=b=" eventually
-   reaches $u_0$, and the end result of the interaction is that they both will
-   be looking at a buffer containing "=ba=". In this scenario the buffers ended
-   up identical, so we say that we reached a consistent state.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -208,19 +196,29 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{figure}
    #+END_EXPORT
 
-   Scenarios like the one we just saw are trivial, because there were no
-   concurrent edits. We can see that "=a=" was inserted before the "=b=" at
-   both $u_0$ and $u_1$, hence they cannot have been applied concurrently. The
-   non-trivial cases arise when we do have concurrent edits.
+   Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine our
+   European friend $u_0$ has an empty buffer which she precedes to insert an
+   "=a=" into. Meanwhile $u_1$, the American, inserts a "=b=" in front of the
+   "=a=" that just popped up in her buffer. The "=b=" eventually reaches $u_0$,
+   and the end result of the interaction is that they both will be looking at a
+   buffer containing "=ba=". In this scenario the buffers ended up identical,
+   so we say that we reached a consistent state.
 
-   Let us return to the example, with a slight modification. The scenario is
+   Scenarios like the one we saw would be gracefully handled by even a naive
+   approach. We can see that "=a=" was inserted prior to the "=b=" at both
+   $u_0$ and $u_1$, hence they cannot have been applied concurrently. We will
+   now demonstrate that the approach does not work when we introduce concurrent
+   edits.
+
+   Let us return to the example from Figure [[ref:fig:noconflict0]], with a slight
+   modification, visualized in Figure [[ref:fig:conflict0]]. The scenario is
    unchanged at $u_0$, where she first inserts an "=a=", and later receives the
    "=b=" which leaves her with a buffer containing "=ba=". Now say that $u_1$
    inserts her "=b=" /before/ having received the "=a=". When she has already
    typed a "=b=", she receives a message saying that she should place an "=a="
    at the first point in her buffer. The resulting buffer is "=ab=". Now they
    are looking at different buffers, so we say we have reached an inconsistent
-   state. The scenario is visualized in Figure [[ref:fig:conflict0]].
+   state.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -285,8 +283,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    In later chapters we will come to realize that this is not at all trivial,
    considering the highly concurrent and distributed nature of the problem. In
-   order to handle this level of complexity we will try to apply a certain
-   level of mathematical rigor, and rely heavily on the use of formal methods.
+   order to handle this level of complexity we will rely heavily on the use of
+   formal methods.
 
 ** Approach
 
