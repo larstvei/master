@@ -315,6 +315,21 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    to use Linear Temporal Logic (LTL) to express properties over paths, which
    are sequences of states.
 
+** Contributions
+
+   The main result of this thesis is a protocol that enables real-time
+   collaborative editing. Both a client- and server-side algorithm have been
+   developed and modeled, and the model has been formally verified to guarantee
+   eventual consistency using bounded model checking.
+
+   To this end we:
+   - provide a mathematical description of our system based on OT,
+   - demonstrate the Model Checking Driven Development process,
+   - present a representation of the system in Maude,
+   - perform LTL model checking on our model in Maude,
+   - provide a client as an extension for Emacs,
+   - provide an implementation of the server-side algorithm in Clojure.
+
 * Formal Specification
 
 #+LaTeX:\backmatter{}
