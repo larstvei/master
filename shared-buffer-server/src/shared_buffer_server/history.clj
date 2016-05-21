@@ -1,5 +1,6 @@
 (ns shared-buffer-server.history
-  (:require [clojure.set :refer [intersection]]))
+  (:require [clojure.set :refer [intersection]])
+  (:require [shared-buffer-server.operations :refer :all]))
 
 (defn concurrent?
   "Returns non-nil iff the events are concurrent."

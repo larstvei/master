@@ -4,7 +4,6 @@
   (:require [shared-buffer-server.app :refer :all])
   (:require [shared-buffer-server.utils :refer :all])
   (:require [shared-buffer-server.history :refer :all])
-  (:require [clojure.set :refer :all])
   (:require [clojure.data.json :as json]))
 
 (defonce state (atom {}))
@@ -27,7 +26,7 @@
   (-> state
       (assoc-in  [:clients client :room] room)
       (update-in [:rooms room :clients] (fnil conj #{}) client)
-      (update-in [:rooms room :state] (fnil identity 0))))
+      (update-in [:rooms room :token] (fnil identity 0))))
 
 (defn dissolve-client
   "The function is called when a connection to a client is closed. It
@@ -54,11 +53,13 @@
 
 (defmethod receive :operation [msg client]
   (let [op (select-keys msg [:pos :ins :del])
-        token (:state msg)
-        time (get-in @state [:rooms (:key msg) :state])
+        token (:token msg)
+        seqno (:seqno msg)
+        time (get-in @state [:rooms (:room msg) :token])
         user #{(get-in @state [:clients client :id])}
         event [op token time user]]
-    (swap! state update-in [:rooms (:key msg) :history] add-event event)))
+    (swap! state update-in [:rooms (:room msg) :history] add-event event)
+    (prn op)))
 
 (defmethod receive :default [msg client]
   (println "default" msg))
