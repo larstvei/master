@@ -33,7 +33,7 @@
 
 ;;; Variables
 
-(defvar-local sb-room-key nil
+(defvar-local sb-key nil
   "A buffer that is shared belongs to a room. This variable keeps an
   identifier to the room this buffer belongs to.")
 
@@ -46,13 +46,19 @@
   variable keeps the connected socket.")
 
 (defvar-local sb-seqno 0
-  "All buffer-operations are given a sequence number. This sequence
-  number is incremented for each operation.")
+  "A sequence number that is incremented with every interaction
+  with the server.")
+
+(defvar-local sb-token 0
+  "A number that represents the last consistent state. It is
+  updated when messages are received from the server.")
 
 ;; Changing major-mode should not affect Shared Buffer.
-(dolist (var '(sb-room-key
+(dolist (var '(sb-key
                sb-host
                sb-socket
+               sb-seqno
+               sb-token
                shared-buffer-mode
                after-change-functions))
   (put var 'permanent-local t))
@@ -73,7 +79,7 @@
 
 (defun sb-on-open (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
-    (sb-send (list :type 'room :room sb-room-key))))
+    (sb-send (list :type 'room :room sb-key))))
 
 (defun sb-on-close (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
@@ -87,33 +93,31 @@
 
 (defun sb-send-entire-buffer ()
   (sb-send (list :type 'entire-buffer
-                 :key sb-room-key
-                 :point (point-min)
-                 :addition (sb-substr
-                            (point-min) (point-max))
+                 :room sb-key
+                 :pos (point-min)
+                 :ins (sb-substr (point-min) (point-max))
+                 :token sb-token
                  :seqno sb-seqno)))
 
-(defun sb-send-addition (beg end len)
+(defun sb-send-insertion (beg end len)
   (and (zerop len)
        (sb-send (list :type 'operation
-                      :key sb-room-key
-                      :current-point (point)
-                      :point beg
-                      :addition (sb-substr beg end)
+                      :room sb-key
+                      :current-pos (point)
+                      :pos beg
+                      :ins (sb-substr beg end)
+                      :token sb-token
                       :seqno (cl-incf sb-seqno)))))
 
 (defun sb-send-deletion (beg end)
   (and (not (= beg end))
        (sb-send (list :type 'operation
-                      :key sb-room-key
-                      :current-point (point)
-                      :point beg
-                      :deletion (sb-substr beg end)
-                      :bytes-deleted (- end beg)
+                      :room sb-key
+                      :current-pos (point)
+                      :pos beg
+                      :del (sb-substr beg end)
+                      :token sb-token
                       :seqno (cl-incf sb-seqno)))))
-
-(defun sb-send-ack (data)
-  (sb-send (list :type 'ack :key sb-room-key :seqno sb-seqno)))
 
 ;;; Receive
 
@@ -129,17 +133,16 @@
              (sb-entire-buffer data))
             ((string= type "operations")
              (sb-apply-operations data))
-            (t (error "Shared Buffer: Error in protocol.")))
-      (sb-send-ack data))))
+            (t (error "Shared Buffer: Error in protocol."))))))
 
 (defun sb-entire-buffer (data)
-  (if (and (plist-get data :point)
-           (plist-get data :addition))
+  (if (and (plist-get data :pos)
+           (plist-get data :ins))
       (sb-apply-operations data)
     (sb-send-entire-buffer)))
 
 (defun sb-set-room (room)
-  (setq sb-room-key room)
+  (setq sb-key room)
   (sb-add-key-to-kill-ring)
   (message "Shared Buffer: \
 Connected to room: %s, the key was added to the kill ring." room))
@@ -147,20 +150,23 @@ Connected to room: %s, the key was added to the kill ring." room))
 ;;; Buffer modification
 
 (defun sb-apply-operations (data)
-  (mapcar 'sb-apply-operation (plist-get data :operations))
-  (setq sb-seqno (plist-get data :seqno)))
+  (when (= sb-seqno (plist-get data :seqno))
+    (cl-mapc 'sb-apply-operation (plist-get data :operations))
+    (setq sb-token (plist-get data :token)))
+  (cl-incf sb-seqno))
 
 (defun sb-apply-operation (operation)
   (save-excursion
     (let ((inhibit-modification-hooks t)
-          (point (plist-get operation :point))
-          (addition (plist-get operation :addition))
-          (bytes-deleted (plist-get operation :bytes-deleted)))
-      (when (and addition bytes-deleted)
+          (point     (plist-get operation :pos))
+          (insertion (plist-get operation :ins))
+          (deletion  (plist-get operation :del)))
+      (when (and insertion bytes-deleted)
         (error "Shared Buffer: Error in protocol."))
-      (when point (goto-char point))
-      (when addition (insert addition))
-      (when bytes-deleted (delete-char bytes-deleted)))))
+      (goto-char point)
+      (when insertion (insert insertion))
+      ;; use length, or rather just send number of chars to delete
+      (when deletion  (delete-char (length deletion))))))
 
 ;;; Interactive functions
 
@@ -176,7 +182,7 @@ Connected to room: %s, the key was added to the kill ring." room))
   (interactive "sHost: \nsRoom: ")
   (let ((buffer (generate-new-buffer room)))
     (switch-to-buffer buffer)
-    (setq sb-room-key room)
+    (setq sb-key room)
     (sb-share-buffer host buffer)))
 
 (defun sb-disconnect (&optional buffer)
@@ -188,22 +194,22 @@ Connected to room: %s, the key was added to the kill ring." room))
 
 (defun sb-add-key-to-kill-ring ()
   (interactive)
-  (kill-new sb-room-key))
+  (kill-new sb-key))
 
 ;;; Minor mode
 
 (defun sb-quit ()
-  (dolist (var '(sb-room-key sb-host sb-socket sb-seqno))
-    (kill-local-variable var))
+  (mapc #'kill-local-variable
+        '(sb-key sb-host sb-socket sb-seqno sb-token))
   (shared-buffer-mode 0)
   (remove-hook 'before-change-functions 'sb-send-deletion)
-  (remove-hook 'after-change-functions 'sb-send-addition))
+  (remove-hook 'after-change-functions 'sb-send-insertion))
 
 (define-minor-mode shared-buffer-mode
   "A minor mode for Shared Buffer."
   nil " SB" nil
   ;; fixme
   (add-hook 'before-change-functions 'sb-send-deletion t t)
-  (add-hook 'after-change-functions 'sb-send-addition t t))
+  (add-hook 'after-change-functions 'sb-send-insertion t t))
 
 ;;; shared-buffer.el ends here.
