@@ -191,7 +191,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
-     \caption{A conflict-free scenario, with two clients}
+     \caption{A conflict-free scenario, with two clients.}
      \label{fig:noconflict0}
    \end{figure}
    #+END_EXPORT
@@ -266,7 +266,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
-     \caption{The smallest conflict with two clients}
+     \caption{The smallest conflict with two clients.}
      \label{fig:conflict0}
    \end{figure}
    #+END_EXPORT
