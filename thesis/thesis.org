@@ -330,7 +330,71 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    - provide a client as an extension for Emacs,
    - provide an implementation of the server-side algorithm in Clojure.
 
-* Formal Specification
+* Operational Transformation
+
+  In section [[Introducing%20the%20Problem]] we showed how concurrent edits to a
+  buffer lead to inconsistent results. OT tries to remedy this by transforming
+  the operations invoked by the users in a way that preserves consistency.
+  Transformations are essentially higher order functions that transforms an
+  operation with regards to another, but before we dive in to these we should
+  first discuss the operations that we are supposed to transform.
+
+** Operations and Buffers
+
+   The operations we are concerned with is the /insertion/ and /deletion/ of a
+   character in a buffer. Formally, we define the set of operations $\mathcal
+   O$ as:
+   - $nop \in \mathcal O$,
+   - $ins(i, c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in UTF\text{-}8$[fn:2],
+   - $del(i) \in \mathcal O$ for any $i \in \mathbb{N}$,
+   - for any two $O_i, O_j \in \mathcal O$ then $O_i \circ O_j \in \mathcal O$,
+   - $\mathcal O$ is closed under $\circ$.
+
+   A buffer is simply defined as a 0-indexed string, and we let $\mathcal B$
+   constitute the set of all possible buffers[fn:3]. An Operation can be
+   applied to a buffer, which in turn yields a new buffer. All $O \in \mathcal
+   O$ are partial unary operations $O : \mathcal B' \rightarrow \mathcal B$,
+   where $\mathcal B' \subseteq \mathcal B$.
+
+   Let $B \in \mathcal{B}$. The $nop$ operation is the operation that does
+   nothing, and applying it is defined as:
+   #+BEGIN_EXPORT latex
+     \begin{align*}
+       nop(B) &= B
+     \end{align*}
+   #+END_EXPORT
+   Let $i \in \mathbb{N}$, and both $c, c' \in UTF\text{-}8$. We let a single
+   space represent the concatenation of strings and characters[fn:4]. Applying
+   an insertion is then defined as follows:
+   #+BEGIN_EXPORT latex
+     \begin{align*}
+       ins(0, c)(B) &= c\ B \\
+       ins(i + 1, c)(c'\ B) &= c'\ ins(i, c)(B)
+     \end{align*}
+   #+END_EXPORT
+   Similarly, applying a deletion is defined as:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     del(0)(c\ B) &= B \\
+     del(i + 1)(c\ B) &= c\ del(i)(B)
+   \end{align*}
+   #+END_EXPORT
+   Let $O_i, O_j \in \mathcal O$, and let $O_i \circ O_j$ represent the
+   /composition/ of $O_i$ and $O_j$. Applying a composed operation to a buffer
+   is defined as so:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     O_i \circ O_j(B) &= O_i(O_j(B)) \\
+   \end{align*}
+   #+END_EXPORT
+   Note that composition of operations is no different from regular function
+   composition, which the reader might be familiar with.
+
+[fn:2] UTF-8 is a character encoding, and we let $UTF\text{-}8$ constitute the set of
+these characters.
+[fn:3] This set could also be expressed as $UTF\text{-}8^{*}$.
+[fn:4] Let concatenation of a character be identical to concatenating a string
+of size one.
 
 #+LaTeX:\backmatter{}
 #+LaTeX:\printbibliography
