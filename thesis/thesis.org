@@ -61,7 +61,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   that implementing real-time collaboration in Emacs would make the perfect
   project.
 
-  My approach was quite naive, and it was developed using a trial and error
+  My approach was quite naïve, and it was developed using a trial and error
   approach. By the end of the summer I had a rough prototype that worked for
   what I deemed "the most common use-cases". It had a very serious problem: All
   changes were applied under the assumption of consistency between clients, but
@@ -96,8 +96,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   The first actual implementation of such an editor that was documented in the
   literature, came with GROVE (GROUP Outline Viewing Editor)
   cite:ellis1989concurrency, which introduced the concept of /Operational
-  Transformation/ (OT) which we will cover thoroughly later (in section /sec/).
-  Previous systems
+  Transformation/ (OT) which we will cover thoroughly in Chapter [[Operational
+  Transformation]]. Previous systems
   cite:Greif:1986:ADA:512644.512659,Fish:1988:QCT:45410.45414,Lewis:1988:SBC:45410.45431
   that provided collaborative capabilities were not considered /real-time/
   systems, because users could not edit the same section of the document
@@ -204,7 +204,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    buffer containing "=ba=". In this scenario the buffers ended up identical,
    so we say that we reached a consistent state.
 
-   Scenarios like the one we saw would be gracefully handled by even a naive
+   Scenarios like the one we saw would be gracefully handled by even a naïve
    approach. We can see that "=a=" was inserted prior to the "=b=" at both
    $u_0$ and $u_1$, hence they cannot have been applied concurrently. We will
    now demonstrate that the approach does not work when we introduce concurrent
@@ -271,7 +271,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{figure}
    #+END_EXPORT
 
-   The two examples are meant to give insight to how a naive implementation
+   The two examples are meant to give insight to how a naïve implementation
    (like the one briefly described in the [[Preface]]) might work, and where it
    fails to produce a consistent result.
 
@@ -319,8 +319,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    The main result of this thesis is a protocol that enables real-time
    collaborative editing. Both a client- and server-side algorithm have been
-   developed and modeled, and the model has been formally verified to guarantee
-   eventual consistency using bounded model checking.
+   developed and modeled. The model has been formally verified to guarantee
+   eventual consistency for a limited number of clients and operations.
 
    To this end we:
    - provide a mathematical description of our system based on OT,
