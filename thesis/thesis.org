@@ -347,7 +347,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    - $nop \in \mathcal O$,
    - $ins(i, c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in UTF\text{-}8$[fn:2],
    - $del(i) \in \mathcal O$ for any $i \in \mathbb{N}$,
-   - for any two $O_i, O_j \in \mathcal O$ then $O_i \circ O_j \in \mathcal O$,
+   - for any two $O_i, O_j \in \mathcal O$ then $O_j \circ O_i \in \mathcal O$,
    - $\mathcal O$ is closed under $\circ$.
 
    A buffer is simply defined as a 0-indexed string, and we let $\mathcal B$
@@ -379,12 +379,12 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      del(i + 1)(c\ B) &= c\ del(i)(B)
    \end{align*}
    #+END_EXPORT
-   Let $O_i, O_j \in \mathcal O$, and let $O_i \circ O_j$ represent the
+   Let $O_i, O_j \in \mathcal O$, and let $O_j \circ O_i$ represent the
    /composition/ of $O_i$ and $O_j$. Applying a composed operation to a buffer
    is defined as so:
    #+BEGIN_EXPORT latex
    \begin{align*}
-     O_i \circ O_j(B) &= O_i(O_j(B)) \\
+     O_j \circ O_i(B) &= O_j(O_i(B)) \\
    \end{align*}
    #+END_EXPORT
    Note that composition of operations is no different from regular function
