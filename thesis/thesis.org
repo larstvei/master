@@ -83,67 +83,82 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   A real-time collaborative editor enables multiple users, at (potentially)
   different locations, to simultaneously work on the same document. The idea
   has been around for a long time, and was demoed by Douglas Engelbart in the
-  Mother of All Demos cite:engelbart1968mother already in 1968.
+  Mother of All Demos cite:engelbart1968mother already in 1968. In this thesis
+  we aim to formally verify and develop a system for real-time collaboration.
 
   First, let us make it clear what we will characterize as a real-time
-  collaborative editor. An editor is a program that allows a user to manipulate
-  a document. The editor is considered collaborative if it has features that
-  makes it easier for multiple users to form a document together. Furthermore,
-  it is considered /real-time/ if multiple users can edit the document
-  simultaneously cite:ellis1989concurrency, and that changes are propagated to
-  the other users within a reasonably short amount of time.
+  collaborative editor. An /editor/ is a program that allows a user to
+  manipulate a document. The editor is considered /collaborative/ if it has
+  features that makes it easier for multiple users to form a document together.
+  Furthermore, it is considered /real-time/ if multiple users can edit the
+  document simultaneously cite:ellis1989concurrency, and that changes are
+  propagated to the other users within a reasonably short amount of time.
 
   The first actual implementation of such an editor that was documented in the
   literature, came with GROVE (GROUP Outline Viewing Editor)
   cite:ellis1989concurrency, which introduced the concept of /Operational
-  Transformation/ (OT) which we will cover thoroughly in Chapter [[Operational
-  Transformation]]. Previous systems
+  Transformation/ (OT) which we will cover thoroughly in Chapter [[Formal
+  Semantics of Editing Operations]]. Previous systems
   cite:Greif:1986:ADA:512644.512659,Fish:1988:QCT:45410.45414,Lewis:1988:SBC:45410.45431
   that provided collaborative capabilities were not considered /real-time/
-  systems, because users could not edit the same section of the document
-  simultaneously.
+  systems by cite:ellis1989concurrency, because users could not edit the same
+  section of the document simultaneously.
 
   The reader might be familiar with [[https://www.google.com/docs/about/][Google Docs]], which is an example of a
-  modern real-time collaborative document WYSIWYG[fn:1]-editor with over [[http://goo.gl/02ZGtV][240
-  million monthly active users]]. It is largely based on OT cite:WaveOT, but has
-  also initiated research in a technique called Differential Synchronization
-  cite:Fraser:09. Through its integration with [[https://www.google.com/drive/][Google Drive]], it offers a
-  collaborative platform, where users can both store and manipulate their
-  documents, as long as they have a internet connection, along with a (fairly
-  modern) browser.
+  modern real-time collaborative document WYSIWYG (What You See Is What You
+  Get) editor with over 240 million monthly active users cite:NextWeb2014. It
+  is largely based on OT cite:WaveOT, but has also initiated research in a
+  technique called Differential Synchronization cite:Fraser:09. Through its
+  integration with [[https://www.google.com/drive/][Google Drive]], it offers a collaborative platform, where
+  users can both store and manipulate their documents, as long as they have a
+  internet connection, along with a (fairly modern) browser.
 
   We will present a tool for real-time collaborative editing called Shared
-  Buffer. It is designed with developers in mind. What most developers have in
-  common is that they spend a lot of time manipulating /plain text/, yet they
-  use a [[http://stackoverflow.com/research/developer-survey-2016][lot of different tools]] to do so. We aim to enable real-time
-  collaboration in /existing/ text editors, as opposed to developing an editor
-  with real-time collaborative features. Our prototype implementation is for
-  the text editor Emacs. The name Shared Buffer reflects a choice in design;
-  Emacs stores text in a /buffer/; when a file is opened, its contents is put
-  inside a buffer, which the user can manipulate. You may also have buffers
-  that are not associated with any file. In Shared Buffer, there are is no
-  notion of a file, meaning there is no centrally stored copy of the document.
+  Buffer, which is designed with developers in mind. What most developers have
+  in common is that they spend a lot of time manipulating /plain text/, yet
+  they use a lot of different tools to do so cite:stackoverflowdevelopersurvey,
+  therefore we aim to enable real-time collaboration in /existing/ text
+  editors, as opposed to developing an editor with real-time collaborative
+  features. We therefore want to develop a protocol which ideally should be
+  portable to any text editor, or any program that embeds a text editor.
 
-  We want to develop a protocol which ideally should be portable to any text
-  editor, or any program that embeds a text editor. A client-server model is
-  chosen, as opposed to a fully decentralized solution. We will consequently
-  move complexity to the server, if this can simplify the client-side
-  algorithm. This is chosen in order to ensure portability. Furthermore,
-  proving correctness for a fully decentralized solution has proven to be very
-  difficult cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
+  A client-server model is chosen, as opposed to a fully decentralized
+  solution. We will consequently move complexity to the server, if this can
+  simplify the client-side algorithm; this is chosen in order to ensure
+  portability. Furthermore, proving correctness for a fully decentralized
+  solution has proven to be very difficult
+  cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
 
-[fn:1] What You See Is What You Get
-** Introducing the Problem
+  Our prototype client is for the text editor Emacs. The name Shared Buffer
+  reflects a choice in design; in Emacs, text is stored in a /buffer/; when a
+  file is opened, its contents is put inside a buffer, which the user can
+  manipulate. You may also have buffers that are not associated with any file.
+  In Shared Buffer, there is no notion of a file, meaning there is no centrally
+  stored copy of the document.
 
-   Say we have two users, $u_0$ and $u_1$, who are both communicating with a
-   server $S$. They each have a copy of a shared buffer. Both may either insert
-   a character, or delete one from the buffer, and they may do so at any time.
-   When a user performs an operation (meaning insertion or deletion) on its
-   local buffer, then this should be communicated to $S$. When $S$ receives an
-   operation, it should communicate this to the other user. We can graphically
-   represent scenarios that can occur in the system by using a variation of
-   message sequence charts. The diagrams are read from top to bottom with
-   regards to time, where directed edges represents the transfer of a message.
+  The server will be written in [[https://clojure.org/][Clojure]], a modern functional programming
+  language with strong concurrency semantics cite:Emerick2012. Begin hosted on
+  the JVM, Clojure offers full Java interoperability, meaning that we can
+  leverage the vast collection of Java libraries.
+
+** A Naïve Algorithm
+
+   Let us now consider two cases that illustrates how a naïve implementation
+   (like the one briefly described in the [[Preface]]) might work, and where it
+   fails to produce a desirable result.
+
+   Say we have two users, our European friend $u_0$ and $u_1$, the American,
+   who are both communicating with a server $S$. They each have a copy of a
+   shared buffer. Both may either insert a character, or delete one from the
+   buffer, and they may do so at any time. When a user performs an operation
+   (meaning insertion or deletion) on its local buffer, then this should be
+   communicated to $S$. When $S$ receives an operation, it should communicate
+   this to the other user.
+
+   We represent scenarios that can occur in the system graphically by using a
+   variation of message sequence charts. The diagrams are read from top to
+   bottom with regards to time, where directed edges represents the transfer of
+   a message.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -191,24 +206,24 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
-     \caption{A conflict-free scenario, with two clients.}
+     \caption{A conflict-free scenario with two clients.}
      \label{fig:noconflict0}
    \end{figure}
    #+END_EXPORT
 
-   Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine our
-   European friend $u_0$ has an empty buffer which she precedes to insert an
-   "=a=" into. Meanwhile $u_1$, the American, inserts a "=b=" in front of the
-   "=a=" that just popped up in her buffer. The "=b=" eventually reaches $u_0$,
-   and the end result of the interaction is that they both will be looking at a
-   buffer containing "=ba=". In this scenario the buffers ended up identical,
-   so we say that we reached a consistent state.
+   Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
+   $u_0$ has an empty buffer which she precedes to insert an "=a=" into.
+   Meanwhile $u_1$ inserts a "=b=" in front of the "=a=" that just popped up in
+   her buffer. The "=b=" eventually reaches $u_0$, and the end result of the
+   interaction is that they both will be looking at a buffer containing "=ba=".
+   In this scenario the buffers ended up identical, so we say that we reached a
+   /consistent state/.
 
-   Scenarios like the one we saw would be gracefully handled by even a naïve
-   approach. We can see that "=a=" was inserted prior to the "=b=" at both
-   $u_0$ and $u_1$, hence they cannot have been applied concurrently. We will
-   now demonstrate that the approach does not work when we introduce concurrent
-   edits.
+   Simple scenarios like the one we saw, where only one message is "in flight"
+   at any one time, would be gracefully handled by even the naïve approach. We
+   can see that "=a=" was inserted prior to the "=b=" at both $u_0$ and $u_1$,
+   hence they cannot have been applied concurrently. We will now demonstrate
+   that the approach does not work when we introduce concurrent edits.
 
    Let us return to the example from Figure [[ref:fig:noconflict0]], with a slight
    modification, visualized in Figure [[ref:fig:conflict0]]. The scenario is
@@ -217,8 +232,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    inserts her "=b=" /before/ having received the "=a=". When she has already
    typed a "=b=", she receives a message saying that she should place an "=a="
    at the first point in her buffer. The resulting buffer is "=ab=". Now they
-   are looking at different buffers, so we say we have reached an inconsistent
-   state.
+   are looking at different buffers, so we say we have reached an /inconsistent
+   state/.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -271,30 +286,31 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{figure}
    #+END_EXPORT
 
-   The two examples are meant to give insight to how a naïve implementation
-   (like the one briefly described in the [[Preface]]) might work, and where it
-   fails to produce a consistent result.
-
-   Our task is to create a protocol which guarantees eventual consistency
-   cite:Vogels:2009:EC:1435417.1435432 between participating clients.
-   Intuitively, this means that if all users stop typing at some point, then
-   given enough time for traveling messages to reach their destination, they
-   will all be looking at the same buffer.
-
-   In later chapters we will come to realize that this is not at all trivial,
-   considering the highly concurrent and distributed nature of the problem. In
-   order to handle this level of complexity we will rely heavily on the use of
-   formal methods.
+   In this thesis we introduce and discuss a new protocol which guarantees
+   /eventual consistency/ cite:Vogels:2009:EC:1435417.1435432 between
+   participating clients. Intuitively, this means that if all users stop typing
+   at some point, then given enough time for traveling messages to reach their
+   destination, they will all be looking at the same buffer. In later chapters
+   we will come to realize that is not at all trivial, considering the highly
+   concurrent and distributed nature of the problem. In order to handle this
+   level of complexity we will rely heavily on the use of formal methods.
 
 ** Approach
 
-   We will use a formal verification technique called model checking. This is a
-   technique that requires us to write a mathematical representation of the
-   system, which will be our model. We can perform exploratory searches of the
-   model, and check whether certain properties holds true. A model is generally
-   an abstraction of a given system, where one carefully chooses what parts of
-   the system is necessary to represent, in order to prove the properties that
-   are of interest.
+   In this thesis we use a formal verification technique called /model
+   checking/ cite:Clarke:2000:MC:332656. This technique requires us to obtain a
+   mathematical model of the system we wish to validate. A model is represented
+   as a set of states, and transitions between these states. We can think of
+   model checking as a graph search, where the states acts as nodes, and edges
+   represent the possibility of going from one state to another. If the graph
+   is finite, we can prove that the model has a certain property by checking
+   whether or not the property holds true in every state. Furthermore, we want
+   to use Linear Temporal Logic (LTL) to express properties over paths, which
+   are sequences of states.
+
+   The model is generally an abstraction of a given system, where one carefully
+   chooses what parts of the system is necessary to represent, in order to
+   prove the properties that are of interest.
 
    Moreover, we will use the model as a way of driving the development process,
    or rather, solving the problem. When model checking a property, a counter
@@ -306,14 +322,9 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    [[http://maude.cs.illinois.edu/][The Maude System]] is our chosen modeling language and verification tool. It
    provides an expressive language, that is well suited for modeling concurrent
-   and distributed systems [[cite:DBLP:conf/maude/2007]]. It allows us to represent
-   states in a system, and transitions between states. We can think of model
-   checking as a graph search, where the states acts as nodes, and edges
-   represent the possibility of going from one state to another. If the graph
-   is finite, we can prove that the model has a certain property by checking
-   whether or not the property holds true in every state. Furthermore, we want
-   to use Linear Temporal Logic (LTL) to express properties over paths, which
-   are sequences of states.
+   and distributed systems [[cite:DBLP:conf/maude/2007]]. In addition, it provides
+   The LTL Model Checker cite:Eker2004162, which allows us to specify and
+   verify LTL properties.
 
 ** Contributions
 
@@ -330,14 +341,15 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    - provide a client as an extension for Emacs,
    - provide an implementation of the server-side algorithm in Clojure.
 
-* Operational Transformation
+* Formal Semantics of Editing Operations
 
-  In section [[Introducing%20the%20Problem]] we showed how concurrent edits to a
-  buffer lead to inconsistent results. OT tries to remedy this by transforming
-  the operations invoked by the users in a way that preserves consistency.
-  Transformations are essentially higher order functions that transforms an
-  operation with regards to another, but before we dive in to these we should
-  first discuss the operations that we are supposed to transform.
+  In section [[A Naïve Algorithm]] we showed how concurrent edits to a buffer lead
+  to inconsistent results. /Operational Transformation/ (OT) tries to remedy
+  this by transforming the operations invoked by the users in a way that
+  preserves consistency. Transformations are essentially higher order functions
+  that transforms an operation with regards to another, but before we dive in
+  to these we should first discuss the operations that we are supposed to
+  transform.
 
 ** Operations and Buffers
 
