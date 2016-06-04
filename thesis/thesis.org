@@ -1,4 +1,5 @@
-#+TITLE: Developing a System for Real-Time Collaborative Editing With the Aid of Formal Methods
+#+TITLE: Shared Buffer
+#+SUBTITLE: The Specification, Verification and Implementation of a Real-Time Collaborative Editing System
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
@@ -295,7 +296,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    concurrent and distributed nature of the problem. In order to handle this
    level of complexity we will rely heavily on the use of formal methods.
 
-** Approach
+** Method
 
    In this thesis we use a formal verification technique called /model
    checking/ cite:Clarke:2000:MC:332656. This technique requires us to obtain a
