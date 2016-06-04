@@ -514,8 +514,6 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
     We say the buffers of $u_0$ and $u_1$ have diverged.
 
 
-#+LaTeX:\backmatter{}
-#+LaTeX:\printbibliography
 #+LaTeX:\appendix
 * LISP In Summer Projects contribution
 
@@ -622,6 +620,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
     minor mode accompanied by a chat feature. When these things are in order
     it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
 
+#+LaTeX:\backmatter{}
+#+LaTeX:\printbibliography
 * COMMENT Local variables
 # Local Variables:
 # eval: (require 'org-ref)
