@@ -343,13 +343,65 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
 * Formal Semantics of Editing Operations
 
-  In section [[A Naïve Algorithm]] we showed how concurrent edits to a buffer lead
-  to inconsistent results. /Operational Transformation/ (OT) tries to remedy
-  this by transforming the operations invoked by the users in a way that
-  preserves consistency. Transformations are essentially higher order functions
-  that transforms an operation with regards to another, but before we dive in
-  to these we should first discuss the operations that we are supposed to
-  transform.
+  #+BEGIN_EXPORT latex
+  \begin{wrapfigure}[14]{r}{0pt}
+    \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+        \tikzstyle{vertex} = [circle, scale=0.5]
+        \tikzstyle{O_0} = [vertex, fill=black!30!green]
+        \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+        \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+        \tikzstyle{toO_0} = [to, color=black!30!green]
+        \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+        \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\small]
+
+        %% Server receives operations in this order
+        \node[color=black!20] (s) at (3, 3.5) {$S$};
+        \coordinate (se) at (3, 0) {};
+        \node[O_0, color=black!20, below = 2em of s] (s1) {};
+        \node[O_1, color=black!20, below = 1.5em of s1] (s2) {};
+
+        %% User 0 generates/receives in this order
+        \node (u0) at (0, 3.5) {$u_0$};
+        \node (u0e) at (0, 0) {};
+        \node[O_0, below = of u0, label=left:{\texttt{a}}] (u00) {};
+        \node[O_1, above = 2em of u0e, label=left:{\texttt{ba}}] (u01a) {};
+
+        \begin{pgfonlayer}{bg} % select the background layer
+          \draw[to, color=black!20] (s) -- (s1)  -- (s2) -- (se);
+          \draw[to, color=black!30] (u0) -- (u00) -- (u01a) -- (u0e);
+
+          % Life of O_0
+          \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{ins(0,a)}^{O_0}$};
+
+          % Life of O_1
+          \draw[toO_1] (s2) -- (u01a) node [op] {$\overbrace{ins(0,b)}^{O_1}$};
+        \end{pgfonlayer}
+    \end{tikzpicture}
+    \caption{Our focus is on the operations of a single user.}
+    \label{fig:focusclient}
+  \end{wrapfigure}
+  #+END_EXPORT
+
+  A model of a given system is an abstraction of that system cite:Lamport:2002,
+  which means only some aspects of the system are described. In our case, the
+  fundamental capabilities of an text editor the, namely insertion and
+  deletions of characters in a buffer, should be captured, along with the order
+  in which they are performed. The time between operations is an example of
+  something /not/ represented in the model; as a result the model cannot be
+  used to analyze the real time performance of the system. Other features of a
+  text editor, like "search and replace", are also omitted, because such
+  features can be represented as a series of deletions and insertions.
+
+  In this chapter we introduce a formal definition of editing operations. The
+  definitions are based on
+  cite:ellis1989concurrency,DBLP:journals/corr/abs-1302-3292, but we provide
+  more mathematical definitions in the sense that the semantics of editing
+  operations are described as a set of equations. This chapter is only
+  concerned with events at a single client. We assume that every event is
+  simply an operation being applied, and we will not differ between a operation
+  originating locally or remotely.
 
 ** Operations and Buffers
 
@@ -357,16 +409,22 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    character in a buffer. Formally, we define the set of operations $\mathcal
    O$ as:
    - $nop \in \mathcal O$,
-   - $ins(i, c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in UTF\text{-}8$[fn:2],
+   - $ins(i, c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in Unicode$,
    - $del(i) \in \mathcal O$ for any $i \in \mathbb{N}$,
    - for any two $O_i, O_j \in \mathcal O$ then $O_j \circ O_i \in \mathcal O$,
    - $\mathcal O$ is closed under $\circ$.
 
-   A buffer is simply defined as a 0-indexed string, and we let $\mathcal B$
-   constitute the set of all possible buffers[fn:3]. An Operation can be
-   applied to a buffer, which in turn yields a new buffer. All $O \in \mathcal
-   O$ are partial unary operations $O : \mathcal B' \rightarrow \mathcal B$,
-   where $\mathcal B' \subseteq \mathcal B$.
+   The semantics of an operation is defined in terms of how it is applied to a
+   buffer, where a buffer is simply defined as a 0-indexed string of UTF-8
+   encoded characters. The set $Unicode$ is our alphabet, which contains every
+   character defined by the Unicode standard. We let $\mathcal B$ constitute
+   the set of all possible buffers --- this set could also be expressed as
+   $Unicode^{*}$.
+
+   An operation can be applied to a buffer, which in turn yields a new buffer.
+   Consequently all $O \in \mathcal O$ are partial unary operations $O :
+   \mathcal B' \rightarrow \mathcal B$, where $\mathcal B' \subseteq \mathcal
+   B$.
 
    Let $B \in \mathcal{B}$. The $nop$ operation is the operation that does
    nothing, and applying it is defined as:
@@ -375,8 +433,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
        nop(B) &= B
      \end{align*}
    #+END_EXPORT
-   Let $i \in \mathbb{N}$, and both $c, c' \in UTF\text{-}8$. We let a single
-   space represent the concatenation of strings and characters[fn:4]. Applying
+   Let $i \in \mathbb{N}$, and both $c, c' \in Unicode$. We let a single space
+   represent concatenation, and that characters are singular strings. Applying
    an insertion is then defined as follows:
    #+BEGIN_EXPORT latex
      \begin{align*}
@@ -396,17 +454,12 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    is defined as so:
    #+BEGIN_EXPORT latex
    \begin{align*}
-     O_j \circ O_i(B) &= O_j(O_i(B)) \\
+     O_j \circ O_i(B) &= O_j(O_i(B))
    \end{align*}
    #+END_EXPORT
    Note that composition of operations is no different from regular function
    composition, which the reader might be familiar with.
 
-[fn:2] UTF-8 is a character encoding, and we let $UTF\text{-}8$ constitute the set of
-these characters.
-[fn:3] This set could also be expressed as $UTF\text{-}8^{*}$.
-[fn:4] Let concatenation of a character be identical to concatenating a string
-of size one.
 
 #+LaTeX:\backmatter{}
 #+LaTeX:\printbibliography
