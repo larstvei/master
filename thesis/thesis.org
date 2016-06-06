@@ -439,8 +439,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \end{align*}
    #+END_EXPORT
    Let $i \in \mathbb{N}$, and both $c, c' \in Unicode$. We let a single space
-   represent concatenation, and that characters are singular strings. Applying
-   an insertion is then defined as follows:
+   represent concatenation, where characters are treated like strings of length
+   one. Applying an insertion is then defined as follows:
    #+BEGIN_EXPORT latex
      \begin{align*}
        ins(0, c)(B) &= c\ B \\
@@ -463,7 +463,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{align*}
    #+END_EXPORT
    Note that composition of operations is no different from regular function
-   composition, which the reader might be familiar with.
+   composition.
 
 ** Scenarios Described Formally
 
