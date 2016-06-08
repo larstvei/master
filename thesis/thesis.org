@@ -468,53 +468,96 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    Note that composition of operations is no different from regular function
    composition.
 
-** Scenarios Described Formally
+** Scenarios Described in Terms of Operations and Their Application
 
-   Now that we have a formal representation of operations and buffers, we
-   provide a formal description of scenarios, like the examples from Section [[A
-   Naïve Algorithm]]. We will focus our attention on what happens on the client
-   side.
+   In the previous section we formalized
+   - what operations are,
+   - how operations are applied to buffers, and
+   - how operations are combined.
 
-   In the scenario best described by Figure [[ref:fig:noconflict0]], we saw two
-   operations $ins(0, a)$ and $ins(0, b)$, named $O_0$ and $O_1$ respectively,
-   being applied in the same order at two different locations, $u_0$ and $u_1$.
-   They both applied $O_0$ on the empty buffer, and applied $O_1$ on the
-   resulting buffer; this is more compactly represented as $O_1 \circ
-   O_0(\epsilon)$.
-
-   Using the equations provided in the previous section, we can /calculate/ the
-   resulting buffer of both $u_0$ and $u_1$.
+   Let us try to bridge the gap between the formal notion of an editing
+   operation, and scenarios that involves a user typing on a keyboard. Imagine
+   that a user types the word ~"hello"~ --- this is modeled as a single
+   operation:
+   \[ \ins{4}{o} \circ \ins{3}{l} \circ \ins{2}{l} \circ \ins{1}{e} \circ \ins{0}{h} \]
+   The result of applying the operation to the empty buffer $\epsilon$
+   evaluates to the buffer that only contains the word ~"hello"~, and can be
+   calculated as so:
    #+BEGIN_EXPORT latex
-    \begin{align*}
-      O_1 \circ O_0(\epsilon) &= \\
-      ins(0, b) \circ ins(0, a)(\epsilon) &= \\
-      ins(0, b)(a) &= ba
-    \end{align*}
+   \begin{align*}
+     \ins{4}{o} \circ \ins{3}{l} \circ \ins{2}{l} \circ \ins{1}{e} \circ \ins{0}{h} (\epsilon) &= \\
+     \ins{4}{o} \circ \ins{3}{l} \circ \ins{2}{l} \circ \ins{1}{e} (\texttt{"h"}) &= \\
+     \ins{4}{o} \circ \ins{3}{l} \circ \ins{2}{l} (\texttt{"he"}) &= \\
+     \ins{4}{o} \circ \ins{3}{l} (\texttt{"hel"}) &= \\
+     \ins{4}{o} (\texttt{"hell"}) &= \texttt{"hello"}
+   \end{align*}
    #+END_EXPORT
-
-   Let us now apply the same technique to represent the scenario described in
-   Figure [[ref:fig:conflict0]]. In this example $u_0$ and $u_1$ applies the same
-   operations, but in different orders.
+   Now we will expand from the case where a single user types on a keyboard,
+   and include operations that can be received from a server. In the scenario
+   best described by Figure [[ref:fig:noconflict0]] (page pageref:fig:noconflict0),
+   we saw two operations $\ins{0}{a}$ and $\ins{0}{b}$, named $O_0$ and $O_1$
+   respectively, being applied in the same order at two different locations.
    #+BEGIN_EXPORT latex
-    \begin{multicols}{2}
-      Operation applied by $u_0$:
-      \begin{align*}
-        O_1 \circ O_0(\epsilon) &= \\
-        ins(0, b) \circ ins(0, a)(\epsilon) &= \\
-        ins(0, b)(a) &= ba
-      \end{align*}
+   \begin{multicols}{2}
+     From the perspective of $u_0$:
+     \begin{itemize}
+     \item $O_0$ is generated locally,
+     \item $O_1$ is received from the server
+     \end{itemize}
+     \columnbreak
+     From the perspective of $u_1$:
+     \begin{itemize}
+     \item $O_0$ is received from the server,
+     \item $O_1$ is generated locally
+     \end{itemize}
+   \end{multicols}
+   #+END_EXPORT
+   Common to both $u_0$ and $u_1$ is their initial buffer (the empty buffer
+   $\epsilon$) and the order they operation they apply is $O_1 \circ O_0$.
+   Because they perform the same operation to the same initial buffer, they
+   must necessarily end up in a consistent state (i.e. end up with the same
+   buffer).
 
-      \columnbreak
-      Operations applied by $u_1$:
-      \begin{align*}
-        O_0 \circ O_1(\epsilon) &= \\
-        ins(0, a) \circ ins(0, b)(\epsilon) &= \\
-        ins(0, a)(b) &= ab
-      \end{align*}
-    \end{multicols}
+   The scenario from Figure [[ref:fig:conflict0]] (page pageref:fig:conflict0) is
+   identical to the previous scenario, except that the orders of operations
+   have changed.
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     From the perspective of $u_0$:
+     \begin{itemize}
+     \item $O_0$ is generated locally,
+     \item $O_1$ is received from the server
+     \end{itemize}
+     \columnbreak
+     From the perspective of $u_1$:
+     \begin{itemize}
+     \item $O_1$ is generated locally
+     \item $O_0$ is received from the server,
+     \end{itemize}
+   \end{multicols}
+   #+END_EXPORT
+   $u_0$ and $u_1$ have the same initial buffer, but the composed operation of
+   $u_0$ is $O_1 \circ O_0$ and the composed operation of $u_1$ is $O_0 \circ
+   O_1$. By applying these operations to the empty buffer $\epsilon$ we show
+   that $u_0$ and $u_1$ end up in a inconsistent state (i.e. end up with
+   different buffers).
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     Operation applied by $u_0$:
+     \begin{align*}
+       \overbrace{\ins{0}{b}}^{O_1} \circ \overbrace{\ins{0}{a}}^{O_0}(\epsilon) &= \\
+       \ins{0}{b}(\texttt{"a"}) &= \texttt{"ba"}
+     \end{align*}
+
+     \columnbreak
+     Operations applied by $u_1$:
+     \begin{align*}
+       \overbrace{\ins{0}{a}}^{O_0} \circ \overbrace{\ins{0}{b}}^{O_1}(\epsilon) &= \\
+       \ins{0}{a}(\texttt{"b"}) &= \texttt{"ab"}
+     \end{align*}
+   \end{multicols}
     #+END_EXPORT
-
-    We say the buffers of $u_0$ and $u_1$ have diverged.
+** Algebraic Properties
 
 
 #+LaTeX:\appendix
