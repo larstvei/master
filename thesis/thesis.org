@@ -559,6 +559,60 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
     #+END_EXPORT
 ** Algebraic Properties
 
+   An algebraic structure is a set along with one or more operations
+   cite:antonsen2014logiske. The set of operations $\mathcal O$ under
+   composition $\circ : \mathcal O \times \mathcal O \rightarrow \mathcal O$
+   forms an algebraic structure, denoted $\langle \mathcal O, \circ \rangle$.
+
+   The previous section contains a proof that $\circ$ is /not/ commutative,
+   meaning that $O_j \circ O_i = O_i \circ O_j$ is not the case for all $O_i,
+   O_j \in \mathcal O$.
+   \begin{proof}
+   As examplified in the previous section:
+   \[
+   ins(0, b) \circ ins(0, a) \neq ins(0, a) \circ ins(0, b)
+   \]
+   \end{proof}
+
+   The fact that $\circ$ is not commutative is precisely the problem with a
+   naïve algorithm (Section [[A Naïve Algorithm]]); in other words, an naïve
+   algorithm would guarantee eventual consistency if the order of which
+   operations are applied does not effect the end result.
+
+   Furthermore, it is worth noting that the structure $\langle \mathcal O,
+   \circ \rangle$ is a /monoid/ because it satisfies the following properties:
+
+   - $nop$ is the identity element of $\circ$.
+     \begin{proof}
+     Let $O \in \mathcal O$, then
+     \begin{itemize}
+       \item $nop \circ O(B) = nop(O(B)) = O(B)$
+       \item $O \circ nop(B) = O(nop(B)) = O(B)$
+     \end{itemize}
+     for any $B \in \mathcal B$. It follows that $nop \circ O = O \circ nop = O$.
+     \end{proof}
+   - $\circ$ is associative.
+     \begin{proof}
+     Let $O_i, O_j, O_k \in \mathcal O$, then
+     \begin{itemize}
+       \item $((O_k \circ O_j) \circ O_i)(B) = (O_k \circ O_j)(O_i(B)) = O_k(O_j(O_i(B)))$
+       \item $(O_k \circ (O_j \circ O_i))(B) = O_k((O_j \circ O_i)(B)) = O_k(O_j(O_i(B)))$
+     \end{itemize}
+     for any $B \in \mathcal B$. It follows that $O_k \circ (O_j \circ O_i) =
+     (O_k \circ O_j) \circ O_i$.
+     \end{proof}
+   - $\circ$ is closed under $\mathcal O$.
+     \begin{proof}
+     By definition.
+     \end{proof}
+
+   There are two main reasons for noting these algebraic properties; one is
+   that it is helpful when writing a formal specification in Maude; the other
+   is that it helps when translating the structure to a given programming
+   language, by making sure the selected representation preserves the
+   properties of a monoid.
+
+
 
 #+LaTeX:\appendix
 * LISP In Summer Projects contribution
