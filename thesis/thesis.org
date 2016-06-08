@@ -408,8 +408,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   more mathematical definitions in the sense that the semantics of editing
   operations are described as a set of equations. This chapter is only
   concerned with events at a single client. We assume that every event is
-  simply an operation being applied, and we will not differ between a operation
-  originating locally or remotely.
+  simply an operation being applied, and we will not differ between an
+  operation originating locally or remotely.
 
 ** Operations and Buffers
 
