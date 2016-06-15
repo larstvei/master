@@ -15,10 +15,7 @@
 
 #+LaTeX_HEADER: \newcommand{\ins}[2]{ins(#1,\ \texttt{#2})}
 #+LaTeX_HEADER: \newcommand{\del}[2]{del(#1,\ \texttt{#2})}
-
-# Try not to break lines in math mode
-#+LaTeX: \binoppenalty=3000
-#+LaTeX: \relpenalty=3000
+#+LaTeX_HEADER: \newenvironment{ritemize}{\begin{itemize}\raggedright}{\end{itemize}}
 
 #+LaTeX: \pgfdeclarelayer{bg}    % declare background layer
 #+LaTeX: \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
@@ -34,7 +31,7 @@ Placeholder for abstract.
 #+LaTeX: \tableofcontents{}
 #+LaTeX: \listoffigures{}
 #+LaTeX: \listoftables{}
-* Acknowledgments
+* Acknowledgements
   :PROPERTIES:
   :UNNUMBERED: t
   :END:
@@ -78,7 +75,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   the user to detect this, and reconnect.
 
   Still, the judges of the competition deemed the program worthy of second
-  prize, awarding me 500$ for my efforts.
+  prize, awarding me $500 for my efforts.
 
   It was by far the most ambitious project I've embarked on, and also the most
   rewarding. I was greatly honored for receiving the prize, and feel my
@@ -145,7 +142,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   stored copy of the document.
 
   The server will be written in [[https://clojure.org/][Clojure]], a modern functional programming
-  language with strong concurrency semantics cite:Emerick2012. Begin hosted on
+  language with strong concurrency semantics cite:Emerick2012. Being hosted on
   the JVM, Clojure offers full Java interoperability, meaning that we can
   leverage the vast collection of Java libraries.
 
@@ -221,7 +218,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
    $u_0$ has an empty buffer which she precedes to insert an "=a=" into.
-   Meanwhile $u_1$ inserts a "=b=" in front of the "=a=" that just popped up in
+   Meanwhile, $u_1$ inserts a "=b=" in front of the "=a=" that just popped up in
    her buffer. The "=b=" eventually reaches $u_0$, and the end result of the
    interaction is that they both will be looking at a buffer containing "=ba=".
    In this scenario the buffers ended up identical, so we say that we reached a
@@ -289,7 +286,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          \draw[toO_1] (s2) -- (u01a) node [op, near end] {$O_1$};
        \end{pgfonlayer}
      \end{tikzpicture}
-     \caption{The smallest conflict with two clients.}
+     \caption{A minimal conflict with two clients.}
      \label{fig:conflict0}
    \end{figure}
    #+END_EXPORT
@@ -312,9 +309,9 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    model checking as a graph search, where the states acts as nodes, and edges
    represent the possibility of going from one state to another. If the graph
    is finite, we can prove that the model has a certain property by checking
-   whether or not the property holds true in every state. Furthermore, we want
-   to use Linear Temporal Logic (LTL) to express properties over paths, which
-   are sequences of states.
+   whether the property holds true in every state. Furthermore, we want to use
+   Linear Temporal Logic (LTL) to express properties over paths, which are
+   sequences of states.
 
    The model is generally an abstraction of a given system, where one carefully
    chooses what parts of the system is necessary to represent, in order to
@@ -394,7 +391,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
   A model of a given system is an abstraction of that system cite:Lamport:2002,
   which means only some aspects of the system are described. In our case, the
-  fundamental capabilities of an text editor the, namely insertion and
+  fundamental capabilities of a text editor, namely the insertion and
   deletions of characters in a buffer, should be captured, along with the order
   in which they are performed. The time between operations is an example of
   something /not/ represented in the model; as a result the model cannot be
@@ -502,44 +499,43 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      From the perspective of $u_0$:
      \begin{itemize}
      \item $O_0$ is generated locally,
-     \item $O_1$ is received from the server
+     \item $O_1$ is received from the server.
      \end{itemize}
      \columnbreak
      From the perspective of $u_1$:
      \begin{itemize}
      \item $O_0$ is received from the server,
-     \item $O_1$ is generated locally
+     \item $O_1$ is generated locally.
      \end{itemize}
    \end{multicols}
    #+END_EXPORT
    Common to both $u_0$ and $u_1$ is their initial buffer (the empty buffer
-   $\epsilon$) and the order they operation they apply is $O_1 \circ O_0$.
-   Because they perform the same operation to the same initial buffer, they
-   must necessarily end up in a consistent state (i.e. end up with the same
-   buffer).
+   $\epsilon$) and the operation they apply is $O_1 \circ O_0$. Because they
+   perform the same operation to the same initial buffer, they must necessarily
+   end up in a consistent state (i.e. end up with the same buffer).
 
    The scenario from Figure [[ref:fig:conflict0]] (page pageref:fig:conflict0) is
-   identical to the previous scenario, except that the orders of operations
-   have changed.
+   almost identical to the scenario above, but the operations are applied in
+   different orders.
    #+BEGIN_EXPORT latex
    \begin{multicols}{2}
      From the perspective of $u_0$:
      \begin{itemize}
      \item $O_0$ is generated locally,
-     \item $O_1$ is received from the server
+     \item $O_1$ is received from the server.
      \end{itemize}
      \columnbreak
      From the perspective of $u_1$:
      \begin{itemize}
-     \item $O_1$ is generated locally
-     \item $O_0$ is received from the server,
+     \item $O_1$ is generated locally,
+     \item $O_0$ is received from the server.
      \end{itemize}
    \end{multicols}
    #+END_EXPORT
    $u_0$ and $u_1$ have the same initial buffer, but the composed operation of
    $u_0$ is $O_1 \circ O_0$ and the composed operation of $u_1$ is $O_0 \circ
    O_1$. By applying these operations to the empty buffer $\epsilon$ we show
-   that $u_0$ and $u_1$ end up in a inconsistent state (i.e. end up with
+   that $u_0$ and $u_1$ end up in an inconsistent state (i.e. end up with
    different buffers).
    #+BEGIN_EXPORT latex
    \begin{multicols}{2}
@@ -550,13 +546,14 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \end{align*}
 
      \columnbreak
-     Operations applied by $u_1$:
+     Operation applied by $u_1$:
      \begin{align*}
        \overbrace{\ins{0}{a}}^{O_0} \circ \overbrace{\ins{0}{b}}^{O_1}(\epsilon) &= \\
        \ins{0}{a}(\texttt{"b"}) &= \texttt{"ab"}
      \end{align*}
    \end{multicols}
     #+END_EXPORT
+
 ** Algebraic Properties
 
    An algebraic structure is a set along with one or more operations
@@ -575,9 +572,9 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{proof}
 
    The fact that $\circ$ is not commutative is precisely the problem with a
-   naïve algorithm (Section [[A Naïve Algorithm]]); in other words, an naïve
+   naïve algorithm (Section [[A Naïve Algorithm]]); in other words, a naïve
    algorithm would guarantee eventual consistency if the order of which
-   operations are applied does not effect the end result.
+   operations are applied does not affect the end result.
 
    Furthermore, it is worth noting that the structure $\langle \mathcal O,
    \circ \rangle$ is a /monoid/ because it satisfies the following properties:
