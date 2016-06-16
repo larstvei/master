@@ -3,7 +3,7 @@
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
-#+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil
+#+OPTIONS: num:3 H:5 todo:nil title:nil toc:nil ':t
 #+LaTeX_CLASS_OPTIONS: [USenglish, hidelinks]
 #+LaTeX_CLASS: ifimaster
 #+LATEX_HEADER: \usepackage{tikz}
@@ -217,26 +217,26 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    #+END_EXPORT
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
-   $u_0$ has an empty buffer which she precedes to insert an "=a=" into.
-   Meanwhile, $u_1$ inserts a "=b=" in front of the "=a=" that just popped up in
-   her buffer. The "=b=" eventually reaches $u_0$, and the end result of the
-   interaction is that they both will be looking at a buffer containing "=ba=".
+   $u_0$ has an empty buffer which she precedes to insert an ="a"= into.
+   Meanwhile, $u_1$ inserts a ="b"= in front of the ="a"= that just popped up in
+   her buffer. The ="b"= eventually reaches $u_0$, and the end result of the
+   interaction is that they both will be looking at a buffer containing ="ba"=.
    In this scenario the buffers ended up identical, so we say that we reached a
    /consistent state/.
 
    Simple scenarios like the one we saw, where only one message is "in flight"
    at any one time, would be gracefully handled by even the naïve approach. We
-   can see that "=a=" was inserted prior to the "=b=" at both $u_0$ and $u_1$,
+   can see that ="a"= was inserted prior to the ="b"= at both $u_0$ and $u_1$,
    hence they cannot have been applied concurrently. We will now demonstrate
    that the approach does not work when we introduce concurrent edits.
 
    Let us return to the example from Figure [[ref:fig:noconflict0]], with a slight
    modification, visualized in Figure [[ref:fig:conflict0]]. The scenario is
-   unchanged at $u_0$, where she first inserts an "=a=", and later receives the
-   "=b=" which leaves her with a buffer containing "=ba=". Now say that $u_1$
-   inserts her "=b=" /before/ having received the "=a=". When she has already
-   typed a "=b=", she receives a message saying that she should place an "=a="
-   at the first point in her buffer. The resulting buffer is "=ab=". Now they
+   unchanged at $u_0$, where she first inserts an ="a"=, and later receives the
+   ="b"= which leaves her with a buffer containing ="ba"=. Now say that $u_1$
+   inserts her ="b"= /before/ having received the ="a"=. When she has already
+   typed a ="b"=, she receives a message saying that she should place an ="a"=
+   at the first point in her buffer. The resulting buffer is ="ab"=. Now they
    are looking at different buffers, so we say we have reached an /inconsistent
    state/.
 
