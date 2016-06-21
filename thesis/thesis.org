@@ -609,6 +609,377 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    language, by making sure the selected representation preserves the
    properties of a monoid.
 
+* Related Work
+
+  In this chapter we will present some of the work of Ellis and Gibbs
+  cite:ellis1989concurrency, the pioneers of /Operational Transformation/ (OT)
+  and the very interesting work of Imine et al. on proving correctness for
+  transformation functions using formal verification techniques
+  cite:DBLP:conf/ecscw/ImineMOR03,DBLP:journals/corr/abs-1302-3292,formalOT.
+
+** Basics of OT
+
+   Ellis and Gibbs introduced the dOPT (Distributed Operational Transformation)
+   algorithm cite:ellis1989concurrency, and with it, /Operational
+   Transformation/ (OT), which tries to solve the problem of diverging copies
+   of a buffer, in a fully distributed setting. The main idea is to construct a
+   /transformation function/ where remote operations are transformed with
+   regards to conflicting local operations in a way that guarantees
+   consistency.
+
+   In order to achieve this, an additional parameter, /priority/, is added to
+   insertions and deletions; the priority is a unique identifier for a given
+   client, represented as a number, and is used in order to break ties. The
+   transformation function $T: \mathcal O \times \mathcal O \rightarrow
+   \mathcal O$, proposed by Ellis and Gibbs, is restated in Figure
+   [[ref:fig:transformation-function]].
+
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \begin{align*}
+       T(ins(p1,c1,pr1), ins(p2,c2,pr2)) &=
+       \begin{cases}
+         ins(p1,c1,pr1)      & \text{if }      p1 < p2 \\
+         ins(p1+1,c1,pr1)    & \text{else if } p1 > p2 \\
+         nop                 & \text{else if } c1 = c2 \\
+         ins(p1+1,c1,pr1)    & \text{else if } pr1 > pr2 \\
+         ins(p1,c1,pr1)      & \text{otherwise}
+       \end{cases}
+       \\
+       T(ins(p1,c1,pr1), del(p2,pr2)) &=
+       \begin{cases}
+         ins(p1,c1,pr1)      & \text{if } p1 < p2 \\
+         ins(p1-1,c1,pr1)    & \text{otherwise}
+       \end{cases}
+       \\
+       T(del(p1,pr1), ins(p2,c2,pr2)) &=
+       \begin{cases}
+         del(p1,pr1)         & \text{if } p1 < p2 \\
+         del(p1+1,pr1)       & \text{otherwise}
+       \end{cases}
+       \\
+       T(del(p1,pr1), del(p2,pr2)) &=
+       \begin{cases}
+         del(p1,pr1)         & \text{if }      p1 < p2 \\
+         del(p1-1,pr1)       & \text{else if } p1 > p2 \\
+         nop                 & \text{otherwise}
+       \end{cases}
+     \end{align*}
+     \caption{The transformation function from \cite{ellis1989concurrency}.}
+     \label{fig:transformation-function}
+   \end{figure}
+   #+END_EXPORT
+   Let us again consider the example described in Figure [[ref:fig:conflict0]]
+   (page pageref:fig:conflict0), where two operations $O_0 = ins(0,\
+   \texttt{a},\ 0)$ and $O_1 = ins(0,\ \texttt{b},\ 1)$ are performed
+   concurrently, leading to an inconsistent state. Rather than applying
+   operations directly, remote operations are transformed with regards to
+   (potential) concurrent local operations, before they are applied.
+   Communication is done directly between clients (as opposed to going via a
+   server).
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     From the perspective of $u_0$:
+     \begin{ritemize}
+     \item $O_0$ is generated locally,
+     \item $O_1$ is received from $u_1$, $T(O_1, O_0)$ is applied.
+     \end{ritemize}
+     \columnbreak
+     From the perspective of $u_1$:
+     \begin{ritemize}
+     \item $O_1$ is generated locally,
+     \item $O_0$ is received from $u_0$, $T(O_0, O_1)$ is applied.
+     \end{ritemize}
+   \end{multicols}
+   #+END_EXPORT
+   The scenario is illustrated in Figure
+   [[ref:fig:conflict-resolved-transformation]]. By composing the operations at
+   each user and applying that operation to the empty buffer $\epsilon$, the
+   resulting buffer is found.
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     Operation applied by $u_0$:
+     \begin{align*}
+       T(O_1, O_0) \circ ins(0,\ \texttt{a},\ 0) (\epsilon) &= \\
+       ins(1,\ \texttt{b},\ 1)(\texttt{"a"}) &= \texttt{"ab"}
+     \end{align*}
+
+     \columnbreak
+     Operation applied by $u_1$:
+     \begin{align*}
+       T(O_0, O_1) \circ ins(0,\ \texttt{b},\ 1) (\epsilon) &= \\
+       ins(0,\ \texttt{a},\ 0)(\texttt{"b"}) &= \texttt{"ab"}
+     \end{align*}
+   \end{multicols}
+    #+END_EXPORT
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+       \tikzstyle{op} = [above=-3pt, sloped, text=black]
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (0, 5) {$u_0$};
+       \node (u0e) at (0, 0) {};
+       \node[O_0, below = of u0, label=left:{\texttt{a}}] (u00) {};
+       \node[O_1, above = 2em of u0e, label=left:{\texttt{ab}}] (u01a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (7, 5) {$u_1$};
+       \node (u1e) at (7, 0) {};
+       \node[O_1, below = 4em of u1, label=right:{\texttt{b}}] (u11) {} ;
+       \node[O_0, below = 1em of u11, label=right:{\texttt{ab}}] (u10a) {};
+
+       \draw[to, color=black!30] (u0) -- (u00) -- (u01a) -- (u0e);
+       \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+       % Life of O_0
+       \draw[toO_0] (u00) -- (u10a) node [op, pos=0.4] {$\overbrace{T(ins(0,\ \texttt{a},\ 0), ins(0,\ \texttt{b},\ 1))}^{ins(0,\ \texttt{a},\ 0)}$};
+
+       % Life of O_1
+       \draw[toO_1] (u11) -- (u01a) node [op, pos=0.6] {$\overbrace{T(ins(0,\ \texttt{b},\ 1), ins(0,\ \texttt{a},\ 0))}^{ins(1,\ \texttt{b},\ 1)}$};
+
+     \end{tikzpicture}
+     \caption{Conflict resolved using $T$.}
+     \label{fig:conflict-resolved-transformation}
+   \end{figure}
+   #+END_EXPORT
+   Note that $T(O_1, O_0) \circ O_0 \neq T(O_0, O_1) \circ O_1$ (i.e. the
+   operations are not /equal/), but they are /equivalent/ in the sense that
+   applying them to the same buffer yields the same result, denoted:
+   #+BEGIN_EXPORT latex
+   \[ T(O_1, O_0) \circ O_0 \equiv T(O_0, O_1) \circ O_1 \]
+   #+END_EXPORT
+   As shown, the transformation function $T$ can be used to resolve a conflict.
+   However, the algorithm should be able to handle any number of concurrent
+   operations, from an arbitrary number of clients, which may lead to conflicts
+   of great complexity --- it is not given that the transformation function can
+   resolve every conflict that can arise.
+
+** Discussing Correctness of OT
+
+   The consistency model of cite:ellis1989concurrency, is defined by the
+   following two properties:
+
+   - *Causality*[fn:1]: If $O_i$ was executed before $O_j$ at one site, then
+     $O_i$ must be executed before $O_j$ on all sites.
+   - *Convergence*: When no messages are "in flight", all copies are identical.
+
+   Sun et al. cite:DBLP:journals/tochi/SunJZYC98 expanded the consistency model
+   of cite:ellis1989concurrency with:
+
+   - *Intention preservation*: If an operation $O_i$ has been transformed to
+     $O_i'$, then the effects of applying $O_i'$ must be equivalent of that of
+     applying $O_i$.
+
+   In the dOPT algorithm, a partial ordering cite:lamport1978time of
+   operations, based on the /happened before/ relation, is maintained. This is
+   achived by using a using a state vector (also referred to as a vector
+   clock); by always executing opertaions according to the ordering, causality
+   is guaranteed.
+
+   Given two operations $O_i, O_j$, where neither /happened before/ the other,
+   then they are considered /concurrent/. In order to obtain convergence, a
+   transformation function is applied to concurrent operations, as discussed in
+   the previous section.
+
+   A transformation function $T$ must satisfy:
+   #+BEGIN_EXPORT latex
+   \begin{equation*}
+     \tag{$C_1$}
+     T(O_j, O_i) \circ O_i \equiv T(O_i, O_j) \circ O_j
+     \label{eqn:C1}
+   \end{equation*}
+   #+END_EXPORT
+   for all $O_i, O_j \in \mathcal O$ in order to guarantee convergence; this is
+   a necessary, but not a sufficient condition. The transformation function $T$
+   from Figure [[ref:fig:transformation-function]] does not satisfy the condition,
+   which has been shown by cite:DBLP:conf/ecscw/ImineMOR03.
+
+   We have been able to reproduce the result by model checking our Maude
+   specification. A minimal counter example, as shown in Figure
+   [[ref:fig:disprove-c1]], involves two operations, $O_0 = \ins{0}{b}$ and $O_1 =
+   del(0)$, applied to an initially non-empty buffer. The priority parameter is
+   omitted in this example, because it has no effect on the outcome. Assume
+   that both $u_0$ and $u_1$ initially has a buffer containing ~"a"~.
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     From the perspective of $u_0$:
+     \begin{ritemize}
+     \item $\ins{0}{b}$ is generated locally,
+     \item $O_1$ is received from $u_1$, $T(O_1, O_0)$ is applied.
+     \end{ritemize}
+     \columnbreak
+     From the perspective of $u_1$:
+     \begin{ritemize}
+     \item $del(0)$ is generated locally,
+     \item $O_0$ is received from $u_0$, $T(O_0, O_1)$ is applied.
+     \end{ritemize}
+   \end{multicols}
+   #+END_EXPORT
+   Again, the resulting buffer can be calculated by applying the respective
+   operations to the buffer ~"a"~.
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{2}
+     Operation applied by $u_0$:
+     \begin{align*}
+       T(O_1, O_0) \circ \ins{0}{b} (\texttt{"a"}) &= \\
+       T(del(0), \ins{0}{b}) (\texttt{"ba"}) &= \\
+       del(1) (\texttt{"ba"}) &= \texttt{"b"}
+     \end{align*}
+
+     \columnbreak
+     Operation applied by $u_1$:
+     \begin{align*}
+       T(O_0, O_1) \circ del(0) (\texttt{"a"}) &= \\
+       T(\ins{0}{b}, del(0)) (\epsilon) &= \\
+       \ins{-1}{b} (\epsilon) &= \textcolor{black!15!red}{error}
+     \end{align*}
+   \end{multicols}
+   #+END_EXPORT
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+       \tikzstyle{op} = [above=-3pt, sloped, text=black]
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (0, 5) {$u_0$};
+       \node (u0e) at (0, 0) {};
+       \node[draw=none, below = of u0, label=left:{\texttt{a}}] (u0l) {};
+       \node[O_0, below = of u0l, label=left:{\texttt{ba}}] (u00) {};
+       \node[O_1, above = 2em of u0e, label=left:{\texttt{b}}] (u01a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (6, 5) {$u_1$};
+       \node (u1e) at (6, 0) {};
+       \node[draw=none, below = of u1, label=right:{\texttt{a}}] (u1l) {};
+       \node[O_1, below = 5em of u1, label=right:{$\epsilon$}] (u11) {} ;
+       \node[O_0, below = 1em of u11, label=right:{$\textcolor{black!15!red}{error}$}] (u10a) {};
+
+       \draw[to, color=black!30] (u0) -- (u00) -- (u01a) -- (u0e);
+       \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+       % Life of O_0
+       \draw[toO_0] (u00) -- (u10a) node [op, pos=0.4] {$\overbrace{T(\ins{0}{b}, del(0))}^{\ins{-1}{b}}$};
+
+       % Life of O_1
+       \draw[toO_1] (u11) -- (u01a) node [op, pos=0.6] {$\overbrace{T(del(0), \ins{0}{b})}^{del(1)}$};
+
+     \end{tikzpicture}
+     \caption{Disproving \ref{eqn:C1}.}
+     \label{fig:disprove-c1}
+   \end{figure}
+   #+END_EXPORT
+   Here we demonstrate two problems with the transformation function. One is
+   that the buffers diverged, seeing that $u_0$ and $u_1$ does not end up in
+   the same final state. Secondly, the transformation function returns
+   $\ins{-1}{b}$ which is not well defined, and is not in the set of operations
+   $\mathcal O$. The problem is manifested in the second equation from Figure
+   [[ref:fig:transformation-function]], where $<$ must be replaced with $\le$. The
+   equation is restated correctly for completeness:
+   #+BEGIN_EXPORT latex
+     \[
+     T(ins(p1,c1,pr1), del(p2,pr2)) =
+     \begin{cases}
+       ins(p1,c1,pr1)   & \text{if } p1 \le p2 \\
+       ins(p1-1,c1,pr1) & \text{otherwise}
+     \end{cases}
+     \]
+   #+END_EXPORT
+   From what we can tell, the bug went unnoticed for many years[fn:2], which
+   shows the subtleness of the bug --- uncovering bugs like this is hard, and
+   is part of our motivation for using formal methods.
+
+   The corrected version of $T$ satisfies ref:eqn:C1, but this is not
+   sufficient for guaranteeing convergence. It handles all conflicts where only
+   two operations are involved; in order to handle any number of concurrent
+   operations, being executed in arbitrary order, $T$ must also satisfy:
+   #+BEGIN_EXPORT latex
+   \begin{equation*}
+     \tag{$C_2$}
+     T(T(O_k, O_i), O_j') = T(T(O_k, O_j), O_i')\\
+     \label{eqn:C2}
+   \end{equation*}
+   #+END_EXPORT
+   where $O_j' = T(O_j, O_i)$ and $O_i' = T(O_i, O_j)$ for all $O_i, O_j, O_k
+   \in \mathcal O$. It has been proved that a transformation function $T$ that
+   satisfies [[ref:eqn:C1]] and ref:eqn:C2 is sufficient in order to guarantee
+   convergence cite:DBLP:conf/icde/SuleimanCF98,Lushman2003303.
+
+   In cite:DBLP:conf/ecscw/ImineMOR03, Imine et al. show, using a theorem
+   prover, that neither the corrected version of $T$ from
+   cite:ellis1989concurrency, or any of transformation functions from
+   cite:DBLP:conf/cscw/ResselNG96,DBLP:journals/tochi/SunJZYC98,DBLP:conf/group/SuleimanCF97
+   satisfies [[ref:eqn:C1]] and ref:eqn:C2. Furthermore, they propose a
+   transformation of their own, which was proved correct by their theorem
+   prover. Yet, in cite:DBLP:journals/corr/abs-1302-3292, they prove their own
+   proposed transformation function wrong. This paper also shows that there
+   does not exist a transformation function that satisfies [[ref:eqn:C1]] and
+   ref:eqn:C2 without adding additional parameters to the operations.
+
+   To the best of our knowledge, there has not been found a transformation
+   function that satisfies the consistency model of Sun et al.
+   cite:DBLP:journals/tochi/SunJZYC98.
+
+[fn:1] Referred to as the /Precedence Property/ in cite:ellis1989concurrency.
+[fn:2] In cite:DBLP:conf/ecscw/ImineMOR03 Imine et al. credits the finding to
+cite:DBLP:journals/tochi/SunJZYC98,DBLP:conf/icde/SuleimanCF98,DBLP:conf/cscw/ResselNG96,
+but we have not been able to confirm that any of them uncovered that $T$ does
+not satisfy ref:eqn:C1.
+
+** Operational Transformation with a Client-Server Architecture
+
+   In cite:nichols95, Nichols et al. introduces a simplified algorithm for OT
+   for the Jupiter Collaboration System, based on GROVE
+   cite:ellis1989concurrency, leveraging a centralized server. It is a
+   symmetric algorithm, meaning that the core algorithm is the same at the
+   client and the server. As in GROVE, the document is replicated at every
+   client, but the server keeps an additional copy of the document. Each client
+   synchronizes its changes with the server, yielding a two-way synchronization
+   protocol, as opposed to the fully distributed $N\text{-way}$ synchronization
+   of GROVE.
+
+   When a client generates an operation, it is communicated to the server,
+   which on reception applies it to its document, transforming it if necessary,
+   and sends the transformed operation to the other clients. On a client's
+   reception of an operation from the server, the operation is transformed if
+   necessary, and then applied to the client's local copy.
+
+   Having a server guarantees that causality violation never occurs
+   cite:ellis-ot, without the need for maintaining a state vector. This is
+   because all communication is done via the server, so a client will receive
+   all remotely generated operations (i.e. operations it did not generate
+   itself) in the order the server received them.
+
+   In the Jupiter Collaboration System each client-server pair must store the
+   operations sent until they are acknowledged by their counterpart. This is
+   because new operations might need to be transformed with regards to
+   non-acknowledged operations.
+
+   The Google Wave protocol is largely based on the Jupiter Collaboration
+   System cite:WaveOT. In contrast to the Jupiter Collaboration System, the
+   Google Wave protocol requires that clients wait for acknowledgement before
+   sending new operations. Clients may still apply changes to their local copy,
+   but need to queue the operations, and send them on reception of an
+   acknowledgement. This reduces the memory consumption at the server, because
+   the server will only need to keep one history of operations.
 
 
 #+LaTeX:\appendix
