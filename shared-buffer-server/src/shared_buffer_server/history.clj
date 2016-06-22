@@ -27,3 +27,17 @@
         [xs ys] (split-with not-u? history)
         [x y]   (split-with (partial precedes? e1) xs)]
     (concat x [e1] y ys)))
+
+(defn until
+  "Get the history until state i."
+  [history i]
+  (->> (reverse history)
+       (drop-while (fn [[_ _ m _]] (< m i)))
+       (mapcat first) reverse))
+
+(defn make-op [h1, h2, i]
+  (simplify (compose (until h2 i) (inv (until h1 i)))))
+
+(defn make-response [op1 op2 sent-ops i]
+  (let [opr (mapcat first (take-while (fn [[_ m]] (< i m)) sent-ops))]
+    (simplify (compose op2 (compose opr (inv op1))))))
