@@ -23,8 +23,7 @@
 (defn add-event
   "Adds an event to the history."
   [history [_ _ _ u :as e1]]
-  (let [not-u? (comp not-empty (partial intersection u) last)
-        xs     (take-while not-u? history)
-        ys     (drop-while not-u? history)
-        [x y]  (split-with (partial precedes? e1) xs)]
+  (let [not-u?  (comp not-empty (partial intersection u) last)
+        [xs ys] (split-with not-u? history)
+        [x y]   (split-with (partial precedes? e1) xs)]
     (concat x [e1] y ys)))
