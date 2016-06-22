@@ -17,16 +17,20 @@
 (defn initialize-client
   "The function is called on initialization. It adds the client to the state."
   [state client]
-  (assoc-in state [:clients client :id] (hash client)))
+  (-> state
+      (assoc-in [:clients client :id] (hash client))
+      (assoc-in [:clients client :seqno] 0)
+      (assoc-in [:clients client :token] 0)))
 
 (defn join-room
   "The function is called when a client requests to join a room. It is added to
   the room unconditionally in the state."
-  [state client room]
+  [state client key]
   (-> state
-      (assoc-in  [:clients client :room] room)
-      (update-in [:rooms room :clients] (fnil conj #{}) client)
-      (update-in [:rooms room :token] (fnil identity 0))))
+      (assoc-in  [:clients client :room] key)
+      (update-in [:rooms key :clients] (fnil conj #{}) client)
+      (update-in [:rooms key :token] (fnil identity 0))
+      (update-in [:rooms key :lock] (fnil identity (Object.)))))
 
 (defn dissolve-client
   "The function is called when a connection to a client is closed. It
