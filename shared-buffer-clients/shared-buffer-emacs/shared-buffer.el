@@ -90,30 +90,25 @@
 (defun sb-send-entire-buffer ()
   (sb-send (list :type 'entire-buffer
                  :room sb-key
-                 :pos (point-min)
+                 :pos (1- (point-min))
                  :ins (sb-substr (point-min) (point-max))
                  :token sb-token
                  :seqno sb-seqno)))
 
+(defun sb-send-operation (type beg end)
+  (sb-send (list :type 'operation
+                 :room sb-key
+                 type (sb-substr beg end)
+                 :pos (1- beg)
+                 :current-pos (1- (point))
+                 :token sb-token
+                 :seqno (1- (cl-incf sb-seqno)))))
+
 (defun sb-send-insertion (beg end len)
-  (and (zerop len)
-       (sb-send (list :type 'operation
-                      :room sb-key
-                      :current-pos (point)
-                      :pos beg
-                      :ins (sb-substr beg end)
-                      :token sb-token
-                      :seqno (cl-incf sb-seqno)))))
+  (and (zerop len) (sb-send-operation :ins beg end)))
 
 (defun sb-send-deletion (beg end)
-  (and (not (= beg end))
-       (sb-send (list :type 'operation
-                      :room sb-key
-                      :current-pos (point)
-                      :pos beg
-                      :del (sb-substr beg end)
-                      :token sb-token
-                      :seqno (cl-incf sb-seqno)))))
+  (and (not (= beg end)) (sb-send-operation :del beg end)))
 
 ;;; Receive
 
@@ -154,10 +149,10 @@ Connected to room: %s, the key was added to the kill ring." room))
 (defun sb-apply-operation (operation)
   (save-excursion
     (let ((inhibit-modification-hooks t)
-          (point     (plist-get operation :pos))
+          (point     (1+ (plist-get operation :pos)))
           (insertion (plist-get operation :ins))
           (deletion  (plist-get operation :del)))
-      (when (and insertion bytes-deleted)
+      (when (and insertion deletion)
         (error "Shared Buffer: Error in protocol."))
       (goto-char point)
       (when insertion (insert insertion))
