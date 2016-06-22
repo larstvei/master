@@ -58,7 +58,7 @@
   (let [room (get-in state [:clients client :room] )]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
-        (update-room room history (map :(:clients room))))))
+        (update-room room history))))
 
 ;;; Send
 
