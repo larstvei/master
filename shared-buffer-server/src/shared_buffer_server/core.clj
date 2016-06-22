@@ -43,6 +43,21 @@
       (dissoc-in state [:rooms room])
       (update-in state [:rooms room :clients] disj client))))
 
+(defn update-client [state client seqno op f]
+  (-> state
+      (assoc-in  [:clients client :seqno] seqno)
+      (update-in [:clients client :ops] f op)))
+
+(defn update-room [state room history]
+  (-> state
+      (assoc-in  [:rooms room :history] history)
+      (update-in [:rooms room :token] inc)))
+
+(defn next-state [state client seqno op history]
+  (let [room (get-in state [:clients client :room] )]
+    (-> state
+        (update-client client seqno op (fn [_ x] (list x)))
+        (update-room room history (map :(:clients room))))))
 ;;; Receive
 
 (defmulti receive (comp keyword :type))
