@@ -215,7 +215,7 @@ fmod APPLY is
 
     eq apply ins(0, S) on B = S B .
     eq apply ins(s I, S) on T B = T (apply ins(I, S) on B) .
-    eq apply ins(s I, S) on nil = S .
+    eq apply ins(s I, S) on nil = error .
 
     eq apply del(0, S) on T B = B .
     eq apply del(s I, S) on T B = T (apply del(I, S) on B) .
