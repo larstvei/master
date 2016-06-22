@@ -1,6 +1,6 @@
 ;;; shared-buffer.el --- Collaberative editing in Emacs. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013 - 2015 Lars Tveito.
+;; Copyright (C) 2013 - 2016 Lars Tveito.
 
 ;; Author: Lars Tveito <larstvei@ifi.uio.no>
 ;; Version: 0.2.1
@@ -37,10 +37,6 @@
   "A buffer that is shared belongs to a room. This variable keeps an
   identifier to the room this buffer belongs to.")
 
-(defvar-local sb-host nil
-  "A buffer that is shared is connected to a server. This
-  variable keeps the address of that server.")
-
 (defvar-local sb-socket nil
   "A buffer that is shared is connected to a server. This
   variable keeps the connected socket.")
@@ -55,7 +51,6 @@
 
 ;; Changing major-mode should not affect Shared Buffer.
 (dolist (var '(sb-key
-               sb-host
                sb-socket
                sb-seqno
                sb-token
@@ -68,14 +63,14 @@
 ;;; Socket communication
 
 (defun sb-connect-to-server (host &optional room)
-  (setq sb-host (concat "ws://" (or host "localhost") ":3705"))
-  (setq sb-socket (websocket-open sb-host
-                                  :on-message 'sb-receive
-                                  :on-open    'sb-on-open
-                                  :on-close   'sb-on-close))
-  (when sb-socket
-    (setf (process-buffer (websocket-conn sb-socket))
-          (current-buffer))))
+  (let ((host (concat "ws://" (or host "localhost") ":3705")))
+    (setq sb-socket (websocket-open host
+                                    :on-message #'sb-receive
+                                    :on-open    #'sb-on-open
+                                    :on-close   #'sb-on-close))
+    (when sb-socket
+      (setf (process-buffer (websocket-conn sb-socket))
+            (current-buffer)))))
 
 (defun sb-on-open (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
@@ -173,7 +168,7 @@ Connected to room: %s, the key was added to the kill ring." room))
 (defun sb-share-buffer (host &optional buffer)
   (interactive "sHost: ")
   (with-current-buffer (or buffer (current-buffer))
-    (sb-connect-to-server host)
+    (sb-connect-to-server (if (string= "" host) nil host))
     (if (not sb-socket)
         (message "Shared Buffer: Connection failed.")
       (shared-buffer-mode 1))))
