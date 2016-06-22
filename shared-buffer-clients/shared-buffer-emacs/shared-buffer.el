@@ -55,7 +55,8 @@
                sb-seqno
                sb-token
                shared-buffer-mode
-               after-change-functions))
+               after-change-functions
+               before-change-functions))
   (put var 'permanent-local t))
 
 (defalias 'sb-substr 'buffer-substring-no-properties)
