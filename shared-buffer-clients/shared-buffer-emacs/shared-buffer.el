@@ -116,6 +116,7 @@
   (with-current-buffer (process-buffer (websocket-conn websocket))
     (let* ((payload (websocket-frame-payload frame))
            (json-object-type 'plist)
+           (json-array-type 'list)
            (data (json-read-from-string payload))
            (type (plist-get data :type)))
       (cond ((string= type "room")
