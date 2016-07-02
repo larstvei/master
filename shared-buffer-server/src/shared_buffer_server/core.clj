@@ -87,52 +87,75 @@
 
 ;;; Send
 
-(defn make-msg [op seqno token]
+(defn make-msg [key op seqno token]
   {:type :operations
+   :session key
    :operations (reverse op)
    :seqno seqno
    :token token})
 
 (defn send-op
   "Sends an operation to a set of clients."
-  [op token clients]
+  [key op token clients]
   (doseq [c clients]
-    (let [clinfo (get-in @state [:clients c])
-          seqno (:seqno clinfo)
-          msg (make-msg op seqno token)]
-      (send! c (json/write-str msg))
+    (let [site (get-in @state [:clients c])
+          seqno (:seqno site)
+          msg (make-msg key op seqno token)]
+      (when (get-in @state [:clients c :initialized])
+        (send! c (json/write-str msg)))
       (swap! state update-client c (inc seqno) [op token] conj))))
+
+(defn send-buffer-request [state key]
+  (->> {:type :send-buffer :session key}
+       (json/write-str)
+       (send! (get-initialized-client state key))))
 
 ;;; Receive
 
 (defmulti receive (comp keyword :type))
 
-(defmethod receive :room [msg client]
-  (let [key (or (:room msg) (generate-key key-length))]
-    (swap! state join-room client key)
-    (when-not (:room msg)
-      (->> {:type :room :room key}
+(defmethod receive :buffer [msg client]
+  (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
+    (let [key (keyword (:session msg))
+          msg  {:type :operations
+                :session (:session msg)
+                :operations (list (select-keys msg [:pos :ins]))
+                :token (:token msg)
+                :seqno 0}]
+      (doseq [c (get-uninitialized-clients @state key)]
+        (send! c (json/write-str msg))
+        (swap! state assoc-in  [:clients c :initialized] true)
+        (swap! state update-in [:clients c :seqno] inc)))))
+
+(defmethod receive :connect [msg client]
+  (let [key (or (:session msg) (generate-key key-length))]
+    (swap! state join-session client (keyword key))
+    (when (or (not (:session msg))
+              (= 1 (clients-in-session @state (keyword key))))
+      (->> {:type :connect :session key}
            (json/write-str)
-           (send! client)))))
+           (send! client)))
+    (when-not (initialized? @state client)
+      (send-buffer-request @state (keyword key)))))
 
 (defmethod receive :operation [msg client]
-  (locking (get-in @state [:rooms (:room msg) :lock])
-    (let [room (get-in @state [:rooms (:room msg)])
-          cli  (get-in @state [:clients client])
-          op (list (select-keys msg [:pos :ins :del]))
-          seqno (+ (inc (:seqno msg)) (- (:seqno cli) (:seqno msg)))
-          time (inc (:token room))
-          event [op (:token msg) (:token room) #{(:id cli)}]
-          history (add-event (:history room) event)
-          op1 (make-op (:history room) history (:token msg))
-          op2 (make-response op op1 (:ops cli) (:token msg))
-          reply (make-msg op2 seqno time)
-          others (disj (:clients room) client)]
-      (syncprn "broadcast" op1)
-      (syncprn "reply" op2)
-      (send-op op1 time others)
+  (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
+    (let [key     (keyword (:session msg))
+          session (get-in @state [:sessions key])
+          site    (get-in @state [:clients client])
+          op      (list (select-keys msg [:pos :ins :del]))
+          seqno   (next-seq (:seqno msg) (:seqno site))
+          token   (:token msg)
+          time    (inc (:token session))
+          event   [op token (:token session) #{(:id site)}]
+          hist    (add-event (:history session) event (min-token session))
+          op1     (make-op (:history session) hist token)
+          op2     (make-response op op1 (:ops site) token)
+          reply   (make-msg key op2 seqno time)
+          rest    (disj (:clients session) client)]
+      (send-op key op1 time rest)
       (send! client (json/write-str reply))
-      (swap! state next-state client (inc seqno) [op2 time] history))))
+      (swap! state next-state client token (inc seqno) [op2 time] hist))))
 
 (defmethod receive :default [msg client]
   (println "default" msg))
