@@ -15,6 +15,23 @@
 
 ;;; Initialization and termination
 
+(defn clients-in-session [state key]
+  (-> state :sessions key :clients count))
+
+(defn empty-session? [state key]
+  (= 0 (clients-in-session state key)))
+
+(defn initialized? [state client]
+  (get-in state [:clients client :initialized]))
+
+(defn get-initialized-client [state key]
+  (->> state :sessions key :clients
+       (filter (partial initialized? state)) rand-nth))
+
+(defn get-uninitialized-clients [state key]
+  (->> state :sessions key :clients
+       (remove (partial initialized? state))))
+
 (defn initialize-client
   "The function is called on initialization. It adds the client to the state."
   [state client]
