@@ -1,11 +1,11 @@
 (ns shared-buffer-server.core
   (:gen-class)
   (:use org.httpkit.server)
-  (:require [shared-buffer-server.app :refer :all])
-  (:require [shared-buffer-server.utils :refer :all])
-  (:require [shared-buffer-server.history :refer :all])
-  (:require [shared-buffer-server.syncprn :refer [syncprn]])
-  (:require [clojure.data.json :as json]))
+  (:require [shared-buffer-server.app :refer :all]
+            [shared-buffer-server.utils :refer :all]
+            [shared-buffer-server.history :refer :all]
+            [shared-buffer-server.syncprn :refer [syncprn]]
+            [clojure.data.json :as json]))
 
 (defonce state (atom {}))
 
