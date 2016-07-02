@@ -190,5 +190,5 @@
 
 (defn -main
   "The main function for Shared Buffer. It simply starts the server."
-  [& args]                            ; <- is this right?
+  [& args]
   (swap! state assoc :server (run-server #'handler {:port 3705})))
