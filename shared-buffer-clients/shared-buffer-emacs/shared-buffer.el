@@ -34,8 +34,8 @@
 ;;; Variables
 
 (defvar-local sb-key nil
-  "A buffer that is shared belongs to a room. This variable keeps an
-  identifier to the room this buffer belongs to.")
+  "A buffer that is shared belongs to a session. This variable keeps an
+  identifier to the session this buffer belongs to.")
 
 (defvar-local sb-socket nil
   "A buffer that is shared is connected to a server. This
@@ -63,7 +63,7 @@
 
 ;;; Socket communication
 
-(defun sb-connect-to-server (host &optional room)
+(defun sb-connect-to-server (host &optional session)
   (let ((host (concat "ws://" (or host "localhost") ":3705")))
     (setq sb-socket (websocket-open host
                                     :on-message #'sb-receive
@@ -75,7 +75,10 @@
 
 (defun sb-on-open (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
-    (sb-send (list :type 'room :room sb-key))))
+    (sb-send (list :type 'connect :session sb-key))
+    (with-local-quit
+      ;; Block until first message is received
+      (accept-process-output (websocket-conn websocket)))))
 
 (defun sb-on-close (websocket)
   (with-current-buffer (process-buffer (websocket-conn websocket))
@@ -87,17 +90,16 @@
 (defun sb-send (data)
   (websocket-send-text sb-socket (json-encode data)))
 
-(defun sb-send-entire-buffer ()
-  (sb-send (list :type 'entire-buffer
-                 :room sb-key
+(defun sb-send-buffer ()
+  (sb-send (list :type 'buffer
+                 :session sb-key
                  :pos (1- (point-min))
                  :ins (sb-substr (point-min) (point-max))
-                 :token sb-token
-                 :seqno sb-seqno)))
+                 :token sb-token)))
 
 (defun sb-send-operation (type beg end)
   (sb-send (list :type 'operation
-                 :room sb-key
+                 :session sb-key
                  type (sb-substr beg end)
                  :pos (1- beg)
                  :current-pos (1- (point))
@@ -119,25 +121,19 @@
            (json-array-type 'list)
            (data (json-read-from-string payload))
            (type (plist-get data :type)))
-      (cond ((string= type "room")
-             (sb-set-room (plist-get data :room)))
-            ((string= type "entire-buffer")
-             (sb-entire-buffer data))
+      (cond ((string= type "connect")
+             (sb-set-session (plist-get data :session)))
+            ((string= type "send-buffer")
+             (sb-send-buffer))
             ((string= type "operations")
              (sb-apply-operations data))
             (t (error "Shared Buffer: Error in protocol."))))))
 
-(defun sb-entire-buffer (data)
-  (if (and (plist-get data :pos)
-           (plist-get data :ins))
-      (sb-apply-operations data)
-    (sb-send-entire-buffer)))
-
-(defun sb-set-room (room)
-  (setq sb-key room)
+(defun sb-set-session (session)
+  (setq sb-key session)
   (sb-add-key-to-kill-ring)
   (message "Shared Buffer: \
-Connected to room: %s, the key was added to the kill ring." room))
+Connected to session: %s, the key was added to the kill ring." session))
 
 ;;; Buffer modification
 
@@ -170,11 +166,11 @@ Connected to room: %s, the key was added to the kill ring." room))
         (message "Shared Buffer: Connection failed.")
       (shared-buffer-mode 1))))
 
-(defun sb-join-room (host room)
-  (interactive "sHost: \nsRoom: ")
-  (let ((buffer (generate-new-buffer room)))
+(defun sb-join-session (host session)
+  (interactive "sHost: \nsSession: ")
+  (let ((buffer (generate-new-buffer session)))
     (switch-to-buffer buffer)
-    (setq sb-key room)
+    (setq sb-key session)
     (sb-share-buffer host buffer)))
 
 (defun sb-disconnect (&optional buffer)
