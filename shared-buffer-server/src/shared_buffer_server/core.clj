@@ -37,29 +37,30 @@
   [state client]
   (-> state
       (assoc-in [:clients client :id] (hash client))
-      (assoc-in [:clients client :seqno] 0)
-      (assoc-in [:clients client :token] 0)))
+      (assoc-in [:clients client :seqno] 0)))
 
-(defn join-room
-  "The function is called when a client requests to join a room. It is added to
-  the room unconditionally in the state."
+(defn join-session
+  "The function is called when a client requests to join a session. It is added to
+  the session unconditionally in the state."
   [state client key]
   (-> state
-      (assoc-in  [:clients client :room] key)
-      (update-in [:rooms key :clients] (fnil conj #{}) client)
-      (update-in [:rooms key :token] (fnil identity 0))
-      (update-in [:rooms key :lock] (fnil identity (Object.)))))
+      (assoc-in  [:clients client :session] key)
+      (assoc-in  [:clients client :initialized] (empty-session? state key))
+      (assoc-in  [:sessions key :tokens client] 0)
+      (update-in [:sessions key :clients] (fnil conj #{}) client)
+      (update-in [:sessions key :token] (fnil identity 0))
+      (update-in [:sessions key :lock] (fnil identity (Object.)))))
 
 (defn dissolve-client
   "The function is called when a connection to a client is closed. It
-  removes the client. If the room its in has no more clients, the room is
+  removes the client. If the session its in has no more clients, the session is
   closed."
   [state client status]
-  (let [room (get-in state [:clients client :room])
+  (let [session (get-in state [:clients client :session])
         state (dissoc-in state [:clients client])]
-    (if (= 1 (count (get-in state [:rooms room :clients])))
-      (dissoc-in state [:rooms room])
-      (update-in state [:rooms room :clients] disj client))))
+    (if (= 1 (count (get-in state [:sessions session :clients])))
+      (dissoc-in state [:sessions session])
+      (update-in state [:sessions session :clients] disj client))))
 
 (defn update-client [state client seqno op f]
   (-> state
