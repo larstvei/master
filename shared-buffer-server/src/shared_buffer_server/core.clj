@@ -32,6 +32,12 @@
   (->> state :sessions key :clients
        (remove (partial initialized? state))))
 
+(defn min-token [session]
+  (->> session :tokens vals (apply min)))
+
+(defn next-seq [n m]
+  (+ (inc n) (- m n)))
+
 (defn initialize-client
   "The function is called on initialization. It adds the client to the state."
   [state client]
