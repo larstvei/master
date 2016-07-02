@@ -67,16 +67,17 @@
       (assoc-in  [:clients client :seqno] seqno)
       (update-in [:clients client :ops] f op)))
 
-(defn update-room [state room history]
+(defn update-session [state session history]
   (-> state
-      (assoc-in  [:rooms room :history] history)
-      (update-in [:rooms room :token] inc)))
+      (assoc-in  [:sessions session :history] history)
+      (update-in [:sessions session :token] inc)))
 
-(defn next-state [state client seqno op history]
-  (let [room (get-in state [:clients client :room] )]
+(defn next-state [state client token seqno op history]
+  (let [session (get-in state [:clients client :session] )]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
-        (update-room room history))))
+        (update-session session history)
+        (assoc-in [:sessions session :tokens client] token))))
 
 ;;; Send
 
