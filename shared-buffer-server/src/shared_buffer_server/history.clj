@@ -11,7 +11,7 @@
 
 (defn precedes?
   "Returns non-nil iff the e1 precedes e2."
-  [[op1 _ m1 _ :as e1] [op2 _ m2 _ :as e2]]
+  [[[op1] _ m1 _ :as e1] [[op2] _ m2 _ :as e2]]
   (if (concurrent? e1 e2)
     (or (> (:pos op1) (:pos op2))
         (and (= (:pos op1) (:pos op2)) (:del op1))
@@ -23,11 +23,11 @@
 (defn add-event
   "Adds an event to the history."
   [history [_ _ _ u :as e1] min-token]
-  (let [not-u?  (comp not-empty (partial intersection u) last)
-        [xs ys] (split-with not-u? history)
+  (let [u?      (comp empty? (partial intersection u) last)
+        [xs ys] (split-with u? history)
         [x y]   (split-with (partial precedes? e1) xs)]
     (->> (concat x [e1] y ys)
-         (take-while (fn [[_ _ t _]] (>= t min-token))))))
+         (take-while (fn [[_ _ t _]] (> t min-token))))))
 
 (defn until
   "Get the history until state i."
