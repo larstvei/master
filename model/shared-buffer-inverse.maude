@@ -601,14 +601,14 @@ mod TEST is
     eq init B N N' =
         [ a b c d ]
         (actions 0 N N')
-        < server | history : nil, state : 0,
+        < server | history : nil, state : 1,
                    sites : sites N >
         clients B N .
 
     op clients__ : Buffer Nat -> Configuration .
     eq clients B 0 = none .
     eq clients B s N =
-        < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < user N | buffer : B, seqno : 0, state : 1, out-queue : nil, in-queue : nil >
         clients B N .
 
     op sites_ : Nat -> Map{User,Queue} .

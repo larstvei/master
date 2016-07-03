@@ -54,7 +54,7 @@
       (assoc-in  [:clients client :initialized] (empty-session? state key))
       (assoc-in  [:sessions key :tokens client] 0)
       (update-in [:sessions key :clients] (fnil conj #{}) client)
-      (update-in [:sessions key :token] (fnil identity 0))
+      (update-in [:sessions key :token] (fnil identity 1))
       (update-in [:sessions key :lock] (fnil identity (Object.)))))
 
 (defn dissolve-client
