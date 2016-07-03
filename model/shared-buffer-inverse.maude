@@ -374,7 +374,7 @@ fmod TOTALORDER is
     subsort List{Event} < Totalorder .
 
     vars M N I M' N' I' : Nat .
-    vars O O' : Op .
+    vars O O' O'' : Op .
     vars T T' T'' : Totalorder .
     vars U U' : Set{User} .
     vars E E' : Event .
@@ -404,9 +404,10 @@ fmod TOTALORDER is
 
     op  fix : Totalorder -> Totalorder .
     eq  fix(nil) = nil .
-    ceq fix((O I M U) T) = (O' I M U) T'
-      if T' := fix(T) /\
-         O' := it(O, compose(filter((O I M U), T'))) .
+    ceq fix((O I M U) T) = (O'' I M U) T'
+      if T'  := fix(T) /\
+         O'  := et(O, compose(opsIn(U, I, 0, T))) /\
+         O'' := it(it(O', compose(filter((O I M U), T'))), compose(opsIn(U, I, 0, T))) .
 
     op  filter : Event Totalorder -> Totalorder .
     eq  filter(E, nil) = nil .
