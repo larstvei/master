@@ -1,5 +1,4 @@
-#+TITLE: Shared Buffer
-#+SUBTITLE: The Specification, Verification and Implementation of a Real-Time Collaborative Editing System
+#+TITLE: Achieving Portable, Responsive and Robust Real-Time Collaborative Editing
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
@@ -86,7 +85,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 * Introduction
 
   A real-time collaborative editor enables multiple users, at (potentially)
-  different locations, to simultaneously work on the same document. The idea
+  different locations, to work on the same document /simultaneously/. The idea
   has been around for a long time, and was demoed by Douglas Engelbart in the
   Mother of All Demos cite:engelbart1968mother already in 1968. In this thesis
   we aim to formally verify and develop a system for real-time collaboration.
@@ -102,12 +101,12 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   The first actual implementation of such an editor that was documented in the
   literature, came with GROVE (GROUP Outline Viewing Editor)
   cite:ellis1989concurrency, which introduced the concept of /Operational
-  Transformation/ (OT) which we will cover thoroughly in Chapter [[Formal
-  Semantics of Editing Operations]]. Previous systems
+  Transformation/ (OT) which we will cover in Chapter [[Related Work]]. Previous
+  systems
   cite:Greif:1986:ADA:512644.512659,Fish:1988:QCT:45410.45414,Lewis:1988:SBC:45410.45431
   that provided collaborative capabilities were not considered /real-time/
   systems by cite:ellis1989concurrency, because users could not edit the same
-  section of the document simultaneously.
+  /section/ of the document simultaneously.
 
   The reader might be familiar with [[https://www.google.com/docs/about/][Google Docs]], which is an example of a
   modern real-time collaborative document WYSIWYG (What You See Is What You
@@ -115,38 +114,39 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   is largely based on OT cite:WaveOT, but has also initiated research in a
   technique called Differential Synchronization cite:Fraser:09. Through its
   integration with [[https://www.google.com/drive/][Google Drive]], it offers a collaborative platform, where
-  users can both store and manipulate their documents, as long as they have a
-  internet connection, along with a (fairly modern) browser.
+  users can both store and manipulate their documents, as long as they have an
+  internet connection and a (fairly modern) browser.
 
-  We will present a tool for real-time collaborative editing called Shared
-  Buffer, which is designed with developers in mind. What most developers have
-  in common is that they spend a lot of time manipulating /plain text/, yet
-  they use a lot of different tools to do so cite:stackoverflowdevelopersurvey,
-  therefore we aim to enable real-time collaboration in /existing/ text
-  editors, as opposed to developing an editor with real-time collaborative
-  features. We therefore want to develop a protocol which ideally should be
-  portable to any text editor, or any program that embeds a text editor.
+  We present a tool for real-time collaborative editing called Shared Buffer,
+  which is designed with developers in mind. What most developers have in
+  common is that they spend a lot of time manipulating /plain text/, yet they
+  use a lot of different tools to do so cite:stackoverflowdevelopersurvey. We
+  therefore aim at enabling real-time collaboration in /existing/ text editors,
+  as opposed to developing an editor with real-time collaborative features. As
+  a means to this end, we develop a protocol which, ideally, should be portable
+  to any text editor, or any program that embeds a text editor.
 
   A client-server model is chosen, as opposed to a fully decentralized
-  solution. We will consequently move complexity to the server, if this can
-  simplify the client-side algorithm; this is chosen in order to ensure
-  portability. Furthermore, proving correctness for a fully decentralized
-  solution has proven to be very difficult
+  solution. We consequently move complexity to the server, if this can simplify
+  the client-side algorithm; this is chosen in order to ensure portability.
+  Furthermore, proving correctness for a fully decentralized solution has
+  proven to be very difficult
   cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
 
   Our prototype client is for the text editor Emacs. The name Shared Buffer
   reflects a choice in design; in Emacs, text is stored in a /buffer/; when a
-  file is opened, its contents is put inside a buffer, which the user can
+  file is opened, its contents is put inside a buffer which the user can
   manipulate. You may also have buffers that are not associated with any file.
   In Shared Buffer, there is no notion of a file, meaning there is no centrally
   stored copy of the document.
 
-  The server will be written in [[https://clojure.org/][Clojure]], a modern functional programming
-  language with strong concurrency semantics cite:Emerick2012. Being hosted on
-  the JVM, Clojure offers full Java interoperability, meaning that we can
-  leverage the vast collection of Java libraries.
+  The server is written in a dialect of Lisp called [[https://clojure.org/][Clojure]], a modern
+  functional programming language with strong concurrency semantics
+  cite:Emerick2012. Being hosted on the JVM, Clojure offers full Java
+  interoperability, meaning that we can leverage the vast collection of Java
+  libraries.
 
-** A Naïve Algorithm
+** The Naïve Algorithm
 
    Let us now consider two cases that illustrates how a naïve implementation
    (like the one briefly described in the [[Preface]]) might work, and where it
@@ -218,11 +218,11 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
    $u_0$ has an empty buffer which she precedes to insert an ="a"= into.
-   Meanwhile, $u_1$ inserts a ="b"= in front of the ="a"= that just popped up in
-   her buffer. The ="b"= eventually reaches $u_0$, and the end result of the
+   Meanwhile, $u_1$ inserts a ="b"= in front of the ="a"= that just popped up
+   in her buffer. The ="b"= eventually reaches $u_0$, and the end result of the
    interaction is that they both will be looking at a buffer containing ="ba"=.
-   In this scenario the buffers ended up identical, so we say that we reached a
-   /consistent state/.
+   In this scenario the buffers ended up identical, so we say that we have
+   reached a /consistent state/.
 
    Simple scenarios like the one we saw, where only one message is "in flight"
    at any one time, would be gracefully handled by even the naïve approach. We
@@ -335,16 +335,16 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
 
    The main result of this thesis is a protocol that enables real-time
    collaborative editing. Both a client- and server-side algorithm have been
-   developed and modeled. The model has been formally verified to guarantee
+   modeled and implemented. The model has been formally verified to guarantee
    eventual consistency for a limited number of clients and operations.
 
-   To this end we:
-   - provide a mathematical description of our system based on OT,
-   - demonstrate the Model Checking Driven Development process,
-   - present a representation of the system in Maude,
-   - perform LTL model checking on our model in Maude,
-   - provide a client as an extension for Emacs,
-   - provide an implementation of the server-side algorithm in Clojure.
+   In the process we have:
+   - provided a mathematical description of our system based on OT,
+   - demonstrated the how modeling has been used to drive the development,
+   - presented a representation of the system in Maude,
+   - performed LTL model checking on our model in Maude,
+   - provided a client as an extension for Emacs,
+   - provided an implementation of the server-side algorithm in Clojure.
 
 * Formal Semantics of Editing Operations
 
