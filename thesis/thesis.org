@@ -620,6 +620,87 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    when translating the structure to a given programming language, by making
    sure the selected representation preserves the properties of a monoid.
 
+*** Invertibility
+
+    A /group/ can be described as a monoid with /invertibility/, meaning every
+    element in $\mathcal O$ has an inverse. More formally, for $\langle
+    \mathcal O, \circ \rangle$ to be a group, it must satisfy that for any $O_i
+    \in \mathcal O$ there exists a $O_j \in \mathcal O$ such that:
+    #+BEGIN_EXPORT latex
+    \[ O_i \circ O_j = O_j \circ O_i = nop \]
+    #+END_EXPORT
+    The inverse of an operation $O \in \mathcal O$ is denoted $O^{-1}$, and so
+    the equation can be restated as:
+    #+BEGIN_EXPORT latex
+    \[ O \circ O^{-1} = O^{-1} \circ O = nop \]
+    #+END_EXPORT
+    /Undo/ is a common feature in text editors, and should guide us in
+    constructing an inverse function for $\mathcal O$. Intuitively it seem to
+    satisfy the equation, in the sense that adding a character to a buffer,
+    followed by an undo is the same as having done nothing at all.
+
+    Guided by this intuition, the inverse of $\ins{0}{a}$ should be $del(0)$,
+    because applying $del(0) \circ \ins{0}{a}$ to a buffer will always yield
+    the same buffer. We can make the exact same argument for $\ins{0}{b}$; its
+    inverse should be $del(0)$. What should then be the inverse of $del(0)$? It
+    cannot be both $\ins{0}{a}$ and $\ins{0}{b}$, which poses a problem.
+
+    The problem is solved by extending the delete operations with what
+    character is deleted, and so we redefine delete operations as so:
+    - $del(i,\ c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in Unicode$.
+
+    With the information of what character was deleted in the operation, we
+    disambiguate what the inverse of a deletion should be. The inverse of
+    $\ins{0}{a}$ should be $\del{0}{a}$, and the inverse of $\ins{0}{b}$ should
+    be $\del{0}{b}$, where the inverse of each deletion should be $\ins{0}{a}$
+    and $\ins{0}{b}$ respectively.
+
+    Inverting composed operations is analogous with undoing multiple steps. Say
+    a user types an =a= followed by a =b=, then undoing it would be to first
+    delete the =b=, then delete the =a=. So for instance, the inverse of
+    $\ins{1}{b} \circ \ins{0}{a}$ should be $\del{0}{a} \circ \del{1}{b}$.
+    #+BEGIN_EXPORT latex
+    \\
+    \begin{definition}[Inverse of an Operation]
+      The inverse of the $nop$ element is the $nop$ element itself:
+      \[ nop^{-1} = nop \]
+      The inverse of an insertion of a character $c \in Unicode$ at position $i
+      \in \mathbb{N}$, is the deletion of that character at that position:
+      \[ ins(i,\ c)^{-1} = del(i,\ c) \]
+      Similarly for deletions:
+      \[ del(i,\ c)^{-1} = ins(i,\ c) \]
+      For a composed operation $O_i \circ O_j \in \mathcal{O}$, the order of the
+      operations is reversed, and the operations are inverted:
+      \[ (O_i \circ O_j)^{-1} = O_j^{-1} \circ O_i^{-1} \]\hfill$\dashv$
+    \end{definition}
+    #+END_EXPORT
+    Now that we have defined an inverse for all operations, we can check if the
+    invertibillity axiom holds. Say we have the operation $\ins{0}{a}$, then
+    its inverse is $\del{0}{a}$. We apply $\del{0}{a} \circ \ins{0}{a}$ to the
+    empty buffer $\epsilon$:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      \del{0}{a} \circ \ins{0}{a} (\epsilon) &= \\
+      \del{0}{a} (\texttt{"a"}) &= \epsilon
+    \end{align*}
+    #+END_EXPORT
+    In order to satisfy the invertibility axiom, the reverse should be true as
+    well. It is not because applying $\ins{0}{a} \circ \del{0}{a}$ on the empty
+    buffer $\epsilon$, because it is not well defined. Consequently the
+    invertibility axiom does not hold, and so $\langle \mathcal O, \circ
+    \rangle$ is not a group.
+
+    Inverting operations is an essential part of the Shared Buffer algorithm,
+    and we rely on the definition above even though the invertibillity axiom
+    does not hold. Notice that the counter example $\ins{0}{a} \circ \del{0}{a}
+    (\epsilon)$ expresses that a deletion is applied to the empty buffer and
+    then undone. It seems fair to question if that situation could really
+    occur, because there is no reasonably defined way for an editor to perform
+    the deletion in the first place.
+
+    We have to ensure that the algorithm never construct an operation that
+    cannot be applied to a given client's buffer. We rely on the model checker
+    to provide a counter example, if we were to construct such an operation.
 * Related Work
 
   In this chapter we present some of the work of Ellis and Gibbs
