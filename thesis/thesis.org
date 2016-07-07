@@ -8,13 +8,16 @@
 #+LATEX_HEADER: \usepackage{tikz}
 #+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
-#+LATEX_HEADER: \usepackage{amsthm, parskip, multicol}
+#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, mathabx, multicol}
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
 #+LaTeX_HEADER: \newcommand{\ins}[2]{ins(#1,\ \texttt{#2})}
 #+LaTeX_HEADER: \newcommand{\del}[2]{del(#1,\ \texttt{#2})}
+#+LATEX_HEADER: \newcommand{\tuple}[1]{\ensuremath{\langle #1\rangle}}
 #+LaTeX_HEADER: \newenvironment{ritemize}{\begin{itemize}\raggedright}{\end{itemize}}
+#+LaTeX_HEADER: \theoremstyle{definition}
+#+LaTeX_HEADER: \newtheorem{definition}{Definition}[section]
 
 #+LaTeX: \pgfdeclarelayer{bg}    % declare background layer
 #+LaTeX: \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
@@ -317,8 +320,8 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    chooses what parts of the system is necessary to represent, in order to
    prove the properties that are of interest.
 
-   Moreover, we will use the model as a way of driving the development process,
-   or rather, solving the problem. When model checking a property, a counter
+   Moreover, we use the model as a way of driving the development process, or
+   rather, solving the problem. When model checking a property, a counter
    example is given if the property does not hold. By studying the example, we
    can change the model in hope of resolving the issue, and see the effects of
    the change. This resembles Test Driven Development (TDD), but instead of
@@ -402,65 +405,71 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   In this chapter we introduce a formal definition of editing operations. The
   definitions are based on
   cite:ellis1989concurrency,DBLP:journals/corr/abs-1302-3292, but we provide
-  more mathematical definitions in the sense that the semantics of editing
+  more formal definitions, in the sense that the semantics of editing
   operations are described as a set of equations. This chapter is only
   concerned with events at a single client. We assume that every event is
-  simply an operation being applied, and we will not differ between an
+  simply an operation being applied, and do not differentiate between an
   operation originating locally or remotely.
 
 ** Operations and Buffers
 
    The operations we are concerned with is the /insertion/ and /deletion/ of a
-   character in a buffer. Formally, we define the set of operations $\mathcal
-   O$ as:
-   - $nop \in \mathcal O$,
-   - $ins(i, c) \in \mathcal O$ for any $i \in \mathbb{N}$ and $c \in Unicode$,
-   - $del(i) \in \mathcal O$ for any $i \in \mathbb{N}$,
-   - for any two $O_i, O_j \in \mathcal O$ then $O_j \circ O_i \in \mathcal O$,
-   - $\mathcal O$ is closed under $\circ$.
+   character in a buffer.
+   #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}[Operations]
+     The set $\mathcal O$ is inductively defined as the smallest set such that
+     the following holds:
+     \begin{itemize}
+     \item \(nop \in \mathcal O\),
+     \item \(ins(i,\ c) \in \mathcal O\) for any \(i \in \mathbb{N}\) and \(c \in Unicode\),
+     \item \(del(i) \in \mathcal O\) for any \(i \in \mathbb{N}\),
+     \item for any two \(O_i, O_j \in \mathcal O\) then \(O_j \circ O_i \in \mathcal O\).\hfill$\dashv$
+     \end{itemize}
+   \end{definition}
+   #+END_EXPORT
 
    The semantics of an operation is defined in terms of how it is applied to a
    buffer, where a buffer is simply defined as a 0-indexed string of UTF-8
    encoded characters. The set $Unicode$ is our alphabet, which contains every
-   character defined by the Unicode standard. We let $\mathcal B$ constitute
-   the set of all possible buffers --- this set could also be expressed as
-   $Unicode^{*}$.
+   character defined by the Unicode standard cite:unicode-standard. We let
+   $\mathcal B$ constitute the set of all possible buffers --- this set could
+   also be expressed as $Unicode^{*}$.
 
    An operation can be applied to a buffer, which in turn yields a new buffer.
    Consequently all $O \in \mathcal O$ are partial unary operations $O :
-   \mathcal B' \rightarrow \mathcal B$, where $\mathcal B' \subseteq \mathcal
-   B$.
-
-   Let $B \in \mathcal{B}$. The $nop$ operation is the operation that does
-   nothing, and applying it is defined as:
+   \mathcal B \rightarrow \mathcal B$. The operations are partial because a
+   given operation cannot necessarily be applied to all buffers; as an example,
+   no delete operation can be applied to the empty buffer $\epsilon$. We assume
+   that no text-editor are able to produce an operation which is ill-defined on
+   its current buffer.
    #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}{(Semantics of Operations).}
+     Let $B \in \mathcal{B}$. The $nop$ operation is the operation that does
+     nothing, and applying it is defined as:
      \begin{align*}
        nop(B) &= B
      \end{align*}
-   #+END_EXPORT
-   Let $i \in \mathbb{N}$, and both $c, c' \in Unicode$. We let a single space
-   represent concatenation, where characters are treated like strings of length
-   one. Applying an insertion is then defined as follows:
-   #+BEGIN_EXPORT latex
+     Let $i \in \mathbb{N}$, and both $c, c' \in Unicode$. We let a single space
+     represent concatenation, where characters are treated like strings of length
+     one. Applying an insertion is then defined as follows:
      \begin{align*}
        ins(0, c)(B) &= c\ B \\
        ins(i + 1, c)(c'\ B) &= c'\ ins(i, c)(B)
      \end{align*}
-   #+END_EXPORT
-   Similarly, applying a deletion is defined as:
-   #+BEGIN_EXPORT latex
-   \begin{align*}
-     del(0)(c\ B) &= B \\
-     del(i + 1)(c\ B) &= c\ del(i)(B)
-   \end{align*}
-   #+END_EXPORT
-   Let $O_i, O_j \in \mathcal O$, and let $O_j \circ O_i$ represent the
-   /composition/ of $O_i$ and $O_j$. Applying a composed operation to a buffer
-   is defined as so:
-   #+BEGIN_EXPORT latex
-   \begin{align*}
-     O_j \circ O_i(B) &= O_j(O_i(B))
-   \end{align*}
+     Similarly, applying a deletion is defined as:
+     \begin{align*}
+       del(0)(c\ B) &= B \\
+       del(i + 1)(c\ B) &= c\ del(i)(B)
+     \end{align*}
+     Let $O_i, O_j \in \mathcal O$, and let $O_j \circ O_i$ represent the
+     /composition/ of $O_i$ and $O_j$. Applying a composed operation to a buffer
+     is defined as:
+     \begin{align*}
+       O_j \circ O_i(B) &= O_j(O_i(B))
+     \end{align*}\hfill$\dashv$
+   \end{definition}
    #+END_EXPORT
    Note that composition of operations is no different from regular function
    composition.
@@ -571,10 +580,12 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \]
    \end{proof}
 
-   The fact that $\circ$ is not commutative is precisely the problem with a
-   naïve algorithm (Section [[A Naïve Algorithm]]); in other words, a naïve
+   The fact that $\circ$ is not commutative is precisely the problem with the
+   naïve algorithm (Section [[The Naïve Algorithm]]); in other words, the naïve
    algorithm would guarantee eventual consistency if the order of which
-   operations are applied does not affect the end result.
+   operations are applied does not affect the end result. In the next chapter
+   we will introduce /Operational Transformation/ which, at its core, is a
+   technique for restoring commutativity for operations.
 
    Furthermore, it is worth noting that the structure $\langle \mathcal O,
    \circ \rangle$ is a /monoid/ because it satisfies the following properties:
@@ -604,18 +615,22 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      \end{proof}
 
    There are two main reasons for noting these algebraic properties; one is
-   that it is helpful when writing a formal specification in Maude; the other
-   is that it helps when translating the structure to a given programming
-   language, by making sure the selected representation preserves the
-   properties of a monoid.
+   that it is helpful when writing a formal specification in Maude, because
+   Maude is an /algebraic/ specification language; the other is that it helps
+   when translating the structure to a given programming language, by making
+   sure the selected representation preserves the properties of a monoid.
 
 * Related Work
 
-  In this chapter we will present some of the work of Ellis and Gibbs
+  In this chapter we present some of the work of Ellis and Gibbs
   cite:ellis1989concurrency, the pioneers of /Operational Transformation/ (OT)
   and the very interesting work of Imine et al. on proving correctness for
   transformation functions using formal verification techniques
   cite:DBLP:conf/ecscw/ImineMOR03,DBLP:journals/corr/abs-1302-3292,formalOT.
+  The chapter should sufficiently convay the basic idea of OT and how it
+  works, without going into the finer details. We use notation estabelished in
+  Chapter [[Formal Semantics of Editing Operations]] to describe the workings of
+  OT.
 
 ** Basics of OT
 
@@ -645,19 +660,19 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
          ins(p1+1,c1,pr1)    & \text{else if } pr1 > pr2 \\
          ins(p1,c1,pr1)      & \text{otherwise}
        \end{cases}
-       \\
+       \\\\
        T(ins(p1,c1,pr1), del(p2,pr2)) &=
        \begin{cases}
          ins(p1,c1,pr1)      & \text{if } p1 < p2 \\
          ins(p1-1,c1,pr1)    & \text{otherwise}
        \end{cases}
-       \\
+       \\\\
        T(del(p1,pr1), ins(p2,c2,pr2)) &=
        \begin{cases}
          del(p1,pr1)         & \text{if } p1 < p2 \\
          del(p1+1,pr1)       & \text{otherwise}
        \end{cases}
-       \\
+       \\\\
        T(del(p1,pr1), del(p2,pr2)) &=
        \begin{cases}
          del(p1,pr1)         & \text{if }      p1 < p2 \\
@@ -701,6 +716,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      Operation applied by $u_0$:
      \begin{align*}
        T(O_1, O_0) \circ ins(0,\ \texttt{a},\ 0) (\epsilon) &= \\
+       T(ins(0,\ \texttt{b},\ 1), ins(0,\ \texttt{a},\ 0)) (\epsilon) &= \\
        ins(1,\ \texttt{b},\ 1)(\texttt{"a"}) &= \texttt{"ab"}
      \end{align*}
 
@@ -708,6 +724,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      Operation applied by $u_1$:
      \begin{align*}
        T(O_0, O_1) \circ ins(0,\ \texttt{b},\ 1) (\epsilon) &= \\
+       T(ins(0,\ \texttt{a},\ 0), ins(0,\ \texttt{b},\ 1)) (\epsilon) &= \\
        ins(0,\ \texttt{a},\ 0)(\texttt{"b"}) &= \texttt{"ab"}
      \end{align*}
    \end{multicols}
@@ -764,14 +781,21 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    of great complexity --- it is not given that the transformation function can
    resolve every conflict that can arise.
 
-** Discussing Correctness of OT
+** Discussing Consistency in OT
+
+   This section introduces some consistency models that have been used to
+   describe correctness of OT algorithms, and achievements in trying to verify
+   these algorithms. In OT it is common to refer to a /site/ as an uniquely
+   identified object with a data segment (for example a document) which a user
+   can manipulate. When no messages are "in flight" the system is said to be
+   /quiescence/.
 
    The consistency model of cite:ellis1989concurrency, is defined by the
    following two properties:
 
    - *Causality*[fn:1]: If $O_i$ was executed before $O_j$ at one site, then
      $O_i$ must be executed before $O_j$ on all sites.
-   - *Convergence*: When no messages are "in flight", all copies are identical.
+   - *Convergence*: At quiescence, all copies are identical.
 
    Sun et al. cite:DBLP:journals/tochi/SunJZYC98 expanded the consistency model
    of cite:ellis1989concurrency with:
@@ -780,16 +804,24 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
      $O_i'$, then the effects of applying $O_i'$ must be equivalent of that of
      applying $O_i$.
 
-   In the dOPT algorithm, a partial ordering cite:lamport1978time of
-   operations, based on the /happened before/ relation, is maintained. This is
-   achived by using a using a state vector (also referred to as a vector
-   clock); by always executing opertaions according to the ordering, causality
-   is guaranteed.
+   dOPT is a fully distributed algorithm, where determining temporal
+   relationships between events (i.e. generation and reception of operations)
+   is a more challenging task than when leveraging a centralized server. It
+   uses a /state vector/ (also referred to as a /vector clock/) which is
+   essentially an extension of Lamport clocks cite:lamport1978time, yielding a
+   partial order of events. An ordering being partial means that there exists
+   events where neither event precedes the other, which means the events are
+   /concurrent/.
 
-   Given two operations $O_i, O_j$, where neither /happened before/ the other,
-   then they are considered /concurrent/. In order to obtain convergence, a
-   transformation function is applied to concurrent operations, as discussed in
-   the previous section.
+   The dOPT algorithm ensures that operations are applied according to the
+   partial order of events, where an event is either the generation of an
+   operation or the reception of one. This ensures causality, but not
+   convergence. Because the order is partial there are events that are
+   concurrent; instead of trying to order these events /totally/ (i.e. ensure
+   that for any two events, one will precede the other) a transformation
+   function is used. Given two concurrent operations $O_i, O_j$, where $O_i$
+   has already been applied, $O_j$ must be transformed with regards to $O_i$
+   before it is applied.
 
    A transformation function $T$ must satisfy:
    #+BEGIN_EXPORT latex
@@ -800,9 +832,10 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
    \end{equation*}
    #+END_EXPORT
    for all $O_i, O_j \in \mathcal O$ in order to guarantee convergence; this is
-   a necessary, but not a sufficient condition. The transformation function $T$
-   from Figure [[ref:fig:transformation-function]] does not satisfy the condition,
-   which has been shown by cite:DBLP:conf/ecscw/ImineMOR03.
+   a necessary, but not a sufficient condition cite:ellis1989concurrency. The
+   transformation function $T$ from Figure [[ref:fig:transformation-function]] does
+   not satisfy the condition, which has been shown by
+   cite:DBLP:conf/ecscw/ImineMOR03.
 
    We have been able to reproduce the result by model checking our Maude
    specification. A minimal counter example, as shown in Figure
@@ -947,20 +980,21 @@ not satisfy ref:eqn:C1.
 ** Operational Transformation with a Client-Server Architecture
 
    In cite:nichols95, Nichols et al. introduces a simplified algorithm for OT
-   for the Jupiter Collaboration System, based on GROVE
+   in the Jupiter Collaboration System, based on GROVE
    cite:ellis1989concurrency, leveraging a centralized server. It is a
-   symmetric algorithm, meaning that the core algorithm is the same at the
+   symmetric algorithm, in the sense that the core algorithm is the same at the
    client and the server. As in GROVE, the document is replicated at every
    client, but the server keeps an additional copy of the document. Each client
    synchronizes its changes with the server, yielding a two-way synchronization
    protocol, as opposed to the fully distributed $N\text{-way}$ synchronization
    of GROVE.
 
-   When a client generates an operation, it is communicated to the server,
-   which on reception applies it to its document, transforming it if necessary,
-   and sends the transformed operation to the other clients. On a client's
-   reception of an operation from the server, the operation is transformed if
-   necessary, and then applied to the client's local copy.
+   When a client generates an operation, it is communicated to the server. On
+   reception of an operation, the server applies it to its document,
+   transforming it if necessary, and sends the transformed operation to the
+   other clients. When a client receives an operation from the server, the
+   operation is transformed if necessary, and then applied to the client's
+   local copy.
 
    Having a server guarantees that causality violation never occurs
    cite:ellis-ot, without the need for maintaining a state vector. This is
@@ -975,10 +1009,10 @@ not satisfy ref:eqn:C1.
 
    The Google Wave protocol is largely based on the Jupiter Collaboration
    System cite:WaveOT. In contrast to the Jupiter Collaboration System, the
-   Google Wave protocol requires that clients wait for acknowledgement before
+   Google Wave protocol requires that clients wait for acknowldgement before
    sending new operations. Clients may still apply changes to their local copy,
    but need to queue the operations, and send them on reception of an
-   acknowledgement. This reduces the memory consumption at the server, because
+   acknowldgement. This reduces the memory consumption at the server, because
    the server will only need to keep one history of operations.
 
 
