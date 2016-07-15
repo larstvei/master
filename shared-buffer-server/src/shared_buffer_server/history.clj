@@ -1,13 +1,13 @@
 (ns shared-buffer-server.history
-  (:require [clojure.set :refer [intersection]])
-  (:require [shared-buffer-server.operations :refer :all]))
+  (:require [clojure.set :refer [intersection]]
+            [shared-buffer-server.operations :refer :all]))
 
 (defn concurrent?
   "Returns non-nil iff the events are concurrent."
-  [[_ i1 m1 u1] [_ i2 m2 u2]]
+  [[_ t1 m1 u1] [_ t2 m2 u2]]
   (and (empty? (intersection u1 u2))
-       (or (and (<= i1 i2) (<= i2 m1))
-           (and (<= i2 i1) (<= i1 m2)))))
+       (or (and (<= t1 t2) (<= t2 m1))
+           (and (<= t2 t1) (<= t1 m2)))))
 
 (defn precedes?
   "Returns non-nil iff the e1 precedes e2."
@@ -20,25 +20,27 @@
              (< m1 m2)))
     (< m1 m2)))
 
+(defn trim-history [history min-token]
+  (take-while (fn [[_ t _ _]] (> t min-token)) history))
+
 (defn add-event
   "Adds an event to the history."
-  [history [_ _ _ u :as e1] min-token]
-  (let [u?      (comp empty? (partial intersection u) last)
+  [history [op1 _ _ u1 :as e1]]
+  (let [u?      (comp empty? (partial intersection u1) last)
         [xs ys] (split-with u? history)
         [x y]   (split-with (partial precedes? e1) xs)]
-    (->> (concat x [e1] y ys)
-         (take-while (fn [[_ _ t _]] (> t min-token))))))
+    (concat x [e1] y ys)))
 
 (defn until
-  "Get the history until state i."
-  [history i]
+  "Get the history until state t."
+  [history t]
   (->> (reverse history)
-       (drop-while (fn [[_ _ m _]] (< m i)))
+       (drop-while (fn [[_ _ m _]] (< m t)))
        (mapcat first) reverse))
 
-(defn make-op [h1, h2, i]
-  (simplify (compose (until h2 i) (inv (until h1 i)))))
+(defn make-op [h1 h2 t]
+  (simplify (compose (until h2 t) (inv (until h1 t)))))
 
-(defn make-response [op1 op2 sent-ops i]
-  (let [opr (mapcat first (take-while (fn [[_ m]] (< i m)) sent-ops))]
+(defn make-response [op1 op2 sent-ops t]
+  (let [opr (mapcat first (take-while (fn [[_ m]] (< t m)) sent-ops))]
     (simplify (compose op2 (compose opr (inv op1))))))

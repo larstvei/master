@@ -7,7 +7,7 @@
             [shared-buffer-server.syncprn :refer [syncprn]]
             [clojure.data.json :as json]))
 
-(defonce state (atom {}))
+(defonce state (atom {:sessions {} :clients {}}))
 
 (def key-length
   "This dictates the length of random generated keys."
@@ -32,8 +32,8 @@
   (->> state :sessions key :clients
        (remove (partial initialized? state))))
 
-(defn min-token [session]
-  (->> session :tokens vals (apply min)))
+(defn min-token [site]
+  (->> site :tokens vals (apply min)))
 
 (defn next-seq [n m]
   (+ (inc n) (- m n)))
@@ -79,10 +79,12 @@
       (update-in [:sessions session :token] inc)))
 
 (defn next-state [state client token seqno op history]
-  (let [session (get-in state [:clients client :session] )]
+  (let [session (get-in state [:clients client :session])
+        site    (-> state :sessions session)
+        t       (min-token site)]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
-        (update-session session history)
+        (update-session session (trim-history history t))
         (assoc-in [:sessions session :tokens client] token))))
 
 ;;; Send
@@ -94,7 +96,7 @@
    :seqno seqno
    :token token})
 
-(defn send-op
+(defn send-op!
   "Sends an operation to a set of clients."
   [key op token clients]
   (doseq [c clients]
@@ -148,12 +150,12 @@
           token   (:token msg)
           time    (inc (:token session))
           event   [op token (:token session) #{(:id site)}]
-          hist    (add-event (:history session) event (min-token session))
+          hist    (add-event (:history session) event)
           op1     (make-op (:history session) hist token)
           op2     (make-response op op1 (:ops site) token)
           reply   (make-msg key op2 seqno time)
           rest    (disj (:clients session) client)]
-      (send-op key op1 time rest)
+      (send-op! key op1 time rest)
       (send! client (json/write-str reply))
       (swap! state next-state client token (inc seqno) [op2 time] hist))))
 
@@ -186,7 +188,7 @@
   []
   (when-not (nil? (:server @state))
     ((:server @state) :timeout 100)
-    (reset! state {})))
+    (reset! state {:sessions {} :clients {}})))
 
 (defn -main
   "The main function for Shared Buffer. It simply starts the server."
