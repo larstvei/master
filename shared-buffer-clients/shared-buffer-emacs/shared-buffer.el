@@ -1,6 +1,6 @@
 ;;; shared-buffer.el --- Collaberative editing in Emacs. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013 - 2016 Lars Tveito.
+;; Copyright (C) 2016 Lars Tveito.
 
 ;; Author: Lars Tveito <larstvei@ifi.uio.no>
 ;; Version: 0.2.1
@@ -34,20 +34,23 @@
 ;;; Variables
 
 (defvar-local sb-key nil
-  "A buffer that is shared belongs to a session. This variable keeps an
-  identifier to the session this buffer belongs to.")
+  "A key that identifies the editing session.
+
+For convenience `sb-add-key-to-kill-ring' copies the key to the
+kill ring, so that you may share it.")
 
 (defvar-local sb-socket nil
-  "A buffer that is shared is connected to a server. This
-  variable keeps the connected socket.")
+  "The socket used for communicating with the server.
+
+The variable is set by `sb-connect-to-server'. ")
 
 (defvar-local sb-seqno 0
-  "A sequence number that is incremented with every interaction
-  with the server.")
+  "A sequence number that is incremented at every interaction with the server.")
 
 (defvar-local sb-token 0
-  "A number that represents the last consistent state. It is
-  updated when messages are received from the server.")
+  "A number that represents the last consistent state.
+
+It is only updated when an operation is received.")
 
 ;; Changing major-mode should not affect Shared Buffer.
 (dolist (var '(sb-key
@@ -63,7 +66,8 @@
 
 ;;; Socket communication
 
-(defun sb-connect-to-server (host &optional session)
+(defun sb-connect-to-server (host)
+  "Establishes connection with HOST, and binds `sb-socket'."
   (let ((host (concat "ws://" (or host "localhost") ":3705")))
     (setq sb-socket (websocket-open host
                                     :on-message #'sb-receive
@@ -74,6 +78,10 @@
             (current-buffer)))))
 
 (defun sb-on-open (websocket)
+  "This function is called when a connection to WEBSOCKET is established.
+
+It sends an a request to connect to a session, specified by
+`sb-key', and waits for a reply."
   (with-current-buffer (process-buffer (websocket-conn websocket))
     (sb-send (list :type 'connect :session sb-key))
     (with-local-quit
@@ -81,6 +89,7 @@
       (accept-process-output (websocket-conn websocket)))))
 
 (defun sb-on-close (websocket)
+  "Called when a connection to WEBSOCKET is closed."
   (with-current-buffer (process-buffer (websocket-conn websocket))
     (message "Shared Buffer: Connection closed!")
     (sb-quit)))
@@ -88,9 +97,11 @@
 ;;; Send
 
 (defun sb-send (data)
+  "Encode DATA to a JSON string and send it over `sb-socket'."
   (websocket-send-text sb-socket (json-encode data)))
 
 (defun sb-send-buffer ()
+  "Send an insertion that includes the entire buffer."
   (sb-send (list :type 'buffer
                  :session sb-key
                  :pos (1- (point-min))
@@ -98,6 +109,10 @@
                  :token sb-token)))
 
 (defun sb-send-operation (type beg end)
+  "Send an operation.
+
+TYPE specifies if it is a deletion or insertion, whilst BEG and
+END specifies what part of the buffer is sent."
   (sb-send (list :type 'operation
                  :session sb-key
                  type (sb-substr beg end)
@@ -107,14 +122,30 @@
                  :seqno (1- (cl-incf sb-seqno)))))
 
 (defun sb-send-insertion (beg end len)
-  (and (zerop len) (sb-send-operation :ins beg end)))
+  "Send an insertion.
+
+Called after every change, where BEG and END specifies the part
+of the buffer which is changed. If LEN is zero then the change
+was a deletion, and nothing is sent."
+  (let ((inhibit-modification-hooks nil))
+    (when (zerop len) (sb-send-operation :ins beg end))))
 
 (defun sb-send-deletion (beg end)
-  (and (not (= beg end)) (sb-send-operation :del beg end)))
+  "Send an insertion.
+
+Called before every change, where BEG and END specifies the part
+of the buffer which is about to be changed. If BEG is equal to
+END, then the change was a deletion, and nothing is sent."
+  (let ((inhibit-modification-hooks nil))
+    (when (not (= beg end)) (sb-send-operation :del beg end))))
 
 ;;; Receive
 
 (defun sb-receive (websocket frame)
+  "Receive a message on WEBSOCKET.
+
+The message is inside the FRAME. Every message has a type, which
+is either \"connect\", \"send-buffer\" or \"operations\"."
   (with-current-buffer (process-buffer (websocket-conn websocket))
     (let* ((payload (websocket-frame-payload frame))
            (json-object-type 'plist)
@@ -127,9 +158,13 @@
              (sb-send-buffer))
             ((string= type "operations")
              (sb-apply-operations data))
-            (t (error "Shared Buffer: Error in protocol."))))))
+            (t (error "Shared Buffer: Error in protocol"))))))
 
 (defun sb-set-session (session)
+  "Change the editing SESSION.
+
+The editing session is only set if the connection was established
+using `sb-share-buffer'."
   (setq sb-key session)
   (sb-add-key-to-kill-ring)
   (message "Shared Buffer: \
@@ -138,27 +173,44 @@ Connected to session: %s, the key was added to the kill ring." session))
 ;;; Buffer modification
 
 (defun sb-apply-operations (data)
+  "Apply operations received from the server.
+
+`sb-token' is set, and `sb-seqno' is incremented.
+Argument DATA is a plist with fields :seqno, :operations
+and :token."
   (when (= sb-seqno (plist-get data :seqno))
     (cl-mapc 'sb-apply-operation (plist-get data :operations))
     (setq sb-token (plist-get data :token)))
   (cl-incf sb-seqno))
 
 (defun sb-apply-operation (operation)
+  "Apply a given OPERATION.
+
+The operation is either an insertion or a deletion at a given
+position."
   (save-excursion
     (let ((inhibit-modification-hooks t)
           (point     (1+ (plist-get operation :pos)))
           (insertion (plist-get operation :ins))
           (deletion  (plist-get operation :del)))
       (when (and insertion deletion)
-        (error "Shared Buffer: Error in protocol."))
+        (error "Shared Buffer: Error in protocol"))
       (goto-char point)
       (when insertion (insert insertion))
-      ;; use length, or rather just send number of chars to delete
       (when deletion  (delete-char (length deletion))))))
 
 ;;; Interactive functions
 
 (defun sb-share-buffer (host &optional buffer)
+  "Share the current buffer to enable real-time collaboration.
+
+HOST specifies the host address of the server. A key will be
+generated by the server, and added to the kill ring when
+received. This key can be shared so that other can join your
+editing session. Use `sb-join-session' to connect to an existing
+editing session.
+
+If called non-interactively, a BUFFER may be specified."
   (interactive "sHost: ")
   (with-current-buffer (or buffer (current-buffer))
     (sb-connect-to-server (if (string= "" host) nil host))
@@ -167,6 +219,10 @@ Connected to session: %s, the key was added to the kill ring." session))
       (shared-buffer-mode 1))))
 
 (defun sb-join-session (host session)
+  "Connect to HOST to join SESSION.
+
+Like `sb-share-buffer', except that a new buffer with the name
+SESSION is created with the contents of the shared buffer."
   (interactive "sHost: \nsSession: ")
   (let ((buffer (generate-new-buffer session)))
     (switch-to-buffer buffer)
@@ -174,6 +230,9 @@ Connected to session: %s, the key was added to the kill ring." session))
     (sb-share-buffer host buffer)))
 
 (defun sb-disconnect (&optional buffer)
+  "Disconnect the current shared buffer session.
+
+If called non-interactively a BUFFER may be specified."
   (interactive)
   (when shared-buffer-mode
     (with-current-buffer (or buffer (current-buffer))
@@ -181,12 +240,14 @@ Connected to session: %s, the key was added to the kill ring." session))
     (sb-quit)))
 
 (defun sb-add-key-to-kill-ring ()
+  "Add the session key to the kill ring, so you may share it."
   (interactive)
   (kill-new sb-key))
 
 ;;; Minor mode
 
 (defun sb-quit ()
+  "Disable `shared-buffer-mode' and clean up."
   (mapc #'kill-local-variable
         '(sb-key sb-host sb-socket sb-seqno sb-token))
   (shared-buffer-mode 0)
@@ -196,8 +257,9 @@ Connected to session: %s, the key was added to the kill ring." session))
 (define-minor-mode shared-buffer-mode
   "A minor mode for Shared Buffer."
   nil " SB" nil
-  ;; fixme
   (add-hook 'before-change-functions 'sb-send-deletion t t)
-  (add-hook 'after-change-functions 'sb-send-insertion t t))
+  (add-hook 'after-change-functions  'sb-send-insertion t t))
 
-;;; shared-buffer.el ends here.
+(provide 'shared-buffer)
+
+;;; shared-buffer.el ends here
