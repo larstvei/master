@@ -119,9 +119,12 @@
 (defmethod receive :buffer [msg client]
   (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
     (let [key (keyword (:session msg))
+          op  (list (select-keys msg [:pos :ins]))
+          ops (get-in @state [:clients client :ops])
+          op2 (make-response nil op ops (:token msg))
           msg  {:type :operations
                 :session (:session msg)
-                :operations (list (select-keys msg [:pos :ins]))
+                :operations op2
                 :token (:token msg)
                 :seqno 0}]
       (doseq [c (get-uninitialized-clients @state key)]
