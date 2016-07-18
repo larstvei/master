@@ -7,14 +7,17 @@
 #+LaTeX_CLASS: ifimaster
 #+LATEX_HEADER: \usepackage{tikz}
 #+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
+#+LATEX_HEADER: \usepackage[scale=0.85]{sourcecodepro}
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
-#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, mathabx, multicol}
+#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, multicol, subcaption}
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
 #+LaTeX_HEADER: \newcommand{\ins}[2]{ins(#1,\ \texttt{#2})}
 #+LaTeX_HEADER: \newcommand{\del}[2]{del(#1,\ \texttt{#2})}
 #+LATEX_HEADER: \newcommand{\tuple}[1]{\ensuremath{\langle #1\rangle}}
+#+LATEX_HEADER: \let\oldcirc\circ
+#+LATEX_HEADER: \renewcommand{\circ}{\oldcirc\,}
 #+LaTeX_HEADER: \newenvironment{ritemize}{\begin{itemize}\raggedright}{\end{itemize}}
 #+LaTeX_HEADER: \theoremstyle{definition}
 #+LaTeX_HEADER: \newtheorem{definition}{Definition}[section]
@@ -464,7 +467,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
        del(i + 1)(c\ B) &= c\ del(i)(B)
      \end{align*}
      Let $O_i, O_j \in \mathcal O$, and let $O_j \circ O_i$ represent the
-     /composition/ of $O_i$ and $O_j$. Applying a composed operation to a buffer
+     \textit{composition} of $O_i$ and $O_j$. Applying a composed operation to a buffer
      is defined as:
      \begin{align*}
        O_j \circ O_i(B) &= O_j(O_i(B))
@@ -561,7 +564,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
        \ins{0}{a}(\texttt{"b"}) &= \texttt{"ab"}
      \end{align*}
    \end{multicols}
-    #+END_EXPORT
+   #+END_EXPORT
 
 ** Algebraic Properties
 
@@ -627,7 +630,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
     \mathcal O, \circ \rangle$ to be a group, it must satisfy that for any $O_i
     \in \mathcal O$ there exists a $O_j \in \mathcal O$ such that:
     #+BEGIN_EXPORT latex
-    \[ O_i \circ O_j = O_j \circ O_i = nop \]
+    \[ O_j \circ O_i = O_i \circ O_j = nop \]
     #+END_EXPORT
     The inverse of an operation $O \in \mathcal O$ is denoted $O^{-1}$, and so
     the equation can be restated as:
@@ -809,7 +812,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
        ins(0,\ \texttt{a},\ 0)(\texttt{"b"}) &= \texttt{"ab"}
      \end{align*}
    \end{multicols}
-    #+END_EXPORT
+   #+END_EXPORT
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
      \centering
