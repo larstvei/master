@@ -1491,6 +1491,1132 @@ not satisfy ref:eqn:C1.
     its own accord. This is why the only measures to reduce the state space is
     done by imposing restrictions on the clients.
 
+* Server-side Specification
+
+  At this point the behaviour of clients has been specified. The more
+  interesting part of the system is the server, as it handles most of the
+  complexity in the algorithm.
+
+  The server maintains a /state token/, a /history/ and a mapping from users
+  to /sites/. For every operation received, the server increments its state
+  token, which is one initially. The history determines the order of which
+  operations should be applied. A /site/ is an object which represents the
+  server's information about a given client; when receiving a message from a
+  client, we assume that there exists a way of uniquely identifying the
+  client --- in the model this is a user identifier.
+
+** Events
+
+   An essential part of the server algorithm is maintaining a history, where
+   the entries in a history are /events/. There is only one type of event at
+   the system, namely the reception of a message, containing an operation, a
+   token and a sequence number.
+   #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}[Events]
+     The events on a server $S$ communicating with a set of clients, identified by
+     users in $\mathcal U$, is formally defined as the smallest set of four-tuples
+     $\mathbb E$, where every $\tuple{O,t,m, u} \in \mathbb E$ satisisfies the
+     following:
+     \begin{itemize}
+     \item \(O \in \mathcal O\) and $O$ is not a composition of operations
+     \item \(t \in \mathbb N \land t < m\)
+     \item \(m \in \mathbb N\)
+     \item \(u \in \mathcal U\)\hfill$\dashv$
+     \end{itemize}
+   \end{definition}
+   #+END_EXPORT
+   # The events are constructed based on a message $msg(O, t, s)$ from $u \in
+   # \mathcal U$ and a logical clock $m$ maintained on the server.
+   The events are constructed based on a message received from a user and the
+   state token $m$, maintained on the server. Given a message $msg(O, t, s)$
+   sent from $u \in \mathcal U$ the event $\tuple{O, t, m, u}$ is constructed.
+   Remember that the token $t$ is only updated at the client when it
+   successfully receives a message from the server (i.e. does not reject); it
+   implies that the latest message the client has received was when the
+   server's state token was $t$. Furthermore, we assume that the client have
+   executed all operations with a time stamp smaller than $t$.
+
+   The history of events dictates an order of which operations should be
+   applied. In the case where there are no concurrent events, the arrival time
+   is used to determine what event should precede the other. But in order to
+   decide an order, we first need to be able to detect concurrent operations.
+   Intuitively, are two operations concurrent if they where generated
+   independently from each other.
+   #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}[Concurrent Events]
+     Two events $E_i = \tuple{O_i, t_i, m_i, u_i}$ and $E_j = \tuple{O_j, t_j,
+       m_j, u_j}$, where $E_i, E_j \in \mathbb E$, are said to be concurrent if and
+     only if:
+     \[ u_i \not= u_j \land ((t_i \leq t_j \land m_i \geq t_j) \lor (t_j \leq t_i \land m_j \geq t_i)) \]
+     $E_i$ is concurrent with $E_j$ is denoted $E_i \parallel E_j$.
+     \hfill$\dashv$
+   \end{definition}
+   #+END_EXPORT
+
+   A user cannot produce concurrent events; The first criteria of the
+   definition $u_i \not= u_j$ ensures that events performed by the same user
+   cannot be considered concurrent. Note that an event is not concurrent with
+   itself by this definition; the case is ignored because there is never a
+   need to examine the relationship between an event and itself. There are no
+   duplicate events in the system, seeing that the time stamp is guaranteed to
+   be unique.
+
+   Let us now consider $t_i \leq t_j \land m_i \geq t_j$. It is helpful to read
+   it as: "$O_i$ was generated at same time or before $O_j$ was generated, but
+   $O_i$ arrived at the server at the same time or after $O_j$ was generated".
+   If $t_i \leq t_j$ then it cannot be the case that $O_i$ was generated after
+   having applied $O_j$. Similarly, if $t_j \leq m_i$ then it cannot be the
+   case that $O_j$ was generated after having applied $O_i$. When the
+   operations were generated independently from each other, we say they are
+   concurrent. By the same reasoning, $E_j$ is concurrent with $E_i$ if $t_j
+   \leq t_i \land m_j \geq t_i$, assuring symmetry.
+
+   Given two non-concurrent events, one must have /happened before/ the other.
+   Note that this /happened before/-relation is defined in terms of a state
+   token and a time stamp, and does not necessarily represent which event
+   happened before the other in /real/ time.
+   #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}[Happened Before]
+     An event $E_i = \tuple{O_i, t_i, m_i, U_i}$ \textit{happened before} $E_j =
+     \tuple{O_j, t_j, m_j, U_j}$, where $E_i, E_j \in \mathbb E$, if and only if:
+     \[ E_i \nparallel E_j \land m_i < m_j \]
+     $E_i$ \textit{happened before} $E_j$ is denoted $E_i \longrightarrow E_j$. \hfill$\dashv$
+   \end{definition}
+   #+END_EXPORT
+
+   If the events are not concurrent, then the arrival time is used to determine
+   which event happened before the other.
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=4em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+       \tikzstyle{O_2} = [vertex, fill=black!30!red]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+       \tikzstyle{toO_2} = [to, color=black!30!red]
+
+       \tikzstyle{op} = [pos=0.62, above=-3pt, sloped, text=black, font=\small]
+
+       %% Server receives operations in this order
+       \node (s) at (0, 9) {$S$};
+       \coordinate (se) at (0, 0) {};
+       \node[O_0, below = 2em of s,   label=left:{$\small\overbrace{\tuple{O_0, 0, 1, u_0}}^{E_0}$}] (s1) {};
+       \node[O_1, below = 6em of s1,  label=left:{$\small\overbrace{\tuple{O_1, 0, 2, u_1}}^{E_1}$}] (s2) {};
+       \node[O_2, above = 8em of se, label=left:{$\small\overbrace{\tuple{O_2, 2, 3, u_2}}^{E_2}$}] (s3) {};
+
+       %% User 0 generates/receives in this order
+       \node (u2) at (10, 9) {$u_0$};
+       \node (u2e) at (10, 0) {};
+       \node[O_0, below = 1em of u2] (u20) {};
+       \node[O_0, below = 2em of u20] (u20a) {};
+       \node[O_1, below = 7em of u20a] (u21a) {};
+       \node[O_2, above = 3em of u2e] (u22a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u0) at (8.5, 9) {$u_1$};
+       \node (u0e) at (8.5, 0) {};
+       \node[O_1, below = 6em of u0] (u01) {};
+       \node[O_0, below = 2em of u01] (u00r) {}; % cross out
+       \node[O_1, below = 3em of u00r] (u02) {};
+       \node[O_2, above = 6em of u0e] (u02a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (6, 9) {$u_2$};
+       \node (u1e) at (6, 0) {};
+       \node[O_0, below = 4.5em of u1] (u10a) {};
+       \node[O_2, below = 7em of u10a] (u12) {};
+       \node[O_1, below = 2em of u12] (u11r) {}; % cross out
+       \node[O_2, above = 2.5em of u1e] (u12a) {};
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         %\draw[to, color=black!30, text=black] (t) -- (te) node [midway, fill=white] {time};
+         \draw[to, color=black!30] (s) -- (s1)  -- (s2)  -- (s3) -- (se);
+         \draw[to, color=black!30] (u0) -- (u01) -- (u00r) -- (u02) -- (u02a) -- (u0e);
+         \draw[to, color=black!30] (u1) -- (u10a) -- (u12) -- (u11r) -- (u12a) -- (u1e);
+         \draw[to, color=black!30] (u2) -- (u20) -- (u20a) -- (u21a) -- (u22a) -- (u2e);
+
+         % Life of O_0
+         \draw[toO_0] (u20) -- (s1) node [op] {$\overbrace{\ins{0}{a}}^{O_0}$};
+         \draw[toO_0] (s1) -- (u00r) node [op] {};
+         \draw[toO_0] (s1) -- (u10a) node [op] {};
+         \draw[toO_0] (s1) -- (u20a) node [op] {};
+
+         % Life of O_1
+         \draw[toO_1] (u01) -- (s2) node [op] {$\overbrace{\ins{1}{b}}^{O_1}$};
+         \draw[toO_1] (s2) -- (u02) node [op] {};;
+         \draw[toO_1] (s2) -- (u11r) node [op] {};
+         \draw[toO_1] (s2) -- (u21a) node [op] {};
+
+         % Life of O_2
+         \draw[toO_2] (u12) -- (s3) node [op] {$\overbrace{\ins{0}{c}}^{O_2}$};
+         \draw[toO_2] (s3) -- (u02a) node [op] {};
+         \draw[toO_2] (s3) -- (u12a) node [op] {};
+         \draw[toO_2] (s3) -- (u22a) node [op] {};
+       \end{pgfonlayer}
+     \end{tikzpicture}
+     \caption{A non-trivial example.}
+     \label{fig:non-trivial-happened-before/concurrency-example}
+   \end{figure}
+   #+END_EXPORT
+
+   Let us look at a non-trivial example of a scenario and examine the
+   relationships between events. The scenario is visualized in Figure
+   [[ref:fig:non-trivial-happened-before/concurrency-example]]. We have the
+   following three events:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     E_0 &= \tuple{O_0, t_0, m_0, u_0} = \tuple{O_0, 0, 1, u_0} \\
+     E_1 &= \tuple{O_1, t_1, m_1, u_1} = \tuple{O_1, 0, 2, u_1} \\
+     E_2 &= \tuple{O_2, t_2, m_2, u_2} = \tuple{O_2, 2, 3, u_2}
+   \end{align*}
+   #+END_EXPORT
+   Their relationships are as follows:
+   - $E_0 \parallel E_1$. The events were generated with the same state token, and the
+     state token of $E_0$ is smaller than the arrival time of $E_1$. More
+     precisely, they are concurrent because the operations are performed by
+     different users and $t_0 \leq t_1 \land m_0 \geq t_1$.
+   - $E_0 \longrightarrow E_2$. This is because $u_2$ received $O_0$ before
+     generating $O_2$. More precisely, they are not concurrent because $t_0
+     \leq t_2 \land m_0 \not\geq t_2$ and $t_2 \not\leq t_0 \land m_2 \geq
+     t_0$, and $E_0 \longrightarrow E_2$ because $m_0 < m_2$.
+   - $E_1 \parallel E_2$. The state token of $E_1$ is smaller than that of
+     $E_2$, but the arrival time of $E_1$ the equal to the state token of
+     $E_2$, meaning $O_2$ was generated before $O_1$ was received. More
+     precisely, the events are performed by different users and $t_1 \leq t_2
+     \land m_1 \geq t_2$.
+   It can be helpful to notice that there is a correspondence between
+   overlapping lines in the diagram and events being concurrent.
+
+** An Ordering of Events
+
+   The history maintained on the server should respect an ordering $\prec$.
+   This ordering must respect the /happened before/-relation, meaning that for
+   any two events $E_i, E_j \in \mathbb E$ where if $E_i \longrightarrow E_j$
+   then $E_i \prec E_j$. The question that remains is how to order concurrent
+   events.
+
+   Let us first take a step back to make a useful observation. Say a character
+   is inserted at point $i$ in a given buffer. The characters that were
+   located at positions $0$ to $i$ (exclusive) remain at the same position ---
+   the characters that were located at $i$ or higher are shifted one step to
+   the right. Similarly for deletions, characters that were located at
+   position $0$ to $i$ (exclusive) stay where they were, but characters
+   located at point $i+1$ or higher are shifted to the left (the character
+   that were at point $i$ is deleted).
+
+   Say we have two operations $\ins{2}{x}$ and $\ins{4}{y}$ and both are
+   independently applied to the buffer ="abcdef"=.
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     \ins{2}{x} (\texttt{"abcdef"}) &= \texttt{"ab\textcolor{black!30!blue}{x}cdef"}\\
+     \ins{4}{y} (\texttt{"abcdef"}) &= \texttt{"abcd\textcolor{black!30!red}{y}ef"}
+   \end{align*}
+   #+END_EXPORT
+   Two ways of combining the operations are $\ins{4}{y} \circ \ins{2}{x}$ and
+   $\ins{2}{x} \circ \ins{4}{y}$. Applying them to the buffer ="abcdef"=
+   yields different results.
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{2}
+     \ins{4}{y} \circ \ins{2}{x} (\texttt{"abcdef"})&=
+     \ins{4}{y}(\texttt{"ab\textcolor{black!30!blue}{x}cdef"})&&=
+     \texttt{"ab\textcolor{black!30!blue}{x}c\textcolor{black!30!red}{y}def"}\\
+     \ins{2}{x} \circ \ins{4}{y} (\texttt{"abcdef"}) &=
+     \ins{2}{x}(\texttt{"abcd\textcolor{black!30!red}{y}ef"})&&=
+     \texttt{"ab\textcolor{black!30!blue}{x}cd\textcolor{black!30!red}{y}ef"}
+   \end{alignat*}
+   %% \begin{alignat*}{2}
+   %%   \ins{4}{y} \circ \ins{2}{x} (\texttt{"abcdef"})&=
+   %%   \ins{4}{y}(\texttt{"\textcolor{gray}{ab}x\textcolor{gray}{cdef}"})&&=
+   %%   \texttt{"\textcolor{gray}{ab}x\textcolor{gray}{c}y\textcolor{gray}{def}"}\\
+   %%   \ins{2}{x} \circ \ins{4}{y} (\texttt{"abcdef"}) &=
+   %%   \ins{2}{x}(\texttt{"\textcolor{gray}{abcd}y\textcolor{gray}{ef}"})&&=
+   %%   \texttt{"\textcolor{gray}{ab}x\textcolor{gray}{cd}y\textcolor{gray}{ef}"}
+   %% \end{alignat*}
+   #+END_EXPORT
+   Notice that in both cases =x= was placed between =b= and =c=. On the other
+   hand =y= was placed between =c= and =d= in the first case, and between =d=
+   and =e= in the second. Originally =y= was placed between =d= and =e=, so we
+   can assume that was the /intention/ of the user. We make the general rule,
+   that when the positions of two operations differ, the operation with the
+   highest position should always be performed first.
+
+   Given two operations that operates on the same position, then deletions
+   should always be performed before insertions. If the insertion is done
+   first, then the delete operation would simply remove the character which
+   was just inserted, which does not seem to satisfy either user. If the
+   deletion is done first, the correct character is deleted and the insertion
+   is placed between the characters it wanted, with the exception of the
+   character immediately in front of it. Finally, if the operations are of the
+   same type and operate on the same position, then the arrival time is used
+   as a tiebreaker.
+
+   The following defines when an event is said to precede another. Two
+   accessor functions for operations are used, where $pos$ returns the
+   position argument of the operation, and $type$ returns $ins$ or $del$,
+   depending on the operation being an insertion or deletion.
+   #+BEGIN_EXPORT latex
+   \\
+   \begin{definition}[Precedence]\label{def:prec}
+     Two events $E_i = \tuple{O_i, t_i, m_i, U_i}$ and $E_j = \tuple{O_j, t_j,
+       m_j, U_j}$ where $E_i, E_j \in \mathbb E$ are given. Let $p_i = pos(O_i)$,
+     $p_j = pos(O_j)$, $type_i = type(O_i)$ and $type_j = type(O_j)$.
+     An event $E_i$ \textit{precedes} $E_j$ if and only if:
+     \[
+     E_i \prec E_j =
+     \begin{cases}
+       p_i > p_j\\
+       \text{or } (p_i = p_j \land type_i \not= type_j \land type_i = del)\\
+       \text{or } (p_i = p_j \land type_i = type_j \land m_i < m_j) & \text{if } E_i \parallel E_j\\[0.5em]
+       m_i < m_j & \text{otherwise}
+     \end{cases}
+     \]
+     $E_i$ \textit{precedes} $E_j$ is denoted $E_i \prec E_j$. \hfill$\dashv$
+   \end{definition}
+   #+END_EXPORT
+   Let us look back at the scenario from Figure
+   [[ref:fig:non-trivial-happened-before/concurrency-example]]. There were three
+   events:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     E_0 &= \tuple{O_0, t_0, m_0, u_0} = \tuple{\ins{0}{a}, 0, 1, u_0} \\
+     E_1 &= \tuple{O_1, t_1, m_1, u_1} = \tuple{\ins{1}{b}, 0, 2, u_1} \\
+     E_2 &= \tuple{O_2, t_2, m_2, u_2} = \tuple{\ins{0}{c}, 2, 3, u_2}
+   \end{align*}
+   #+END_EXPORT
+   where $E_0 \parallel E_1$, $E_0 \longrightarrow E_2$ and $E_1 \parallel
+   E_2$. We have the following relations:
+   - $E_1 \prec E_0$ because they are concurrent and $pos(O_1) > pos(O_0)$.
+   - $E_0 \prec E_2$ because they are not concurrent and $m_0 < m_2$.
+   - $E_1 \prec E_2$ because they are concurrent and $pos(O_1) > pos(O_2)$.
+   The only possible ordering of these three events is:
+   #+BEGIN_EXPORT latex
+   \[ E_1 \prec E_0 \prec E_2 \]
+   #+END_EXPORT
+   This scenario can only occur if the initial buffer was non-empty, seeing
+   that $\ins{1}{b}$ was applied to the initial buffer; let us assume the
+   initial buffer was ="f"=. From the perspective of each user:
+   #+BEGIN_EXPORT latex
+   \begin{multicols}{3}
+     Perspective of $u_0$:
+     \[ \ins{0}{a}(\texttt{"f"}) = \texttt{"af"} \]
+
+     \columnbreak
+     Perspective of $u_1$:
+     \[ \ins{1}{b}(\texttt{"f"}) = \texttt{"fb"} \]
+
+     \columnbreak
+     Perspective of $u_2$:
+     \[ \ins{0}{c}(\texttt{"af"}) = \texttt{"caf"} \]
+   \end{multicols}
+   #+END_EXPORT
+   Note that the buffer of $u_2$ is different from the other two users, seeing
+   that $\ins{0}{a}$ had been applied before $\ins{0}{c}$ was generated. By
+   composing the operations from the events, according to the ordering, we
+   would get the operation $\ins{0}{c} \circ \ins{0}{a} \circ \ins{1}{b}$. The
+   result of applying the composed operation to the initial buffer is:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     \ins{0}{c} \circ \ins{0}{a} \circ \ins{1}{b}(\texttt{"f"}) &=\\
+     \ins{0}{c} \circ \ins{0}{a}(\texttt{"fb"}) &=\\
+     \ins{0}{c} (\texttt{"afb"}) &= \texttt{"cafb"}
+   \end{align*}
+   #+END_EXPORT
+   It seems to satisfy the intent of every user; $u_0$ placed an =a= in front
+   of the =f=, $u_1$ placed a =b= ahead of the =f= and $u_2$ placed a =c= in
+   front of the =a=.
+
+*** Events Under Precedence is not a Total Order
+
+    A total order under a relation requires the relation to be antisymmetric,
+    total and transitive. Antisymmetric, meaning that if $E_i$ precedes $E_j$
+    then $E_j$ cannot precede $E_i$ and total, meaning that any two events are
+    comparable under the precedence relation; we have found no counter example
+    to either of these properties. However, the precedence relation is not
+    transitive, and so an ordering under $\prec$ is not a total order, nor is
+    it a partial order.
+
+    These following three events is enough to show that $\prec$ is not
+    transitive:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      E_0 = \tuple{\ins{0}{a}, 0, 1, u_0}\\
+      E_1 = \tuple{\ins{1}{b}, 0, 2, u_0}\\
+      E_2 = \tuple{\del{0}{f}, 0, 3, u_1}
+    \end{align*}
+    #+END_EXPORT
+    The session was initiated with a buffer ="f"=. The first user ($u_0$) typed
+    an =a= followed by a =b=, resulting in the buffer ="abf"=. The other user
+    ($u_1$) deleted the only character in the buffer, resulting in the empty
+    buffer $\epsilon$.
+
+    We have that $E_0 \longrightarrow E_1$, $E_0 \parallel E_2$ and $E_1
+    \parallel E_2$. Because $u_0$ performed both the operations from $E_0$ and
+    $E_1$ we have that $E_0 \prec E_1$. $u_1$ performed a deletion at the same
+    point as $u_0$ performed an insertion, so $E_2 \prec E_0$. However, $E_1
+    \prec E_2$ because the operation in $E_2$ has a higher position. This means
+    we have two plausible orderings:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      E_0 \prec E_1 \prec E_2 \\
+      E_2 \prec E_0 \prec E_1
+    \end{align*}
+    #+END_EXPORT
+    Neither satisfies transitivity, as $E_0 \not\prec E_2$ and $E_2 \not\prec
+    E_1$. The problem is related to how events by the same user are totally
+    ordered (i.e. always compared by a unique time stamp), but this
+    information is not embedded in the event itself.
+
+    This has two implications that we want to note. One is that we cannot
+    /sort/ events based on $\prec$, nor use a standard ordered data structure,
+    due to its lack of transitivity. The other is that there exists multiple
+    plausible orderings of a given set of events, meaning that there are
+    multiple orders where precedence relation is satisfied between each
+    consecutive pair of events.
+
+    A possible resolution to this is discussed in Future Work, Section
+    [[Constructing a Total Order]]. Instead we build a history that relies on the
+    given precedence relation (Definition [[ref:def:prec]]), presenting a scheme
+    that takes the lack of transitivity into consideration.
+
+** Building a History of Events
+
+   A history of events is maintained on the server, and it dictates the order
+   of which operations should be applied by every participant. It is built in
+   an iterative manner, meaning that for every incoming message the new event
+   is placed at some point in the history.
+
+   The /happened before/ relation yields a partial order of events, leaving
+   some events unordered, due to them being concurrent; the precedence
+   relation preservers the ordering provided by the happened before relation,
+   whilst trying to order the concurrent events in a way that preserves the
+   users intentions.
+
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, node distance=4em, scale=1.5]
+       \tikzstyle{vertex} = [circle, draw]
+       \tikzstyle{to} = [-{Stealth}]
+
+       \node[vertex] (e0) at (0, 0) {$E_0$};
+       \node[vertex] (e2) at (1, 1) {$E_2$};
+       \node[vertex] (e1) at (2, 0) {$E_1$};
+
+       \draw[to, shorten >= 1pt] (e2) -- (e0);
+       \draw[to, shorten >= 1pt] (e0) -- (e1);
+       \draw[to, shorten >= 1pt] (e1) -- (e2);
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         \draw[rotate around={-45:(0.5,0.5)}, fill=red!30, draw=red, fill opacity=0.5] (0.5,0.5) ellipse (2.1em and 3.5em);
+         \draw[rotate around={45:(1.5,0.5)}, fill=green!30, draw=green, fill opacity=0.5] (1.5,0.5) ellipse (2.1em and 3.5em);
+       \end{pgfonlayer}
+     \end{tikzpicture}
+     \caption{Precedence relation.}
+     \label{fig:precedence}
+   \end{figure}
+   #+END_EXPORT
+
+   Figure [[ref:fig:precedence]] illustrates the example from the last section.
+   The precedence relation is visualized by edges between the nodes; events
+   that are concurrent are grouped. Notice that the precedence relation shows
+   a cycle. The problem that needs to be solved, is choosing a path that
+   visits every node exactly once, such that the precedence relation is
+   satisfied between each pair of consecutive nodes. As discussed in the
+   previous section, there are two possibilities in this example.
+
+   The history is a list of events, where the head of the list is the most
+   recent event, according to the precedence relation $\prec$. In other words
+   it is a list where the successor relation $\succ$ holds between each pair of
+   consecutive events (where $\succ$ is defined as the inverse relation of
+   $\prec$). The main reason for ordering the history by the successor (rather
+   than the precedence) relation is performance. If there are no conflicts,
+   every new event will be inserted at the head of the list. Assuming a fairly
+   fast internet connection and the (comparably) slow pace of human typing,
+   this is by far the most likely scenario. Adding events by the precedence
+   relation would give linear time in the most likely scenario, but using the
+   successor relation we can often avoid traversing the entire history.
+
+   When adding an event $E$ to a history $H$, we could just add $E$ to the
+   first position where $E$ succeeds the event to its right (if there is no
+   conflict this would be the head of the list). However, in the example
+   visualized in Figure [[ref:fig:precedence]], this approach would break user
+   intent. We have not found a way to completely avoid breaking user intent,
+   but we have found a way to make it less frequent (see Section SECTION). The
+   idea is to find the first event (i.e. the most recent) that is not
+   concurrent with the event that is being added, and let the event skip past
+   events until it precedes the event to its left.
+
+   A function $collect$ collects all events until it finds one that is not
+   concurrent with $E$; its dual, $drop$, skips all events until it finds one
+   that is not concurrent and returns the remaining history (including the
+   event it found). A function $put$, and a helper function $put'$, are defined
+   in order to place the event at a suitable position in the history. It is
+   defined here; note that $nil$ represents an empty history and white space is
+   used to represent concatenation of lists and events (where events are
+   treated as singleton lists under concatenation).
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{2}
+     &put(E, H) &&= put'(E, collect(E, H))\ drop(E, H) \\
+     &put'(E, nil) &&= E\\
+     &put'(E, H\ E') &&=
+     \begin{cases}
+       H\ E'\ E       & \text{if } E \prec E'\\
+       put'(E, H)\ E' & \text{otherwise}
+     \end{cases}
+   \end{alignat*}
+   #+END_EXPORT
+   We can now look at an example where we build a history with the three
+   events $E_0$, $E_1$ and $E_2$ from the last section.
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{3}
+     &put(E_0, nil)      &&= put'(E_0, nil)      &&= E_0 \\
+     &put(E_1, E_0)      &&= put'(E_1, nil)\ E_0  &&= E_1\ E_0\\
+     &put(E_2, E_1\ E_0) &&= put'(E_2, E_1\ E_0) &&= E_1\ E_0\ E_2
+   \end{alignat*}
+   #+END_EXPORT
+   In the first equation the history is empty, and so there is no choice where
+   to put $E_0$. When adding $E_1$ there is only one element in the history,
+   namely $E_0$, which is performed by the same user --- $collect$ returns
+   $nil$ and $drop$ returns a singleton list containing $E_0$. In the last
+   equation $collect$ collects the entire history, and $E_2$ is first compared
+   with $E_0$ which it precedes, and is therefore added to the end of the
+   history.
+
+** Transform the History
+
+   Thus far we have found a way to construct a history of events such that
+   every operation is represented in the history and greatly reduces the number
+   of inconsistencies that can arise. Our hope was that this approach would be
+   sufficient to handle all conflicts, but it turns out that there can still
+   arise inconsistencies between clients. Using Maude to analyze the system
+   uncovered that $0.7\%$ of states in the system, given a buffer of size two
+   and 3 operations are inconsistent. To deal with the remaining portion of
+   inconsistent states we apply transformation functions (discussed in Chapter
+   [[Related Work]]).
+
+   The following example consists of a set of events where the history does
+   not provide a correct result.
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{2}
+     E_0 &= \tuple{O_0, t_0, m_0, u_0} &&=\tuple{\ins{0}{a}, 0, 1, u_0}\\
+     E_1 &= \tuple{O_1, t_1, m_1, u_0} &&=\tuple{\ins{2}{b}, 0, 2, u_0}\\
+     E_2 &= \tuple{O_2, t_2, m_2, u_1} &&=\tuple{\del{0}{f}, 0, 3, u_1}
+   \end{alignat*}
+   #+END_EXPORT
+   The ordering decided by the algorithm from the last section is:
+   #+BEGIN_EXPORT latex
+   \[ E_2 \prec E_0 \prec E_1 \]
+   #+END_EXPORT
+   The problem is that executing the operation $O_2 \circ O_0 \circ O_1$,
+   obtained from the ordering, is not possible to execute on the initial buffer
+   ="f"=. The =f= is deleted, then an =a= at the beginning of the buffer, and
+   finally a =b= is attempted to be inserted at position $2$, which is beyond
+   the bounds of the buffer. The reason that this occurs is that the first
+   deletion /shrinks/ the buffer, but no measure is taken to make sure that the
+   position of $O_2$ is decremented accordingly. This problem can be resolved
+   by transforming the operations.
+
+   We use two types of transformation functions, namely inclusion and
+   exclusion; an inclusion transformation function is the kind we discussed in
+   Chapter [[Related Work]]. Given two operations $O_i, O_j \in \mathcal O$, then
+   an inclusion transformation of $O_i$ with regards to $O_j$ can be
+   understood as "$O_i$ as if $O_j$ had already been applied". Exclusion
+   transformation is the reverse, and transforming $O_i$ with regards to $O_j$
+   can be understood as "$O_i$ as if $O_j$ had not been applied".
+
+   Due to our ordering, we only need to transform against deletions to
+   guarantee eventual consistency. It is however possible that including the
+   complete set of transformations would better preserve user intent --- due
+   to time restrictions we have not been able to verify this.
+
+   We define two functions $it$ and $et$, where $it$ is the inclusion
+   transformation function and $et$ is the exclusion transformation function.
+   $it$ is derived from the (corrected) transformation from Figure
+   [[ref:fig:transformation-function]] (page [[pageref:fig:transformation-function]]),
+   whereas $et$ is derived from cite:sun1998reversible. Furthermore we define
+   both $it$ and $et$ for composed operations, which is derived from
+   cite:formalOT.
+
+   One alteration has been made. When applying an inclusion transformation on
+   two deletions with the same position the result is $nop$. To reverse this
+   effect, $et$ must be able to retrieve the deletion that was omitted (i.e.
+   transformed to $nop$). Using an exclusion transformation on $nop$ cannot be
+   done, because it contains no information about what character was deleted.
+   In cite:sun1998reversible this is handled by keeping a lookup table. Instead
+   we store the information in the $nop$ object itself, by letting $nop$
+   (optionally) contain an operation; its semantics is not changed, meaning
+   applying $nop$ has no effect regardless.
+
+   Note that the following equations, defining $it$ and $et$, uses the word
+   /otherwise/ as it is used in Maude. It means that if none of the above
+   equations covers a particular case, then it is covered by the equation
+   tagged with otherwise. This is important for the last case, which would
+   match all operations if not for this use of otherwise. $it$ is defined as
+   follows:
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     it(\ins{p1}{c1}, \del{p2}{c2}) &=
+     \begin{cases}
+       \ins{p1}{c1}   & \text{if } p1 \leq p2 \\
+       \ins{p1-1}{c1} & \text{otherwise}
+     \end{cases}
+     \\
+     it(\overbrace{\del{p1}{c1}}^{O_i}, \overbrace{\del{p2}{c2}}^{O_j}) &=
+     \begin{cases}
+       \del{p1}{c1}                         & \text{if }      p1 < p2 \\
+       \del{p1-1}{c1}                       & \text{else if } p1 > p2 \\
+       nop(O_i \circ O_j) & \text{otherwise}\\
+     \end{cases}
+     \\
+     it(O_i, O_j \circ O_k) &= it(it(O_i, O_k), O_j) \text{\quad\ \ if $O_j$ is not composed}
+     \\
+     it(O_i, O_j) &= O_i \text{\qquad\qquad\qquad\quad\ \ otherwise}
+   \end{align*}
+   #+END_EXPORT
+   The exclusion transformation is defined in a similar manner, where a
+   position is incremented to reverse the effect of an inclusion
+   transformation. In the cases where an inclusion transformation would omit an
+   operation, the exclusion transformation retrieves the operation.
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     et(\ins{p1}{c1}, \del{p2}{c2}) &=
+     \begin{cases}
+       \ins{p1}{c1}   & \text{if } p1 \leq p2 \\
+       \ins{p1+1}{c1} & \text{otherwise}
+     \end{cases}
+     \\
+     et(\del{p1}{c1}, \del{p2}{c2}) &=
+     \begin{cases}
+       \del{p1}{c1}   & \text{if }      p1 < p2 \\
+       \del{p1+1}{c1} & \text{otherwise} \\
+     \end{cases}
+     \\
+     et(nop(O_i \circ O_j), O_j) &= O_i
+     \\
+     et(O_i, O_j \circ O_k) &= et(et(O_i, O_k), O_j) \text{\quad\ \ if $O_j$ is not composed}
+     \\
+     et(O_i, O_j) &= O_i \text{\qquad\qquad\qquad\quad\ \ \ otherwise}
+   \end{align*}
+   #+END_EXPORT
+   These transformation functions are used to "fix up" the history after a new
+   event has been added. The inclusion transformations assumes that two
+   operations were generated from the same state (i.e. the same buffer)
+   cite:sun1998reversible, but this is not always the case. To deal with these
+   cases, exclusion transformations is used to "reset" the operation to a
+   agreed upon state, then perform inclusion transformations on this operation,
+   and finally, we perform the inclusion transformations for the effects that
+   were excluded.
+
+   Given an event $E = \tuple{O, t, m, u}$ the events that will have effected
+   $O$ can be found. These are the events with a smaller time stamp than $m$,
+   or have the same user $u$ that occur at an earlier point in the history. The
+   event must be "reset" to an agreed upon state, which is decided by the event
+   with the smallest token which is concurrent with $E$. In order to use
+   transformations on multiple events, the operations of a history can be
+   composed using the $compose$ function. It is defined as:
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{2}
+     &compose(nil) &&= nop\\
+     &compose(\tuple{O, t, m, u}\ H) &&= O \circ compose(H)
+   \end{alignat*}
+   #+END_EXPORT
+   We define a function $fix$ which takes a history and returns a "fixed up"
+   version of the history:
+
+   #+BEGIN_EXPORT latex
+   \begin{align*}
+     &fix(nil) = nil \\
+     &fix(\tuple{O, t, m, u}\ H) = \tuple{O_{fixed}, t, m, u}\ H'\\
+     &\begin{aligned}
+        \text{where }
+        &H'      &&= fix(H) \\
+        &E       &&= \tuple{O, t, m, u}\\
+        &H_c     &&= \text{filter $H'$, only keep events that are concurrent with $E$}\\  % filter(\tuple{O, t, n, u}, H') \\
+        %% &t_{min}  &&= \text{get the smallest token from events in $H_c$}\\
+        %% &O_e     &&= \text{compose operations that have effected $O$ (with token $t_{min}$ or greater)}\\
+        &O_e     &&= \text{compose operations that have effected $O$}\\
+        &O_{fixed} &&= it(it(et(O, O_e), compose(H_c)), O_e) \\
+      \end{aligned}&&
+   \end{align*}
+   #+END_EXPORT
+   By making sure the $fix$ function is applied to the history after each
+   insertion, we ensure that composing the entire history can always be safely
+   applied to the initial buffer. What remains is to ensure that each client
+   eventually will apply the operations of the history.
+
+** Ensuring Consistency
+
+   After having gone into great depths on how to construct a history, the
+   question of getting all clients to conform to this history still remains.
+   This section concludes the specification of the server-side algorithm, and
+   shows how the history, and properties of editing operations, are leveraged
+   to guarantee eventual consistency. The only nondeterministic behaviour at
+   the server is the reception of a message; this section describes the
+   server's /reaction/ to incoming messages.
+
+   Messages from the server are on exactly the same form as messages from a
+   client, namely a $msg(O, t, s)$ where $O$ is an operation, $t$ is a token
+   and $s$ is a sequence number. When a client receives a message, the
+   operation is only applied if the sequence number of the message $s$ is equal
+   to the client's local sequence number. If the client applies the operation,
+   then it is guaranteed to be consistent with the history at time $t$. Being
+   consistent with the history at time $t$ is defined as: Compose the history
+   as it was when the server's state token was $t$; if this operation is
+   applied to the initial buffer and the resulting buffer is equal to the
+   client's buffer, then the client is consistent with the history at time $t$.
+
+   On each reception the server sends a response to every connected client. The
+   server constructs two operations, one to the client who sent the message and
+   another to every other client. The token is the same in every message. The
+   sequence number may vary for each client.
+
+*** Sequence Number Scheme
+
+    Remember that a client always increments its sequence number after it
+    performs an operation or receives a message from the server. Say we have a
+    set of users $U$ who identify each connected client. The server keeps a
+    sequence number $s_u \in \mathbb N$ for each participant $u \in U$,
+    initialized at zero.
+
+    When a message is received from a client identified by $u \in U$, the
+    server sends messages to every connected client, each of which contains a
+    sequence number. For each client identified by the users in $u' \in U
+    \setminus \{u\}$, the stored sequence number $s_{u'}$ is used, and
+    incremented after the message is sent. It is incremented because the client
+    will increment its sequence number at reception of the message, and will
+    therefore expect a higher sequence number the next time it receives a
+    message.
+
+    #+BEGIN_EXPORT latex
+    \begin{wrapfigure}[21]{r}{0pt}
+      \centering
+      \begin{tikzpicture}[>=stealth, shorten >= 1pt, node distance=1em, scale=1]
+        \tikzstyle{vertex} = [circle, scale=0.3]
+        \tikzstyle{O_0} = [vertex, fill=black!30!green]
+        \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+        \tikzstyle{O_2} = [vertex, fill=black!30!red]
+
+        \tikzstyle{to} = [-{Stealth[scale=1]}]
+        \tikzstyle{toO_0} = [to, color=black!30!green]
+        \tikzstyle{toO_1} = [to, color=black!30!blue]
+        \tikzstyle{toO_2} = [to, color=black!30!red]
+
+        \tikzstyle{op} = [near start, above=-3pt, sloped, text=black, font=\scriptsize]
+
+        %% Server receives operations in this order
+        \node[font=\scriptsize] (s) at (4, 7.5) {$S$};
+        \coordinate (se) at (4, 0) {};
+
+        \node[O_0, below = 2em of s, label={[font=\scriptsize, align=center]right:$s_u = 0$\\\\$s_u = 2$}] (s1) {};
+
+        \node[O_1, below = 4.5em of s1, label={[font=\scriptsize, align=center]right:\\\\$s_u = 4$}] (s2) {};
+        \node[O_2, below = of s2, label={[font=\scriptsize, align=center]right:\\\\$s_u = 6$}] (s3) {};
+        \node[O_0, below = of s3, label={[font=\scriptsize, align=center]right:\\\\$s_u = 8$}] (s4) {};
+
+        \node[O_1, below = 6em of s4, label={[font=\scriptsize, align=center]right:\\\\$s_u = 10$}] (s5) {};
+
+        %% User 0 generates/receives in this order
+        \node[font=\scriptsize] (u0) at (0, 7.5) {$u_0$};
+        \node (u0e) at (0, 0) {};
+
+        %% \node[O_0, below = 1em of u0, label={[font=\scriptsize, align=center]left:0\\\\1}] (u00) {};
+        %% \node[O_0, below = 2em of u00, label={[font=\scriptsize, align=center]left:\\\\2}] (u01) {};
+
+        %% \node[O_1, below = 1em of u01, label={[font=\scriptsize, align=center]left:\\\\3}] (u02) {};
+        %% \node[O_2, below = of u02, label={[font=\scriptsize, align=center]left:\\\\4}] (u03) {};
+        %% \node[O_0, below = of u03, label={[font=\scriptsize, align=center]left:\\\\5}] (u04) {};
+
+        %% \node[O_1, below = 3em of u04, label={[font=\scriptsize, align=center]left:\\\\6}] (u05) {};
+        %% \node[O_2, below = of u05, label={[font=\scriptsize, align=center]left:\\\\7}] (u06) {};
+        %% \node[O_0, below = of u06, label={[font=\scriptsize, align=center]left:\\\\8}] (u07) {};
+
+        %% \node[O_1, below = 1em of u07, label={[font=\scriptsize, align=center]left:\\\\9}] (u08) {};
+        %% \node[O_1, below = 2em of u08, label={[font=\scriptsize, align=center]left:\\\\10}] (u09) {};
+        \node[O_0, below = 1em of u0, label={[fill=white, font=\tiny, align=center]above left:0}] (dummy) {};
+        \node[O_0, below = 1em of u0, label={[fill=white, font=\tiny, align=center]below left:1}] (u00) {};
+        \node[O_0, below = 2em of u00, label={[fill=white, font=\tiny, align=center]below left:2}] (u01) {};
+
+        \node[O_1, below = 1em of u01, label={[fill=white, font=\tiny, align=center]below left:3}] (u02) {};
+        \node[O_2, below = of u02, label={[fill=white, font=\tiny, align=center]below left:4}] (u03) {};
+        \node[O_0, below = of u03, label={[fill=white, font=\tiny, align=center]below left:5}] (u04) {};
+
+        \node[O_1, below = 3em of u04, label={[fill=white, font=\tiny, align=center]below left:6}] (u05) {};
+        \node[O_2, below = of u05, label={[fill=white, font=\tiny, align=center]below left:7}] (u06) {};
+        \node[O_0, below = of u06, label={[fill=white, font=\tiny, align=center]below left:8}] (u07) {};
+
+        \node[O_1, below = 1em of u07, label={[fill=white, font=\tiny, align=center]below left:9}] (u08) {};
+        \node[O_1, below = 2em of u08, label={[fill=white, font=\tiny, align=center]below left:10}] (u09) {};
+
+        \begin{pgfonlayer}{bg} % select the background layer
+          \draw[to, color=black!30] (s) -- (se);
+          \draw[to, color=black!30] (u0) -- (u0e);
+
+          %% From client
+          \draw[toO_0] (u00) -- (s1) node [op] {$s = 0$};
+          \draw[toO_1] (u02) -- (s2) node [op] {$s = 2$};
+          \draw[toO_2] (u03) -- (s3) node [op] {$s = 3$};
+          \draw[toO_0] (u04) -- (s4) node [op] {$s = 4$};
+          \draw[toO_1] (u08) -- (s5) node [op] {$s = 8$};
+          %% \draw[toO_0] (u00) -- (s1) node [op, pos=0.25] {$msg(O_0, 0, 0)$};
+          %% \draw[toO_1] (u02) -- (s2) node [op, pos=0.25] {$msg(O_1, 2, 2)$};
+          %% \draw[toO_2] (u03) -- (s3) node [op, pos=0.25] {$msg(O_2, 2, 3)$};
+          %% \draw[toO_0] (u04) -- (s4) node [op, pos=0.25] {$msg(O_3, 2, 4)$};
+          %% \draw[toO_1] (u08) -- (s5) node [op, pos=0.25] {$msg(O_4, 5, 8)$};
+
+          %% From server
+          \draw[toO_0] (s1) -- (u01) node [op, near end] {$s = 1$};
+          \draw[toO_1] (s2) -- (u05) node [op, near end] {$s = 3$};
+          \draw[toO_2] (s3) -- (u06) node [op, near end] {$s = 5$};
+          \draw[toO_0] (s4) -- (u07) node [op, near end] {$s = 7$};
+          \draw[toO_1] (s5) -- (u09) node [op, near end] {$s = 9$};
+
+          %% \draw[toO_0] (s1) -- (u01) node [op, pos=0.75] {$msg(O_0', 2, 1)$};
+          %% \draw[toO_1] (s2) -- (u05) node [op, pos=0.75] {$msg(O_1', 3, 3)$};
+          %% \draw[toO_2] (s3) -- (u06) node [op, pos=0.75] {$msg(O_2', 4, 5)$};
+          %% \draw[toO_0] (s4) -- (u07) node [op, pos=0.75] {$msg(O_3', 5, 7)$};
+          %% \draw[toO_1] (s5) -- (u09) node [op, pos=0.75] {$msg(O_4', 6, 9)$};
+        \end{pgfonlayer}
+      \end{tikzpicture}
+      \caption{Sequence number scheme.}
+      \label{fig:seqno-scheme}
+    \end{wrapfigure}
+    #+END_EXPORT
+
+    When a message $msg(O, t, s)$ is received from a client identified by $u$,
+    then the response to this client will contain a sequence number determined
+    by the function $nextSeq$:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      nextSeq(s_u, s) = s_u + 1 + (s_u - s)
+    \end{align*}
+    #+END_EXPORT
+    If there is no conflict then $s = s_u$, and so the response will just be
+    the sequence number of the message incremented by one. It is incremented by
+    one because sending the messages will have caused the client to increment
+    its sequence number. If there is a conflict, then $u$ must have performed
+    one or more operations between the time the server sent the last message
+    and the client received it. The difference $s_u - s$ is the precise number
+    of operations that $u$ has performed in this time span. Because each of
+    these operations has caused the client's sequence number to increase, the
+    difference is added in order to match the sequence number of the client.
+
+    After the server has sent a response to the client, $s_u$ is set to $s_u =
+    nextSeq(s_u, s) + 1$. The extra one is added because the reception of the
+    message will (again) cause the client's sequence number to be incremented.
+
+    The main benefits of this scheme are that it remains very simple on the
+    client side (seeing that it only increments after every send or receive)
+    and that it guarantees that clients do not perform operations from the
+    server which are based on outdated information. Instead the client rejects
+    messages for the duration of a conflict with the server. The disadvantage
+    is that the system is not responsive during long lasting conflicts, which
+    may arise if a users, for instance, holds down a button on her keyboard for
+    a long time. However, it seems reasonable to assume that such situations
+    are unlikely to occur, and even less likely to cause problems in practical
+    uses of the system.
+
+*** Constructing Operations
+
+    When the server receives a message $msg(O, t, s)$ two operations are
+    constructed; one for the client who sent the message, and one for all the
+    other clients. We will discuss the message that is sent to all other
+    clients first.
+
+    If the message was sent by a client identified by $u \in U$ and the message
+    is received at time $m$, then it is assumed that all clients identified by
+    some $u' \in U \setminus \{u\}$ is consistent with the history at time $m$.
+    The event $\tuple{O, t, m, u}$ is added to the history $H$, constructing a
+    new history $H'$. A new message is constructed on the basis of $H$ and
+    $H'$.
+
+    If the new event is added to the beginning of the history (i.e. the most
+    recent), then the constructed operation will always be $O$ itself. Let us
+    say $O$ is in conflict with another operation $O_i$, with a lower position,
+    then $O$ must applied before the operation with the lower position is
+    applied. Since it is assumed that the clients have already applied $O_i$,
+    this must be undone before. When this is done, $O$ may be applied followed
+    by $O_i$.
+
+    A function $until$ takes a history and a token, finds the earliest event
+    that arrived at time greater or equal to the given token. It is defined as
+    follows:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      &until(nil, t) = nil\\
+      &until(H\ \tuple{O, t', m, u}, t) =
+      \begin{cases}
+        H\ \tuple{O, t', m, u} & \text{if } m \geq t\\
+        until(H, t) & \text{otherwise}
+      \end{cases}
+    \end{align*}
+    #+END_EXPORT
+    Now we can define a function $makeOp$, which takes two histories and a
+    token. It is presumably called with the history $H$ (as it was at time $m$,
+    before the new event was added), and the history with the new event added
+    $H'$, along with the token $t$. It is defined as follows:
+    #+BEGIN_EXPORT latex
+    \[ makeOp(H', H, t) = compose(until(H', t)) \circ compose(until(H, t))^{-1} \]
+    #+END_EXPORT
+    This operation will first undo operations that occurred at time $t$ or
+    later, followed by the operations from the updated history (at time $t$ or
+    later). As we discussed in [[Invertibility]], redundant operations on the form
+    $O_i^{-1} \circ O_i$ can be omitted, which should be done (but is not
+    strictly necessary) before the operation is sent.
+
+    The message $msg(makeOp(H', H, t), m+1, s_{u'})$ is sent to all clients
+    identified by some $u' \in U \setminus \{u\}$, where $s_{u'}$ may vary
+    depending on the recipient. For each of these clients, the server keeps a
+    mapping from $u'$ to a list of pairs, containing an operation and a
+    token [fn:4]. The operation and token is added to the head of this list
+    after sending the message.
+
+    The second case to consider is what to send to the client, identified by
+    $u$, that originally sent the message $msg(O, t, s)$. If there is no
+    conflict, then the constructed operation is always $nop$. It is important
+    to note that if a conflict has arisen, it can only be because the client
+    has performed operations in the time between the server last sent it a
+    message, and the time the client received it. The token $t$ indicates that
+    the client was consistent with the history at time $t$.
+    # The token $t$ shows at what point the client last accepted a message from
+    # the server (i.e. received and did not reject).
+
+    Because every operation (along with a token indicating what time it was
+    sent) that is sent to the client is stored, the operations the client have
+    rejected is retrievable. It has rejected all operations with a
+    corresponding token that is strictly greater than $t$. These operations
+    have to be represented in the response.
+
+    The idea is to always make the client undo the operation $O$, then perform
+    all the operations that it has rejected, and finally perform the operation
+    that is sent to every other client (the operation constructed by $makeOp$).
+    If there is no conflict, then the operation constructed by $makeOp$ is
+    simply $O$ and there are no operations stored operations to compose; the
+    resulting operation is $O \circ O^{-1}$ which is equal to $nop$.
+
+    A simple helper function $rejected$ is used. It takes a list of pairs
+    (where each pair contains an operation and a token) $R$ and a token $t$.
+    The function returns the pairs with token strictly greater than $t$.
+    Composing the resulting list is analogous to composing a history. The
+    operation sent to the client who sent the message $msg(O, t, s)$ is given
+    by a function $makeResponse$ that takes four arguments: The received
+    operation $O$, the operation $makeOp(H', H, t)$, the list that contains
+    rejected operations (along with the corresponding tokens) and the token $t$
+    as argument.
+    #+BEGIN_EXPORT latex
+    \[ makeResponse(O, O', R, t) = O' \circ compose(rejected(R, t)) \circ O^{-1} \]
+    #+END_EXPORT
+    This operation can safely be applied by the client who sent the message
+    $msg(O, t, s)$, and will make the client consistent with the history at
+    time $m+1$.
+
+    The last remaining detail is regarding the list of rejected operations
+    (along with the corresponding token). The operation from $makeResponse$
+    ensures that previously rejected operations are performed; it is very
+    important not to perform these rejected operations again if a new conflict
+    arises. The solution is to replace the list with a singleton list, only
+    containing the operation constructed by $makeResponse$ and the token $m+1$.
+
+**** A Summarizing Example
+
+     Let us revisit the example from Figure [[ref:fig:non-trivial-complete]], where
+     we include the operations that are sent to each client. The events
+     received on the server is:
+     #+BEGIN_EXPORT latex
+     \begin{align*}
+       E_0 &= \tuple{O_0, t_0, m_0, u_0} = \tuple{\ins{0}{a}, 0, 1, u_0} \\
+       E_1 &= \tuple{O_1, t_1, m_1, u_1} = \tuple{\ins{1}{b}, 0, 2, u_1} \\
+       E_2 &= \tuple{O_2, t_2, m_2, u_2} = \tuple{\ins{0}{c}, 2, 3, u_2}
+     \end{align*}
+     #+END_EXPORT
+     The server decides on an ordering $E_1 \prec E_0 \prec E_2$, which means
+     that all clients must perform the operation $O_2 \circ O_0 \circ O_1$. By
+     composing all operations sent to a given client, we can calculate what
+     operation they perform.
+    #+BEGIN_EXPORT latex
+    \begin{figure}[h]
+      \centering
+      \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=4em, scale=1]
+        \tikzstyle{vertex} = [circle, scale=0.5]
+        \tikzstyle{O_0} = [vertex, fill=black!30!green]
+        \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+        \tikzstyle{O_2} = [vertex, fill=black!30!red]
+
+        \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+        \tikzstyle{toO_0} = [to, color=black!30!green]
+        \tikzstyle{toO_1} = [to, color=black!30!blue]
+        \tikzstyle{toO_2} = [to, color=black!30!red]
+
+        \tikzstyle{op} = [near end, above=-3pt, sloped, text=black, font=\small]
+
+        %% Server receives operations in this order
+        \node (s) at (0, 11) {$S$};
+        \coordinate (se) at (0, -1) {};
+        \node[O_0, below = 2em of s,   label=left:{$\small\overbrace{\langle O_0, 0, 1, u_2 \rangle}^{E_0}$}] (s1) {};
+        \node[O_1, below = 6em of s1,  label=left:{$\small\overbrace{\langle O_1, 0, 2, u_0 \rangle}^{E_1}$}] (s2) {};
+        \node[O_2, above = 12em of se, label=left:{$\small\overbrace{\langle O_2, 2, 3, u_1 \rangle}^{E_2}$}] (s3) {};
+
+        %% %% Time
+        %% \node (t) at (-2, 9.5){};
+        %% \coordinate (te) at (-2, 0.2) {};
+
+        %% User 0 generates/receives in this order
+        \node (u0) at (6, 11) {$u_0$};
+        \node (u0e) at (6, -1) {%% $\texttt{cbfa}$
+        };
+        \node[O_1, below = 6em of u0] (u01) {};
+        \node[O_0, below = 2em of u01] (u00r) {}; % cross out
+        \node[O_1, below = 3em of u00r] (u01a) {};
+        \node[O_2, above = 10em of u0e] (u02a) {};
+
+        %% User 1 generates/receives in this order
+        \node (u1) at (8.5, 11) {$u_1$};
+        \node (u1e) at (8.5, -1) {%% $\texttt{cbfa}$
+        };
+        \node[O_0, below = 4.5em of u1] (u10a) {};
+        \node[O_2, below = 8em of u10a] (u12) {};
+        \node[O_1, below = of u12] (u11r) {}; % cross out
+        \node[O_2, above = 2em of u1e] (u12a) {};
+
+        %% User 2 generates/receives in this order
+        \node (u2) at (10, 11) {$u_2$};
+        \node (u2e) at (10, -1) {%% $\texttt{cbfa}$
+        };
+        \node[O_0, below = 1em of u2] (u20) {};
+        \node[O_0, below = 6em of u20] (u20a) {};
+        \node[O_1, below = 2.5em of u20a] (u21a) {};
+        \node[O_2, above = 6em of u2e] (u22a) {};
+
+        \begin{pgfonlayer}{bg} % select the background layer
+          %\draw[to, color=black!30, text=black] (t) -- (te) node [midway, fill=white] {time};
+          \draw[to, color=black!30] (s) -- (s1)  -- (s2)  -- (s3) -- (se);
+          \draw[to, color=black!30] (u0) -- (u01) -- (u00r) -- (u01a) -- (u02a) -- (u0e);
+          \draw[to, color=black!30] (u1) -- (u10a) -- (u12) -- (u11r) -- (u12a) -- (u1e);
+          \draw[to, color=black!30] (u2) -- (u20) -- (u20a) -- (u21a) -- (u22a) -- (u2e);
+
+          % Life of O_0
+          \draw[toO_0] (u20) -- (s1) node [op] {$\overbrace{\ins{0}{b}}^{O_0}$};
+          \draw[toO_0] (s1) -- (u00r) node [op, midway] {$O_0$};
+          \draw[toO_0] (s1) -- (u10a) node [op] {$O_0$};
+          \draw[toO_0] (s1) -- (u20a) node [op] {$nop$};
+
+          % Life of O_1
+          \draw[toO_1] (u01) -- (s2) node [op] {$\overbrace{\ins{1}{a}}^{O_1}$};
+          \draw[toO_1] (s2) -- (u01a) node [op] {$O_0$};
+          \draw[toO_1] (s2) -- (u11r) node [op, midway] {$O_0 \circ O_1 \circ O_0^{-1}$};
+          \draw[toO_1] (s2) -- (u21a) node [op] {$O_0 \circ O_1 \circ O_0^{-1}$};
+
+          % Life of O_2
+          \draw[toO_2] (u12) -- (s3) node [op] {$\overbrace{\ins{0}{c}}^{O_2}$};
+          \draw[toO_2] (s3) -- (u02a) node [op] {$O_2$};
+          \draw[toO_2] (s3) -- (u12a) node [op] {$O_2 \circ \overbrace{O_0 \circ O_1 \circ O_0^{-1}}^{\text{rejected}} \circ O_2^{-1}$};
+          \draw[toO_2] (s3) -- (u22a) node [op] {$O_2$};
+        \end{pgfonlayer}
+      \end{tikzpicture}
+      \caption{The events are ordered $E_1 \prec E_0 \prec E_2$.}
+      \label{fig:non-trivial-complete}
+    \end{figure}
+    #+END_EXPORT
+
+     From the perspective of $u_0$:
+     - $O_1$ is generated,
+     - $O_0$ is received,
+     - $O_2$ is received.
+     The composition of these operations yields the operation $O_2 \circ O_0
+     \circ O_1$.
+
+     From the perspective of $u_1$:
+     - $O_0$ is received,
+     - $O_2$ is generated,
+     - $O_0 \circ O_1 \circ O_0^{-1}$ is received, but rejected,
+     - $O_2 \circ O_0 \circ O_1 \circ O_0^{-1} \circ O_2^{-1}$ is received.
+     The composition of the operations (excluding the rejected operation)
+     yields:
+     #+BEGIN_EXPORT latex
+     \begin{align*}
+       O_2 \circ O_0 \circ O_1 \circ O_0^{-1} \circ \overbrace{O_2^{-1} \circ O_2}^{nop} \circ O_0 &= \\
+       O_2 \circ O_0 \circ O_1 \circ \overbrace{O_0^{-1} \circ O_0}^{nop} &= O_2 \circ O_0 \circ O_1
+     \end{align*}
+     #+END_EXPORT
+
+     Lastly, from the perspective of $u_2$:
+     - $O_0$ is generated,
+     - $O_0 \circ O_1 \circ O_0^{-1}$ is received,
+     - $O_2$ is received.
+     The composition of the operations yields:
+     #+BEGIN_EXPORT latex
+     \begin{align*}
+       O_2 \circ O_0 \circ O_1 \circ \overbrace{O_0^{-1} \circ O_0}^{nop} &= O_2 \circ O_0 \circ O_1
+     \end{align*}
+     #+END_EXPORT
+
+** Summary
+
+   This chapter is in essence a comprehensive walk through of the equations of
+   the Maude specification that are related to the server-side of the
+   specification. The reception of a message is the only nondeterministic
+   behaviour at the server; this is expressed as a single rewriting rule in
+   Maude. This rule calls the functions we have described in the preceding
+   sections.
+
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+   \centering
+   \begin{verbatim}
+   crl [server-receive] :
+       < U | out-queue : (Q msg(O, T, N)),
+             in-queue  : Q' >
+       < server | history : H, state : M, sites : (U |-> Q'', US) >
+     =>
+       < U | out-queue : Q,
+             in-queue  : (msg(O'', s M, S) Q') >
+       < server | history : H', state : s M, sites : US' >
+       (send O' to US)
+     if  H'  := fix(put(O T M U, H)) /\
+         O'  := makeOp(H', H, T) /\
+         S   := nextSeq(Q'', N) /\
+         O'' := makeResponse(O, O', Q'', T) /\
+         US' := (U |-> msg(O'', s M, s S), US) .
+   \end{verbatim}
+   \caption{The rule expresses the reaction to the reception of a message.}
+   \label{fig:maude-rule}
+   \end{figure}
+   #+END_EXPORT
+
+   The rule in Figure [[ref:fig:maude-rule]] concisely summarizes this chapter,
+   as it describes the /reaction/ to the reception of a message. The reception
+   of a message is modeled as the server nondeterministically picking a message
+   off of the end of the message outgoing queue of a client. It adds a response
+   message to the incoming queue to the client. The expression =(send O' to
+   US)= similarly adds a message containing the operation =O'= on all the other
+   clients incoming queues with the correct sequence number.
+
+   The =sites= field is a mapping from users to the information the server
+   stores about each client. Each site consists of a list of messages, which
+   contains messages that might be rejected by the client; note that the
+   sequence number is incremented by one in order to comply with the sequence
+   number scheme (Section [[Sequence Number Scheme]]).
+
+   Note that the rule is expressed as a /conditional/ rule =crl= in order to
+   achieve the effects of a /let/-expression, commonly found in functional
+   programming languages.
+
+[fn:3] The rules stated here are slightly simplified from those in the actual
+Maude specification.
+[fn:4] In the Maude specification, each user maps to a list of messages. It
+contains the message that was sent, but where the sequence number $s_{u'}$ is
+incremented by one. This is because the sequence number $s_{u'} + 1$ has to be
+stored somewhere, as discussed in [[Sequence Number Scheme]], and a list of
+messages was already present in the specification, in order to model message
+queues.
+
 
 #+LaTeX:\appendix
 * LISP In Summer Projects contribution
