@@ -87,7 +87,7 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
   gratitude should be expressed in elegant Lisp code, that compose a working
   implementation of the program I wished I had written back in 2013.
 
-#+LaTeX: \mainmatter{}
+  #+LaTeX: \mainmatter{}
 * Introduction
 
   A real-time collaborative editor enables multiple users, at (potentially)
@@ -672,9 +672,9 @@ Fui, Sigmund, Jonny, Simen, my family, and so many more.
       \[ ins(i,\ c)^{-1} = del(i,\ c) \]
       Similarly for deletions:
       \[ del(i,\ c)^{-1} = ins(i,\ c) \]
-      For a composed operation $O_i \circ O_j \in \mathcal{O}$, the order of the
+      For a composed operation $O_j \circ O_i \in \mathcal{O}$, the order of the
       operations is reversed, and the operations are inverted:
-      \[ (O_i \circ O_j)^{-1} = O_j^{-1} \circ O_i^{-1} \]\hfill$\dashv$
+      \[ (O_j \circ O_i)^{-1} = O_i^{-1} \circ O_j^{-1} \]\hfill$\dashv$
     \end{definition}
     #+END_EXPORT
     Now that we have defined an inverse for all operations, we can check if the
@@ -2618,95 +2618,117 @@ messages was already present in the specification, in order to model message
 queues.
 
 
-#+LaTeX:\appendix
+* Shared Buffer for Emacs --- Source Code
+
+  #+INCLUDE: ../shared-buffer-clients/shared-buffer-emacs/shared-buffer.el src emacs-lisp
+
 * LISP In Summer Projects contribution
 
-   The following is the project description submitted for the LISP In Summer
-   Projects contest.
+  The following is the project description submitted for the LISP In Summer
+  Projects contest.
 
 ** Purpose
 
-    # What is your project? In about 50 words, describe your project.
+   # What is your project? In about 50 words, describe your project.
 
-    Shared buffer is a project that enables real-time collaborative editing in
-    Emacs. It is split up in two parts, client and server. The client is an
-    Emacs extension entirely written in Emacs Lisp. The server is a small
-    Common Lisp program; there is currently a server running on 'virvel.de'.
+   Shared buffer is a project that enables real-time collaborative editing in
+   Emacs. It is split up in two parts, client and server. The client is an
+   Emacs extension entirely written in Emacs Lisp. The server is a small
+   Common Lisp program; there is currently a server running on 'virvel.de'.
 
 ** Function
 
-    # What does your project do? In about 50 words, describe what your project
-    # does.
+   # What does your project do? In about 50 words, describe what your project
+   # does.
 
-    In Emacs one is simply able to share a buffer and connect to a buffer that
-    is already shared. This is done by requesting a connection to a shared
-    buffer server. Once a connection is established all changes in your buffer
-    is sent to the server. The server simply redirects these messages to all
-    Emacs clients connected to that shared buffer.
+   In Emacs one is simply able to share a buffer and connect to a buffer that
+   is already shared. This is done by requesting a connection to a shared
+   buffer server. Once a connection is established all changes in your buffer
+   is sent to the server. The server simply redirects these messages to all
+   Emacs clients connected to that shared buffer.
 
 ** Motivation
 
-    # Why did you choose this project?  In about 50 words, describe what was
-    # your motivation was for doing this particular project?
+   # Why did you choose this project?  In about 50 words, describe what was
+   # your motivation was for doing this particular project?
 
-    Working on a small scale project with friends, fellow students and
-    coworkers was not simple enough to do with Emacs. Having recently started
-    learning Lisp, it seemed like a fun and ambitious project.
+   Working on a small scale project with friends, fellow students and
+   coworkers was not simple enough to do with Emacs. Having recently started
+   learning Lisp, it seemed like a fun and ambitious project.
 
 ** Audience
 
-    # Who did you write this for? In about 50 words, describe the intended
-    # target audience and anticipated users.
+   # Who did you write this for? In about 50 words, describe the intended
+   # target audience and anticipated users.
 
-    Initially me, and whomever I wanted to work with. After realizing I’d
-    might actually make it work, I think it can be useful for anyone using
-    Emacs in collaboration with others. It is written with small scale
-    software projects in mind, but can be used for all kinds of text editing.
+   Initially me, and whomever I wanted to work with. After realizing I’d
+   might actually make it work, I think it can be useful for anyone using
+   Emacs in collaboration with others. It is written with small scale
+   software projects in mind, but can be used for all kinds of text editing.
 
 ** Methodology
 
-    # How does it work?  In about 300-400 words, describe the technical details
-    # of how your software works.  This might include high-level algorithms, the
-    # technical stack and technical or social challenges you faced.
+   # How does it work?  In about 300-400 words, describe the technical details
+   # of how your software works.  This might include high-level algorithms, the
+   # technical stack and technical or social challenges you faced.
 
-    The project is divided into two parts, a client and a server. The server
-    is written in Common Lisp, and it's main job is to allow the clients to
-    communicate. The client is an Emacs extension written in Emacs Lisp which
-    mainly send changes to the server, or receives changes from the server.
+   The project is divided into two parts, a client and a server. The server
+   is written in Common Lisp, and it's main job is to allow the clients to
+   communicate. The client is an Emacs extension written in Emacs Lisp which
+   mainly send changes to the server, or receives changes from the server.
 
-    The client may ask to establish a new session or connect to an existing
-    one. If a new session is required, the client provides a key. This key is
-    used by the server as key in a hash table, containing lists of clients. A
-    client asking to connect to a shared buffer is simply added to the list of
-    clients that corresponds to the given key.
+   The client may ask to establish a new session or connect to an existing
+   one. If a new session is required, the client provides a key. This key is
+   used by the server as key in a hash table, containing lists of clients. A
+   client asking to connect to a shared buffer is simply added to the list of
+   clients that corresponds to the given key.
 
-    When a new client connects to an already established session, a single
-    client is asked by the server to send it's entire buffer content. This
-    package is marked as being for new clients only. From that point on they
-    should keep synced. The session is kept alive as long as there are clients
-    connected to it.
+   When a new client connects to an already established session, a single
+   client is asked by the server to send it's entire buffer content. This
+   package is marked as being for new clients only. From that point on they
+   should keep synced. The session is kept alive as long as there are clients
+   connected to it.
 
-    The main challenge in this project was to figure out how to keep several
-    separate Emacs buffers mirrored. This is resolved by sending a message for
-    every command a user invokes (this is done by adding functions to
-    after-change-hook and post-command-hook, both built-in variables in
-    Emacs). These messages will dictate a change that happened in a
-    buffer. Assuming the shared buffers are identical to the one sending the
-    message prior of that change, we can safely apply that change to any
-    client that receives this message.
+   The main challenge in this project was to figure out how to keep several
+   separate Emacs buffers mirrored. This is resolved by sending a message for
+   every command a user invokes (this is done by adding functions to
+   after-change-hook and post-command-hook, both built-in variables in
+   Emacs). These messages will dictate a change that happened in a
+   buffer. Assuming the shared buffers are identical to the one sending the
+   message prior of that change, we can safely apply that change to any
+   client that receives this message.
 
-    A problem arises if our assumption is wrong. The most common situation is
-    that a client has made changes in a buffer between the time the message
-    was sent and received. The point where the change should be applied is
-    then calculated by using the difference in the size of the buffer the
-    message was sent from, and the size of the buffer receiving the
-    message. This works in most cases.
+   A problem arises if our assumption is wrong. The most common situation is
+   that a client has made changes in a buffer between the time the message
+   was sent and received. The point where the change should be applied is
+   then calculated by using the difference in the size of the buffer the
+   message was sent from, and the size of the buffer receiving the
+   message. This works in most cases.
 
 ** Conclusion
 
-    # In 100-200 words, clearly summarize both the accomplishments and
-    # limitations of your software.  Describe future directions for your
-    # projects. This can include enhancements as well as extensions.
+   # In 100-200 words, clearly summarize both the accomplishments and
+   # limitations of your software.  Describe future directions for your
+   # projects. This can include enhancements as well as extensions.
+
+   After a summers worth of coding I am glad to say that the core
+   functionality is up and running. It is fast and lightweight. A lot of time
+   has gone into finding the /right/ solution to the big problems, and
+   finding good workarounds for Emacs's many idiosyncrasies. I believe the
+   project has great potential.
+
+   The main issue that needs fixing is how to detect and resolve problems
+   with synchronization. As of now, once buffers go out of sync, there is
+   really no other solution than to disconnect and reconnect. There are also
+   quite a few bugs triggered by Emacs's many features and extensions, and
+   I'm hoping to resolve these after the competition is over.
+
+   I plan to make Shared buffer more user friendly, by supplying a Emacs
+   minor mode accompanied by a chat feature. When these things are in order
+   it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
+
+   #+LaTeX:\backmatter{}
+   #+LaTeX:\printbibliography
 
     After a summers worth of coding I am glad to say that the core
     functionality is up and running. It is fast and lightweight. A lot of time
@@ -2724,14 +2746,13 @@ queues.
     minor mode accompanied by a chat feature. When these things are in order
     it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
 
-#+LaTeX:\backmatter{}
-#+LaTeX:\printbibliography
 * COMMENT Local variables
-# Local Variables:
-# eval: (require 'org-ref)
-# org-ref-pdf-directory: "~/Dropbox/ifi/master/articles/"
-# dabbrev-check-all-buffers: nil
-# eval: (server-start)
-# eval: (add-hook 'after-save-hook 'org-latex-export-to-latex nil t)
-# eval: (compile "latexmk -pdf -pvc -pdflatex='pdflatex -shell-escape -interaction nonstopmode'")
-# End:
+  # Local Variables:
+  # company-mode : nil
+  # eval: (require 'org-ref)
+  # org-ref-pdf-directory: "~/Dropbox/ifi/master/articles/"
+  # dabbrev-check-all-buffers: nil
+  # eval: (server-start)
+  # eval: (add-hook 'after-save-hook 'org-latex-export-to-latex nil t)
+  # eval: (compile "latexmk -pdf -pvc -pdflatex='pdflatex -shell-escape -interaction nonstopmode'")
+  # End:
