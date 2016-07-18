@@ -1099,6 +1099,398 @@ not satisfy ref:eqn:C1.
    acknowldgement. This reduces the memory consumption at the server, because
    the server will only need to keep one history of operations.
 
+* Client-side Specification and Maude
+
+  The Shared Buffer System is formally modeled using The Maude System. Modeling
+  a system is in essence capturing what can occur in the system in a precise
+  manner, at a suitable level of abstraction. For instance, it is important to
+  model that clients can send messages concurrently, and that there is no way
+  to a priori determine the order of which they are received by the server. On
+  the other hand, we merely assume that messages between a given client and the
+  server are delivered in order, undamaged and without duplication, and make no
+  attempt to model how this is achieved.
+
+  Earlier work on formal verification of /Operational Transformation/ (OT)
+  algorithms has been focused on verifying properties of the /transformation
+  functions/ (as discussed in Section [[Discussing Consistency in OT]]), which is
+  an essential part of all OT algorithms. However, there are other aspects of
+  the algorithms, that are left unverified, leaning on analytical proofs by the
+  original authors. Instead of writing analytical proofs we leverage formal
+  methods to ensure robustness of the system.
+
+  We aim at modeling the clients, the server and the communication between
+  these, but restrict ourselves to editing sessions where all the clients have
+  the same initial buffer and a constant number of connected clients. The
+  Shared Buffer Algorithm is deeply embedded in the model, and therefore also
+  subject of verification. To the best of our knowledge, formal verification
+  techniques has not been applied on a complete real-time collaboration
+  algorithm in the literature before.
+
+  The verification technique we have chosen to apply is model checking. Proving
+  properties of a finite-state system using model checking is /decidable/, but
+  if the system has an infinite number of reachable states, there is no
+  guarantee that the model checker will terminate. Our system is infinite as
+  there can be an arbitrary number of operations, an arbitrary number of
+  clients, with an infinite number of different initial buffers. If we were to
+  model the system without limitations, the model checker would not necessarily
+  terminate. In order to deal with this the system is modeled as a finite
+  system, where the number of operations, the number of clients and an initial
+  buffer are given as parameters when model checking.
+
+  # We need to emphasize that model checking prove properties for finite-state
+  # models. A buffer can be in an infinite number of states, seeing that
+  # nothing prevents the user from adding another character to its buffer. If
+  # our model has no bounds on the number of operations then there would be an
+  # infinite number unique reachable states. This means we cannot possibly
+  # prove properties of the system by model checking. However, by adding
+  # boundaries to the number of operations and to the number of clients, we can
+  # prove properties of the system under that that restriction. Thus, we will
+  # not provide a proof that the Shared Buffer Algorithm is correct.
+
+  # Dette avsnittet suger:
+  This chapter starts of by giving a short introduction to the Maude language.
+  We will then go on to describe our model; by describing the model we will
+  also describe the Shared Buffer Algorithm in detail. The equations in this
+  chapter are translations of the Maude specification. For rewrite rules (that
+  we will introduce shortly) we use Maude syntax in favor of mathematical
+  notation.
+
+** A Short Introduction to Maude
+
+   The Maude System consists of a programming and modeling language, as well as
+   tools for exploring the state space of the model. In essence, Maude is an
+   implementation of /rewriting logic/ which has been proved useful for
+   modeling distributed systems cite:peter.
+
+   A Maude specification consists of /sorts/, /signatures/, /variables/,
+   /equations/ and /rewrite rules/. The sorts are simply labels that are
+   associated with some data type. A signature defines a function symbol, along
+   with its domains, which constitutes the values of a data type (where a
+   constant is represented as a function symbol with arty zero). The values of
+   a specification, which are constructed by applying function symbols with
+   respect to their domains, yields what is called a /ground term/. Variables
+   must be of a given sort and is essentially a placeholder for a ground term;
+   a term (i.e. "non-ground") can contain variables, which is what separates it
+   from a /ground/ term.
+
+   An equation is a relation that takes a left-hand and a right-hand term; it
+   symbolizes that the terms are considered equivalent. Rewriting rules are
+   similar to equations, but the terms does not need to be equivalent. Rather a
+   rewriting rule symbolizes that the left-hand term /may evolve/ to the
+   right-hand term, and is strictly read left to right. The equations of the
+   system represents the /static/ part of the system, and the rewrite rules
+   represent the /dynamic/ part of the system.
+
+   The Maude System have two fundamental commands that sheds light on how
+   equations and rewriting rules operate. The /reduce/ command takes a term and
+   if the term (or a subterm) matches the left-hand term of an equation, it is
+   rewritten to the right hand term, and the process continues until the
+   reduced term does not match any equation in the specification. The /rewrite/
+   command can be given an argument deciding how many rewrites it should
+   perform. It takes a term which it applies to an arbitrary rewrite rule that
+   matches the left-hand term of the rule, followed by reducing the resulting
+   term. The process is repeated until it has reached the specified number of
+   rewrites, or if no more rewrites can be applied. It can be useful to think
+   of an equation as special case of a rewrite rule which is always applied
+   immediately.
+
+   # A reduction should be deterministic, meaning that, for a given input, it
+   # always yields the same term. On the other hand, a rewrite may be
+   # nondeterministic
+
+   In our specification, we use rewrite rules to describe nondeterministic
+   changes in the system, like a user inserting or deleting a character from
+   its buffer. The equations are used to describe the system's reaction to the
+   changes in the system, which should is deterministic.
+
+   # The equational membership logic is very similar to a functional programming
+   # language, in the sense that they are both declarative and have the same
+   # expressive power. By stating a set of equations we can represent any
+   # /static/ part of the system, that is, the parts that for a given input
+   # always yields the same output.
+
+   # The /dynamic/ behaviour of a system is described by a set of rewriting
+   # rules,
+
+** Client-side Specification
+
+   In Chapter [[Formal Semantics of Editing Operations]] we defined operations and
+   the how they are applied. This was stated as a set of equations which has
+   been translated to Maude. The Maude representation is almost identical with
+   the aforementioned definitions, but operation application is syntactically
+   different and have not modeled the entire $Unicode$ set, but rather chosen a
+   small set of characters.
+
+   A client consists of a user label, buffer, sequence number, state token,
+   along with an incoming and outgoing message queue. The following Maude term,
+   where capital letters are variables of the appropriate sort, will match any
+   user:
+
+   #+BEGIN_EXAMPLE
+   < U | buffer : B, seqno : N, token : T, out-queue : Q, in-queue: Q' >
+   #+END_EXAMPLE
+
+   An example of a ground term that will match the term above can look like so:
+
+   #+BEGIN_EXAMPLE
+   < user 0 | buffer : nil, seqno : 0, token : 0,
+              in-queue : nil, out-queue : nil >
+   #+END_EXAMPLE
+
+   Note that =nil= is used to represent both an empty buffer and an empty
+   queue. A user may nondeterministically insert a character to its buffer,
+   which is represented using a rewrite rule, where ~=>~ symbolizes the rewrite
+   relation [fn:3]:
+
+   #+BEGIN_EXAMPLE
+       rl [user-inserts] :
+           < U | buffer : (B B'), seqno : S, token : T, out-queue : Q >
+         =>
+           < U | buffer : (B C B'), seqno : s S, token : T,
+                 out-queue : (msg(ins(size(B), C), T, S) Q) > .
+   #+END_EXAMPLE
+
+   The buffer is represented as =(B B')=, where both =B= and =B'= are any two
+   buffers that matches the client's buffer when concatenated (where
+   concatenating buffers is analogous to concatenation of strings). Note that
+   the buffers may be empty. Assuming we have a character =C= (where a
+   character is treated as a string of length one), an insertion is simply
+   placing a character in between the two buffers, which yields a new buffer
+   =(B C B')=. This rule enables =C= to be inserted at any point in the buffer,
+   because we have not put any restriction on =B= and =B'= besides that they
+   together form the complete buffer.
+
+   The client must communicate its change to the server, which is modeled as
+   putting a message on in its outgoing queue. A message, denoted =msg=,
+   consists of an operation, a state token and a sequence number. The size of
+   =B= determines the position of the insertion, and so =ins(size(B), C)=
+   represents that =C= was inserted at position =size(B)=. The current state
+   token =T= and sequence number =S= is added to the message. Lastly, the
+   client must increment its sequence number, using the successor function =s=.
+   The rule for deletion is almost identical, with the distinction of removing
+   a character from the buffer, rather than inserting one, and labeling the
+   operation =del=.
+
+   The server can put messages on a client's incoming queue, which the client
+   in turn (eventually) reads from. In order to model the latency of messages
+   traveling, it reads from the queue in an nondeterministic manner. The
+   following rewrite rule may be applied if the sequence number of the client
+   is equal to the sequence number of the message at the end of its incoming
+   queue:
+
+   #+BEGIN_EXAMPLE
+   rl [user-receive] :
+       < U | buffer : B, seqno : S, token : T,
+             in-queue : (Q msg(O,T',S)) >
+     =>
+       < U | buffer : apply O on B, seqno : s S, token : T',
+             in-queue : Q > .
+   #+END_EXAMPLE
+
+   Notice that the variable =S= is used both as the client sequence number and
+   the sequence number of the message to ensure that the sequence numbers are
+   equal. On reception of a message the operation is applied to the client's
+   local buffer, the sequence number is incremented and the state token of the
+   message replaces the current state token of the client. Note that =apply O
+   on B= is a term that will match an equation which applies the operation =O=
+   to =B=. It is syntactically different from $O(B)$, which we have seen in
+   previous chapters, but semantically identical.
+
+   Similarly, there is a rule for rejecting a message, which may be applied if
+   an incoming message has a sequence number that is /not/ equal to the
+   sequence number of the client. In that case the message is removed from the
+   queue, and the sequence number is incremented; nothing else changes.
+
+   At this point we can try to perform rewrites on a term containing multiple
+   users, and they will insert and delete characters and add messages to their
+   outgoing queue. Seeing that we have not specified a server yet, they will
+   not receive any messages and their outgoing queue will grow monotonically.
+   Their respective buffers are likely to diverge. Here is an example of two
+   users starting with an empty buffer after three rewrites:
+
+   #+BEGIN_EXAMPLE
+   < user 0 | buffer : nil, seqno : 2, token : 0, in-queue : nil,
+              out-queue : (msg(del(0, a), 0, 1) msg(ins(0, a), 0, 0)) >
+
+   < user 1 | buffer : b, seqno : 1, token : 0, in-queue : nil,
+              out-queue : msg(ins(0, b), 0, 0) >
+   #+END_EXAMPLE
+
+   From the resulting term we can read that $u_0$ (i.e. =user 0=) has inserted
+   an =a=, and deleted it afterwards, whilst $u_1$ has inserted a =b=.
+
+*** Measures to Reduce the State Space
+
+    The /state explosion problem/ is considered the main obstacle for model
+    checking cite:DBLP:conf/laser/ClarkeKNZ11. When performing model checking,
+    an initial state must be given; in Maude this corresponds to a term. If the
+    term matches a rewrite rule, it may be applied which in turn yields a new
+    state. A term can match multiple rewrite rules, so the number of reachable
+    state is given by the sum how many rewrite rules the initial term matches,
+    and how many rewrite rules each of the resulting terms matches and so on.
+    This number may be infinite; a minimal example is a system where each state
+    consists only of a natural number, which can be rewritten to the successor
+    of that number --- because there is no largest natural number, the rewrite
+    rule can always be applied, and so the set of reachable states is infinite.
+    # The number of /reachable/ states from that term is given by all the
+    # possible ways that rewrite rules can be applied. The number of reachable
+    # states is often exponential with regards to the
+
+    # --- for a model to be useful for
+    # verification, the state space generally needs to be kept at a manageable
+    # size.
+
+    Our focus has been on writing a specification which accurately
+    describes the system, rather than optimizing the specification for
+    verification; nevertheless, some measures has been taken to reduce the
+    state space and are documented here.
+
+    In reality, a user could decide to type any arbitrary character at any
+    given time; in the model, all insertions are done alphabetically, meaning
+    the first insertion is always an =a=, the second is a =b= and so on. This
+    is necessary in order to keep the state space at a manageable size. What
+    character the user types is of no importance to the algorithm, so there is
+    no need to check what would happen if, say, =b= where typed before =a=.
+
+    Another restriction is put on which user performs an operation at a given
+    time. Users are labeled because the server needs information about each
+    individual user; however, if we were to swap all $u_0$ labels with $u_1$,
+    it would have no effect on the scenario, as long as /all/ labels are
+    swapped. It can be helpful to look at a visualized scenario and permute the
+    labels at the top to see that the scenarios are symmetric, and checking
+    both is redundant.
+
+    #+BEGIN_EXPORT latex
+    \begin{figure}[h]
+      \centering
+      \begin{subfigure}{.5\textwidth}
+        \centering
+        \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+          \tikzstyle{vertex} = [circle, scale=0.5]
+          \tikzstyle{O_0} = [vertex, fill=black!30!green]
+          \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+          \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+          \tikzstyle{toO_0} = [to, color=black!30!green]
+          \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+          \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\scriptsize]
+
+          %% Server receives operations in this order
+          \node (s) at (2.5, 4) {$S$};
+          \coordinate (se) at (2.5, 0) {};
+          \node[O_0, below = 3em of s] (s1) {};
+          \node[O_1, below = 1em of s1] (s2) {};
+
+          %% User 0 generates/receives in this order
+          \node (u0) at (0, 4) {$u_0$};
+          \node (u0e) at (0, 0) {};
+          \node[O_0, below = of u0] (u00) {};
+          \node[O_0, above = of u01] (u00a) {};
+          \node[O_1, above = 2em of u0e] (u01) {};
+
+          %% User 1 generates/receives in this order
+          \node (u1) at (5, 4) {$u_1$};
+          \node (u1e) at (5, 0) {};
+          \node[O_1, below = 1.5em of u1] (u11) {} ;
+          \node[O_0, below = 3em of u11] (u10a) {};
+          \node[O_1, above = 2em of u1e] (u11a) {};
+
+          \begin{pgfonlayer}{bg} % select the background layer
+            \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
+            \draw[to, color=black!30] (u0) -- (u00) -- (u01) -- (u0e);
+            \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+            % Life of O_0
+            \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{\ins{0}{a}}^{O_0}$};
+            \draw[toO_0] (s1) -- (u00a) node [op] {$nop$};
+            \draw[toO_0] (s1) -- (u10a) node [op, near end] {$O_0$};
+
+            % Life of O_1
+            \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{\ins{0}{b}}^{O_1}$};
+            \draw[toO_1] (s2) -- (u01) node [op] {$O_1$};
+            \draw[toO_1] (s2) -- (u11a) node [op] {$O_1 \circ O_0 \circ O_1^{-1}$};
+          \end{pgfonlayer}
+        \end{tikzpicture}
+      \end{subfigure}%
+      \begin{subfigure}{.5\textwidth}
+        \centering
+        \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+          \tikzstyle{vertex} = [circle, scale=0.5]
+          \tikzstyle{O_0} = [vertex, fill=black!30!green]
+          \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+          \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+          \tikzstyle{toO_0} = [to, color=black!30!green]
+          \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+          \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\scriptsize]
+
+          %% Server receives operations in this order
+          \node (s) at (2.5, 4) {$S$};
+          \coordinate (se) at (2.5, 0) {};
+          \node[O_0, below = 3em of s] (s1) {};
+          \node[O_1, below = 1em of s1] (s2) {};
+
+          %% User 0 generates/receives in this order
+          \node (u0) at (5, 4) {$u_1$};
+          \node (u0e) at (5, 0) {};
+          \node[O_0, below = of u0] (u00) {};
+          \node[O_0, above = 3.5em of u0e] (u00a) {};
+          \node[O_1, above = 2em of u0e] (u01) {};
+
+          %% User 1 generates/receives in this order
+          \node (u1) at (0, 4) {$u_0$};
+          \node (u1e) at (0, 0) {};
+          \node[O_1, below = 1.5em of u1] (u11) {} ;
+          \node[O_0, below = 3em of u11] (u10a) {};
+          \node[O_1, above = 2em of u1e] (u11a) {};
+
+          \begin{pgfonlayer}{bg} % select the background layer
+            \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
+            \draw[to, color=black!30] (u0) -- (u00) -- (u01) -- (u0e);
+            \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+            % Life of O_0
+            \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{\ins{0}{a}}^{O_0}$};
+            \draw[toO_0] (s1) -- (u00a) node [op] {$nop$};
+            \draw[toO_0] (s1) -- (u10a) node [op, near end] {$O_0$};
+
+            % Life of O_1
+            \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{\ins{0}{b}}^{O_1}$};
+            \draw[toO_1] (s2) -- (u01) node [op] {$O_1$};
+            \draw[toO_1] (s2) -- (u11a) node [op] {$O_1 \circ O_0 \circ O_1^{-1}$};
+          \end{pgfonlayer}
+        \end{tikzpicture}
+      \end{subfigure}
+      \caption{Permuting labels.}
+      \label{fig:permuting-labels}
+    \end{figure}
+    #+END_EXPORT
+    A scheme is imposed where $u_0$ always performs the first operation, $u_0$
+    or $u_1$ performs the second, $u_0$, $u_1$ or $u_2$ performs the third, and
+    so on. This corresponds to allowing the scenario to the left from Figure
+    [[ref:fig:permuting-labels]] to occur, but not the scenario on the right.
+
+    In the example at the end of the last section, three rewrites were made.
+    Without the restriction of $u_0$ performing the first operation, there
+    would be 49 reachable states. When imposing the scheme, only 25 different
+    states can be reached within three rewrites, reducing the state space by a
+    factor of 2. As the number of users grow, the reduction of states
+    increases.
+
+    # redo, du har brukt end-states ikke reachable states.
+    #+CAPTION: Reachable states after three rewrites with and without restriction.
+    | Number of users          | 2 users | 3 users | 4 users | 5 users | 6 users |
+    |--------------------------+---------+---------+---------+---------+---------|
+    | Non-restricted           |      49 |     106 |     193 |     316 |     481 |
+    | Restricted               |      25 |      29 |      29 |      29 |      29 |
+    | Reduction by a factor of |    1.96 |    3.66 |    6.66 |    10.9 |   16.59 |
+
+    Note that the server only reacts to incoming messages, and never acts on
+    its own accord. This is why the only measures to reduce the state space is
+    done by imposing restrictions on the clients.
+
 
 #+LaTeX:\appendix
 * LISP In Summer Projects contribution
