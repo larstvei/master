@@ -2590,23 +2590,22 @@ not satisfy ref:eqn:C1.
    \end{figure}
    #+END_EXPORT
 
-   The rule in Figure [[ref:fig:maude-rule]] concisely summarizes this chapter,
-   as it describes the /reaction/ to the reception of a message. The reception
-   of a message is modeled as the server nondeterministically picking a message
-   off of the end of the message outgoing queue of a client. It adds a response
-   message to the incoming queue to the client. The expression =(send O' to
-   US)= similarly adds a message containing the operation =O'= on all the other
-   clients incoming queues with the correct sequence number.
+   The rewriting rule in Figure [[ref:fig:maude-rule]] concisely summarizes
+   this chapter, as it describes the /reaction/ to the reception of a message.
+   The reception of a message is modeled as the server nondeterministically
+   picking a message off of the end of the message outgoing queue of a client.
+   It adds a response message to the incoming queue to the client. The
+   expression =(send O' to US)= similarly adds a message containing the
+   operation =O'= on all the other clients incoming queues with the correct
+   sequence number.
 
    The =sites= field is a mapping from users to the information the server
    stores about each client. Each site consists of a list of messages, which
    contains messages that might be rejected by the client; note that the
    sequence number is incremented by one in order to comply with the sequence
-   number scheme (Section [[Sequence Number Scheme]]).
-
-   Note that the rule is expressed as a /conditional/ rule =crl= in order to
-   achieve the effects of a /let/-expression, commonly found in functional
-   programming languages.
+   number scheme (Section [[Sequence Number Scheme]]). Also note that the rule
+   is expressed as a /conditional/ rule =crl= in order to achieve the effects
+   of a /let/-expression, commonly found in functional programming languages.
 
 [fn:3] The rules stated here are slightly simplified from those in the actual
 Maude specification.
