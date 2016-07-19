@@ -308,7 +308,7 @@ mod SITE-RULES is
         R
         [ B'' ]
         < U | buffer : (B S B'), seqno : s N, state : I,
-        out-queue : (msg(ins(size(B), S), I, N) Q), A > .
+              out-queue : (msg(ins(size(B), S), I, N) Q), A > .
 
     rl [user-deletes] :
         ((U, U') - R)
@@ -316,7 +316,7 @@ mod SITE-RULES is
       =>
         R
         < U | buffer : (B B'), seqno : s N, state : I,
-        out-queue : (msg(del(size(B), S), I, N) Q), A > .
+              out-queue : (msg(del(size(B), S), I, N) Q), A > .
 
     crl [user-receive] :
         < U | buffer : B, seqno : N, state : I, in-queue : (Q msg(O,I',N)), A >
