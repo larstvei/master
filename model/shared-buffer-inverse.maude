@@ -150,12 +150,13 @@ fmod INSERT-DELETE is
 
     sort Type .
 
-    ops ins del : -> Type .
+    ops ins del comp : -> Type .
     op ins : Nat Str -> Op [ctor format (g o)] .
     op del : Nat Str -> Op [ctor format (r o)] .
 
     var N : Nat .
     var S : Str .
+    vars O O' : Op .
 
     op pos : Op -> Nat .
     eq pos(ins(N, S)) = N .
@@ -164,6 +165,7 @@ fmod INSERT-DELETE is
     op type : Op -> Type .
     eq type(ins(N,S)) = ins .
     eq type(del(N,S)) = del .
+    eq type(O o O') = comp .
 endfm
 
 fmod TRANSFORMATION is
@@ -181,7 +183,7 @@ fmod TRANSFORMATION is
     ceq it(del(N, S), del(N', S')) = del(sd(N, 1), S) if N > N' .
     eq  it(del(N, S), del(N', S')) = nop(del(N, S) o del(N', S')) [owise] .
 
-    eq  it(O, O' o O'') = it(it(O, O''), O') .
+    ceq it(O, O' o O'') = it(it(O, O''), O') if type(O') =/= comp .
     eq  it(O, O') = O [owise] .
 
     op  et : Op Op -> Op .
@@ -193,7 +195,7 @@ fmod TRANSFORMATION is
 
     eq et(nop(O o O'), O') = O .
 
-    eq  et(O, O' o O'') = et(et(O, O''), O') .
+    ceq et(O, O' o O'') = et(et(O, O''), O') if type(O') =/= comp .
     eq  et(O, O') = O [owise] .
 endfm
 
