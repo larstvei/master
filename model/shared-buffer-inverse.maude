@@ -26,7 +26,8 @@ fmod MAP{X :: TRIV, Y :: TRIV} is
 
     op _|->_ : X$Elt Y$Elt -> Entry{X,Y} [ctor] .
     op empty : -> Map{X,Y} [ctor] .
-    op _,_ : Map{X,Y} Map{X,Y} -> Map{X,Y} [ctor assoc comm id: empty prec 121 format (d r onttssss d)] .
+    op _,_ : Map{X,Y} Map{X,Y} -> Map{X,Y}
+        [ctor assoc comm id: empty prec 121 format (d r onttssss d)] .
     op undefined : -> [Y$Elt] [ctor] .
 
     var D : X$Elt .
@@ -367,86 +368,86 @@ view Event from TRIV to ORDERING is
     sort Elt to Event .
 endv
 
-fmod TOTALORDER is
+fmod HISTORY is
     pr ORDERING .
     pr LIST{Event} .
     pr TRANSFORMATION .
 
-    sort Totalorder .
-    subsort List{Event} < Totalorder .
+    sort History .
+    subsort List{Event} < History .
 
     vars M N I M' N' I' : Nat .
     vars O O' O'' O''' : Op .
-    vars T T' T'' : Totalorder .
+    vars H H' H'' : History .
     vars U U' : User .
     vars E E' : Event .
 
-    op  collect : Event Totalorder -> Totalorder .
+    op  collect : Event History -> History .
     eq  collect(E, nil) = nil .
-    ceq collect(E, E' T) = E' collect(E, T) if concurrent(E, E') .
-    eq  collect(E, E' T) = nil [owise] .
+    ceq collect(E, E' H) = E' collect(E, H) if concurrent(E, E') .
+    eq  collect(E, E' H) = nil [owise] .
 
-    op  drop : Event Totalorder -> Totalorder .
+    op  drop : Event History -> History .
     eq  drop(E, nil) = nil .
-    ceq drop(E, E' T) = drop(E, T) if concurrent(E, E') .
-    eq  drop(E, E' T) = E' T [owise] .
+    ceq drop(E, E' H) = drop(E, H) if concurrent(E, E') .
+    eq  drop(E, E' H) = E' H [owise] .
 
-    op  put : Event Totalorder -> Totalorder .
-    eq  put(E, T) = put'(E, collect(E, T)) drop(E, T) .
+    op  put : Event History -> History .
+    eq  put(E, H) = put'(E, collect(E, H)) drop(E, H) .
 
-    op  put' : Event Totalorder -> Totalorder .
+    op  put' : Event History -> History .
     eq  put'(E, nil) = E .
-    ceq put'(E, T E') = T E' E if E < E' .
-    eq  put'(E, T E') = put'(E, T) E' [owise] .
+    ceq put'(E, H E') = H E' E if E < E' .
+    eq  put'(E, H E') = put'(E, H) E' [owise] .
 
-    op compose : Totalorder -> Op .
+    op compose : History -> Op .
     eq compose(nil) = nop .
-    eq compose((nop(O) I M U) T) = compose(T) .
-    eq compose((O I M U) T) = O o compose(T) [owise] .
+    eq compose((nop(O) I M U) H) = compose(H) .
+    eq compose((O I M U) H) = O o compose(H) [owise] .
 
-    op  until : Totalorder Nat -> Totalorder .
+    op  until : History Nat -> History .
     eq  until(nil, I') = nil .
-    ceq until(T (O I M U), I') = T (O I M U) if M >= I' .
-    eq  until(T (O I M U), I') = until(T, I') [owise] .
+    ceq until(H (O I M U), I') = H (O I M U) if M >= I' .
+    eq  until(H (O I M U), I') = until(H, I') [owise] .
 
-    op mintoken : Totalorder -> Nat .
+    op mintoken : History -> Nat .
     eq mintoken(O I M U) = I .
-    eq mintoken((O I M U) T) = min(I, mintoken(T)) [owise] .
+    eq mintoken((O I M U) H) = min(I, mintoken(H)) [owise] .
 
-    op  fix : Totalorder -> Totalorder .
+    op  fix : History -> History .
     eq  fix(nil) = nil .
-    ceq fix((O I M U) T) = (O' I M U) T'
-      if T'   := fix(T) /\
-         T''  := filter(O I M U, T') /\
-         O''' := compose(opsIn(U, I, mintoken(T''), T')) /\
+    ceq fix((O I M U) H) = (O' I M U) H'
+      if H'   := fix(H) /\
+         H''  := filter(O I M U, H') /\
+         O''' := compose(opsIn(U, I, mintoken(H''), H')) /\
          O''  := et(O, O''') /\
-         O'   := it(it(O'', compose(T'')), O''') .
+         O'   := it(it(O'', compose(H'')), O''') .
 
-    op  filter : Event Totalorder -> Totalorder .
+    op  filter : Event History -> History .
     eq  filter(E, nil) = nil .
-    ceq filter(E, E' T) = E' filter(E, T) if concurrent(E, E') .
-    eq  filter(E, (O I M U') T) = filter(E, T) [owise] .
+    ceq filter(E, E' H) = E' filter(E, H) if concurrent(E, E') .
+    eq  filter(E, (O I M U') H) = filter(E, H) [owise] .
 
-    op filter : User Totalorder -> Totalorder .
+    op filter : User History -> History .
     eq filter(U, nil) = nil .
-    eq filter(U, (O I M (U, U')) T) = (O I M U) filter(U, T) .
-    eq filter(U, (O I M U') T) = filter(U, T) [owise] .
+    eq filter(U, (O I M (U, U')) H) = (O I M U) filter(U, H) .
+    eq filter(U, (O I M U') H) = filter(U, H) [owise] .
 
-    op  opsIn : User Nat Nat Totalorder -> Totalorder .
+    op  opsIn : User Nat Nat History -> History .
     eq  opsIn(U, I, I', nil) = nil .
-    ceq opsIn(U, I, I', (O N M U') T) = (O N M U') opsIn(U', I, I', T)
+    ceq opsIn(U, I, I', (O N M U') H) = (O N M U') opsIn(U', I, I', H)
       if (M < I and M >= I') or (U == U' and I == N) .
-    eq  opsIn(U, I, I', E T) = opsIn(U, I, I', T) [owise] .
+    eq  opsIn(U, I, I', E H) = opsIn(U, I, I', H) [owise] .
 endfm
 
 mod SERVER is
     pr CONFIGURATION .
     pr MAP{User,Queue} .
     pr NAT .
-    pr TOTALORDER .
+    pr HISTORY .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
-    op history :_ : Totalorder -> Attribute .
+    op history :_ : History -> Attribute .
     op sites :_ : Map{User,Queue} -> Attribute .
 endm
 
@@ -456,7 +457,7 @@ mod SEND is
     pr MAP{User,Queue} .
     pr SERVER .
     pr SITE .
-    pr TOTALORDER .
+    pr HISTORY .
 
     sort Send .
     subsort Send < Configuration .
@@ -489,7 +490,7 @@ mod SERVER-RULES is
     pr SEND .
     pr SERVER .
     pr SITE .
-    pr TOTALORDER .
+    pr HISTORY .
 
     vars A A' : AttributeSet .
     vars Q Q' Q'' : Queue .
@@ -498,25 +499,25 @@ mod SERVER-RULES is
     vars I I' M N N' S S' : Nat .
     var U  : User .
     var E : Event .
-    vars T T' : Totalorder .
+    vars H H' : History .
     vars US US' : Map{User,Queue} .
 
-    op makeOp : Totalorder Totalorder Nat -> Op .
-    eq makeOp(T', T, I) = compose(until(T', I)) o inv(compose(until(T, I))) .
+    op makeOp : History History Nat -> Op .
+    eq makeOp(H', H, I) = compose(until(H', I)) o inv(compose(until(H, I))) .
 
     op makeResponse : Op Op Queue Nat -> Op .
     eq makeResponse(O, O', Q, I) = O' o compose(until(Q, I)) o inv(O) .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O, I, N)), in-queue : Q', A >
-        < server | history : T, state : M, sites : (U |-> Q'', US), A' >
+        < server | history : H, state : M, sites : (U |-> Q'', US), A' >
       =>
         < U | out-queue : Q,
               in-queue  : (msg(Or, s M, S) Q'), A >
-        < server | history : T', state : s M, sites : US', A' >
+        < server | history : H', state : s M, sites : US', A' >
         (send O' to US)
-      if  T'  := fix(put(O I M U, T)) /\
-          O'  := makeOp(T', T, I) /\
+      if  H'  := fix(put(O I M U, H)) /\
+          O'  := makeOp(H', H, I) /\
           S   := nextSeq(Q'', N) /\
           Or  := makeResponse(O, O', Q'', I) /\
           US' := (U |-> msg(Or, s M, s S), US) .
@@ -531,7 +532,7 @@ mod PREDICATES is
     pr SATISFACTION .
     pr SERVER .
     pr SITE .
-    pr TOTALORDER .
+    pr HISTORY .
 
     subsort Configuration < State .
 
@@ -541,7 +542,7 @@ mod PREDICATES is
     vars B B' : Buffer .
     vars U U' : User .
     var C : Configuration .
-    var T : Totalorder .
+    var H : History .
     
     eq < U  | buffer : B,  A  >
        < U' | buffer : B', A' >
@@ -551,8 +552,8 @@ mod PREDICATES is
     eq C |= consistent = not C |= inconsistent .
 
     op legal : Buffer -> Prop .
-    eq < server | history : T, A > C |= legal(B) =
-        apply compose(T) on B =/= error .
+    eq < server | history : H, A > C |= legal(B) =
+        apply compose(H) on B =/= error .
     eq C |= legal(B) = false [owise] .
 endm
 
@@ -570,7 +571,7 @@ mod TEST is
     pr SITE .
     pr SITE-RULES .
     pr STR .
-    pr TOTALORDER .
+    pr HISTORY .
     pr TRANSFORMATION .
     pr UNIQUE .
     pr USER .
@@ -588,7 +589,7 @@ mod TEST is
     vars B B' B'' : Buffer .
     vars Oi Oj : Op .
     var S : Str .
-    vars T T' : Totalorder .
+    vars H H' : History .
 
     op init  : -> Configuration .
     eq init = init nil 2 3 .
