@@ -269,9 +269,9 @@ mod SITE is
     eq compose(nil) = nop .
     eq compose(Q msg(O, T, N)) = compose(Q) o O [owise] .
 
-    op until : Queue Nat -> Queue .
-    eq until(Q msg(O, T, N) Q', T) = Q .
-    eq until(Q, T) = Q [owise] .
+    op rejected : Queue Nat -> Queue .
+    eq rejected(Q msg(O, T, N) Q', T) = Q .
+    eq rejected(Q, T) = Q [owise] .
 
     op nextSeq : Queue Nat -> Nat .
     eq nextSeq(msg(O, T, N') Q, N) = s N + sd(N, N') .
@@ -428,11 +428,6 @@ fmod HISTORY is
     ceq filter(E, E' H) = E' filter(E, H) if concurrent(E, E') .
     eq  filter(E, (O T M U') H) = filter(E, H) [owise] .
 
-    op filter : User History -> History .
-    eq filter(U, nil) = nil .
-    eq filter(U, (O T M (U, U')) H) = (O T M U) filter(U, H) .
-    eq filter(U, (O T M U') H) = filter(U, H) [owise] .
-
     op  opsIn : User Nat Nat History -> History .
     eq  opsIn(U, T, T', nil) = nil .
     ceq opsIn(U, T, T', (O N M U') H) = (O N M U') opsIn(U', T, T', H)
@@ -507,7 +502,7 @@ mod SERVER-RULES is
     eq makeOp(H', H, T) = compose(until(H', T)) o inv(compose(until(H, T))) .
 
     op makeResponse : Op Op Queue Nat -> Op .
-    eq makeResponse(O, O', Q, T) = O' o compose(until(Q, T)) o inv(O) .
+    eq makeResponse(O, O', Q, T) = O' o compose(rejected(Q, T)) o inv(O) .
 
     crl [server-receive] :
         < U | out-queue : (Q msg(O, T, N)), in-queue : Q', A >
