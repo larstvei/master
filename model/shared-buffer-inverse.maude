@@ -625,11 +625,3 @@ mod TEST is
     eq users(0) = empty .
     eq users(s N) = user N, users(N) .
 endm
-
---- search init =>*
---- < user 0 | buffer : B, out-queue : nil, in-queue : nil, state : N, A >
---- < user 1 | buffer : B', out-queue : nil, in-queue : nil, state : N', A' >
---- C
---- such that B =/= B' .
-
---- red modelCheck(init, [] <> consistent) .
