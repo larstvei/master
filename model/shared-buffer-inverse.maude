@@ -491,8 +491,7 @@ mod SERVER-RULES is
     vars A A' : AttributeSet .
     vars Q Q' Q'' : Queue .
     vars O O' O'' : Op .
-    vars O-1 O-1' : Op .
-    vars T T' M N N' S S' : Nat .
+    vars T M S S' : Nat .
     var U  : User .
     var E : Event .
     vars H H' : History .
@@ -505,18 +504,18 @@ mod SERVER-RULES is
     eq makeResponse(O, O', Q, T) = O' o compose(rejected(Q, T)) o inv(O) .
 
     crl [server-receive] :
-        < U | out-queue : (Q msg(O, T, N)), in-queue : Q', A >
+        < U | out-queue : (Q msg(O, T, S)), in-queue : Q', A >
         < server | history : H, state : M, sites : (U |-> Q'', US), A' >
       =>
         < U | out-queue : Q,
-              in-queue  : (msg(O'', s M, S) Q'), A >
+              in-queue  : (msg(O'', s M, S') Q'), A >
         < server | history : H', state : s M, sites : US', A' >
         (send O' to US)
       if  H'  := fix(put(O T M U, H)) /\
           O'  := makeOp(H', H, T) /\
-          S   := nextSeq(Q'', N) /\
+          S'  := nextSeq(Q'', S) /\
           O'' := makeResponse(O, O', Q'', T) /\
-          US' := (U |-> msg(O'', s M, s S), US) .
+          US' := (U |-> msg(O'', s M, s S'), US) .
 endm
 
 mod PREDICATES is
