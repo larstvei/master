@@ -610,7 +610,7 @@ mod TEST is
     op clients__ : Buffer Nat -> Configuration .
     eq clients B 0 = none .
     eq clients B s N =
-        < user N | buffer : B, seqno : 0, state : 1, out-queue : nil, in-queue : nil >
+        < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
         clients B N .
 
     op sites_ : Nat -> Map{User,Queue} .
