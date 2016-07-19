@@ -490,7 +490,7 @@ mod SERVER-RULES is
 
     vars A A' : AttributeSet .
     vars Q Q' Q'' : Queue .
-    vars O O' Or : Op .
+    vars O O' O'' : Op .
     vars O-1 O-1' : Op .
     vars T T' M N N' S S' : Nat .
     var U  : User .
@@ -509,14 +509,14 @@ mod SERVER-RULES is
         < server | history : H, state : M, sites : (U |-> Q'', US), A' >
       =>
         < U | out-queue : Q,
-              in-queue  : (msg(Or, s M, S) Q'), A >
+              in-queue  : (msg(O'', s M, S) Q'), A >
         < server | history : H', state : s M, sites : US', A' >
         (send O' to US)
       if  H'  := fix(put(O T M U, H)) /\
           O'  := makeOp(H', H, T) /\
           S   := nextSeq(Q'', N) /\
-          Or  := makeResponse(O, O', Q'', T) /\
-          US' := (U |-> msg(Or, s M, s S), US) .
+          O'' := makeResponse(O, O', Q'', T) /\
+          US' := (U |-> msg(O'', s M, s S), US) .
 endm
 
 mod PREDICATES is
