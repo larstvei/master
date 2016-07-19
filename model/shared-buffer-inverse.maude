@@ -257,7 +257,7 @@ mod SITE is
     op <_|_> : User AttributeSet -> Object [ctor object] .
     op buffer :_ : Buffer -> Attribute .
     op seqno :_ : Nat -> Attribute .
-    op state :_ : Nat -> Attribute .
+    op token :_ : Nat -> Attribute .
     op in-queue :_ : Queue -> Attribute .
     op out-queue :_ : Queue -> Attribute .
 
@@ -304,25 +304,25 @@ mod SITE-RULES is
     rl [user-inserts] :
         ((U, U') - R)
         [ S B'' ]
-        < U | buffer : (B B'), seqno : N, state : I, out-queue : Q, A >
+        < U | buffer : (B B'), seqno : N, token : I, out-queue : Q, A >
       =>
         R
         [ B'' ]
-        < U | buffer : (B S B'), seqno : s N, state : I,
+        < U | buffer : (B S B'), seqno : s N, token : I,
               out-queue : (msg(ins(size(B), S), I, N) Q), A > .
 
     rl [user-deletes] :
         ((U, U') - R)
-        < U | buffer : (B S B'), seqno : N, state : I, out-queue : Q, A >
+        < U | buffer : (B S B'), seqno : N, token : I, out-queue : Q, A >
       =>
         R
-        < U | buffer : (B B'), seqno : s N, state : I,
+        < U | buffer : (B B'), seqno : s N, token : I,
               out-queue : (msg(del(size(B), S), I, N) Q), A > .
 
     crl [user-receive] :
-        < U | buffer : B, seqno : N, state : I, in-queue : (Q msg(O,I',N)), A >
+        < U | buffer : B, seqno : N, token : I, in-queue : (Q msg(O,I',N)), A >
       =>
-        < U | buffer : B', seqno : s N, state : I', in-queue : Q, A >
+        < U | buffer : B', seqno : s N, token : I', in-queue : Q, A >
       if B' := apply O on B .
 
     crl [user-receive-reject] :
@@ -448,6 +448,7 @@ mod SERVER is
 
     op < server |_> : AttributeSet -> Object [ctor object] .
     op history :_ : History -> Attribute .
+    op state :_ : Nat -> Attribute .
     op sites :_ : Map{User,Queue} -> Attribute .
 endm
 
@@ -611,7 +612,7 @@ mod TEST is
     op clients__ : Buffer Nat -> Configuration .
     eq clients B 0 = none .
     eq clients B s N =
-        < user N | buffer : B, seqno : 0, state : 0, out-queue : nil, in-queue : nil >
+        < user N | buffer : B, seqno : 0, token : 0, out-queue : nil, in-queue : nil >
         clients B N .
 
     op sites_ : Nat -> Map{User,Queue} .
