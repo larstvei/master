@@ -354,7 +354,7 @@ fmod ORDERING is
 
     op _<_ : Event Event -> Bool .
     ceq O I M U < O' I' M' U' = pos(O) > pos(O')
-        or (pos(O) == pos(O') and type(O) == del)
+        or (pos(O) == pos(O') and type(O) =/= type(O') and type(O) == del)
         or (pos(O) == pos(O') and type(O) == type(O') and M < M')
       if concurrent(O I M U, O' I' M' U') .
     eq O I M U < O' I' M' U' = M < M' [owise] .
