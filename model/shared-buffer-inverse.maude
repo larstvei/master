@@ -261,20 +261,20 @@ mod SITE is
     op in-queue :_ : Queue -> Attribute .
     op out-queue :_ : Queue -> Attribute .
 
-    vars I I' N N' : Nat .
+    vars T T' N N' : Nat .
     vars Q Q'      : Queue .
     var  O         : Op .
 
     op compose : Queue -> Op .
     eq compose(nil) = nop .
-    eq compose(Q msg(O, I, N)) = compose(Q) o O [owise] .
+    eq compose(Q msg(O, T, N)) = compose(Q) o O [owise] .
 
     op until : Queue Nat -> Queue .
-    eq until(Q msg(O, I, N) Q', I) = Q .
-    eq until(Q, I) = Q [owise] .
+    eq until(Q msg(O, T, N) Q', T) = Q .
+    eq until(Q, T) = Q [owise] .
 
     op nextSeq : Queue Nat -> Nat .
-    eq nextSeq(msg(O, I, N') Q, N) = s N + sd(N, N') .
+    eq nextSeq(msg(O, T, N') Q, N) = s N + sd(N, N') .
 endm
 
 view Queue from TRIV to SITE is
@@ -293,7 +293,7 @@ mod SITE-RULES is
     pr SITE .
 
     vars B B' B'' : Buffer .
-    vars I I' N M : Nat .
+    vars T T' N M : Nat .
     vars U U' : Set{User} .
     var R : Actions .
     var Q : Queue .
@@ -304,29 +304,29 @@ mod SITE-RULES is
     rl [user-inserts] :
         ((U, U') - R)
         [ S B'' ]
-        < U | buffer : (B B'), seqno : N, token : I, out-queue : Q, A >
+        < U | buffer : (B B'), seqno : N, token : T, out-queue : Q, A >
       =>
         R
         [ B'' ]
-        < U | buffer : (B S B'), seqno : s N, token : I,
-              out-queue : (msg(ins(size(B), S), I, N) Q), A > .
+        < U | buffer : (B S B'), seqno : s N, token : T,
+              out-queue : (msg(ins(size(B), S), T, N) Q), A > .
 
     rl [user-deletes] :
         ((U, U') - R)
-        < U | buffer : (B S B'), seqno : N, token : I, out-queue : Q, A >
+        < U | buffer : (B S B'), seqno : N, token : T, out-queue : Q, A >
       =>
         R
-        < U | buffer : (B B'), seqno : s N, token : I,
-              out-queue : (msg(del(size(B), S), I, N) Q), A > .
+        < U | buffer : (B B'), seqno : s N, token : T,
+              out-queue : (msg(del(size(B), S), T, N) Q), A > .
 
     crl [user-receive] :
-        < U | buffer : B, seqno : N, token : I, in-queue : (Q msg(O,I',N)), A >
+        < U | buffer : B, seqno : N, token : T, in-queue : (Q msg(O,T',N)), A >
       =>
-        < U | buffer : B', seqno : s N, token : I', in-queue : Q, A >
+        < U | buffer : B', seqno : s N, token : T', in-queue : Q, A >
       if B' := apply O on B .
 
     crl [user-receive-reject] :
-        < U | buffer : B, seqno : N, in-queue : (Q msg(O,I',M)), A >
+        < U | buffer : B, seqno : N, in-queue : (Q msg(O,T',M)), A >
       =>
         < U | buffer : B, seqno : s N, in-queue : Q, A >
       if N =/= M .
@@ -343,22 +343,22 @@ fmod ORDERING is
 
     op ____ : Op Nat Nat Set{User} -> Event .
 
-    vars I I' M M' : Nat .
+    vars T T' M M' : Nat .
     vars E E' : Event .
     vars O O' : Op .
     vars U U' : Set{User} .
 
     op concurrent : Event Event -> Bool .
-    eq concurrent(O I M U, O' I' M' U') =
+    eq concurrent(O T M U, O' T' M' U') =
         intersection(U, U') == empty and
-        ((I <= I' and I' <= M) or (I' <= I and I <= M')) .
+        ((T <= T' and T' <= M) or (T' <= T and T <= M')) .
 
     op _<_ : Event Event -> Bool .
-    ceq O I M U < O' I' M' U' = pos(O) > pos(O')
+    ceq O T M U < O' T' M' U' = pos(O) > pos(O')
         or (pos(O) == pos(O') and type(O) =/= type(O') and type(O) == del)
         or (pos(O) == pos(O') and type(O) == type(O') and M < M')
-      if concurrent(O I M U, O' I' M' U') .
-    eq O I M U < O' I' M' U' = M < M' [owise] .
+      if concurrent(O T M U, O' T' M' U') .
+    eq O T M U < O' T' M' U' = M < M' [owise] .
 
     op _>_ : Event Event -> Bool .
     eq E > E' = E' < E .
@@ -376,7 +376,7 @@ fmod HISTORY is
     sort History .
     subsort List{Event} < History .
 
-    vars M N I M' N' I' : Nat .
+    vars M N T M' N' T' : Nat .
     vars O O' O'' O''' : Op .
     vars H H' H'' : History .
     vars U U' : User .
@@ -402,42 +402,42 @@ fmod HISTORY is
 
     op compose : History -> Op .
     eq compose(nil) = nop .
-    eq compose((nop(O) I M U) H) = compose(H) .
-    eq compose((O I M U) H) = O o compose(H) [owise] .
+    eq compose((nop(O) T M U) H) = compose(H) .
+    eq compose((O T M U) H) = O o compose(H) [owise] .
 
     op  until : History Nat -> History .
-    eq  until(nil, I') = nil .
-    ceq until(H (O I M U), I') = H (O I M U) if M >= I' .
-    eq  until(H (O I M U), I') = until(H, I') [owise] .
+    eq  until(nil, T') = nil .
+    ceq until(H (O T M U), T') = H (O T M U) if M >= T' .
+    eq  until(H (O T M U), T') = until(H, T') [owise] .
 
     op mintoken : History -> Nat .
-    eq mintoken(O I M U) = I .
-    eq mintoken((O I M U) H) = min(I, mintoken(H)) [owise] .
+    eq mintoken(O T M U) = T .
+    eq mintoken((O T M U) H) = min(T, mintoken(H)) [owise] .
 
     op  fix : History -> History .
     eq  fix(nil) = nil .
-    ceq fix((O I M U) H) = (O' I M U) H'
+    ceq fix((O T M U) H) = (O' T M U) H'
       if H'   := fix(H) /\
-         H''  := filter(O I M U, H') /\
-         O''' := compose(opsIn(U, I, mintoken(H''), H')) /\
+         H''  := filter(O T M U, H') /\
+         O''' := compose(opsIn(U, T, mintoken(H''), H')) /\
          O''  := et(O, O''') /\
          O'   := it(it(O'', compose(H'')), O''') .
 
     op  filter : Event History -> History .
     eq  filter(E, nil) = nil .
     ceq filter(E, E' H) = E' filter(E, H) if concurrent(E, E') .
-    eq  filter(E, (O I M U') H) = filter(E, H) [owise] .
+    eq  filter(E, (O T M U') H) = filter(E, H) [owise] .
 
     op filter : User History -> History .
     eq filter(U, nil) = nil .
-    eq filter(U, (O I M (U, U')) H) = (O I M U) filter(U, H) .
-    eq filter(U, (O I M U') H) = filter(U, H) [owise] .
+    eq filter(U, (O T M (U, U')) H) = (O T M U) filter(U, H) .
+    eq filter(U, (O T M U') H) = filter(U, H) [owise] .
 
     op  opsIn : User Nat Nat History -> History .
-    eq  opsIn(U, I, I', nil) = nil .
-    ceq opsIn(U, I, I', (O N M U') H) = (O N M U') opsIn(U', I, I', H)
-      if (M < I and M >= I') or (U == U' and I == N) .
-    eq  opsIn(U, I, I', E H) = opsIn(U, I, I', H) [owise] .
+    eq  opsIn(U, T, T', nil) = nil .
+    ceq opsIn(U, T, T', (O N M U') H) = (O N M U') opsIn(U', T, T', H)
+      if (M < T and M >= T') or (U == U' and T == N) .
+    eq  opsIn(U, T, T', E H) = opsIn(U, T, T', H) [owise] .
 endfm
 
 mod SERVER is
@@ -467,7 +467,7 @@ mod SEND is
 
     vars A A' : AttributeSet .
     vars O O' : Op .
-    vars I I' N : Nat .
+    vars T T' N : Nat .
     vars US US' : Map{User,Queue} .
     vars Q Q' : Queue .
     var U : User .
@@ -475,11 +475,11 @@ mod SEND is
     eq [send] : send O to empty = none .
     eq [send] :
         < U | in-queue : Q, A >
-        < server | state : I, sites : (U |-> msg(O', I', N) Q', US'), A' >
-        send O to (U |-> msg(O', I', N) Q', US)
+        < server | state : T, sites : (U |-> msg(O', T', N) Q', US'), A' >
+        send O to (U |-> msg(O', T', N) Q', US)
       =
-        < U | in-queue : (msg(O, I, N) Q), A >
-        < server | state : I, sites : (U |-> msg(O, I, s N) msg(O', I', N) Q', US'), A' >
+        < U | in-queue : (msg(O, T, N) Q), A >
+        < server | state : T, sites : (U |-> msg(O, T, s N) msg(O', T', N) Q', US'), A' >
         send O to US .
 endm
 
@@ -497,30 +497,30 @@ mod SERVER-RULES is
     vars Q Q' Q'' : Queue .
     vars O O' Or : Op .
     vars O-1 O-1' : Op .
-    vars I I' M N N' S S' : Nat .
+    vars T T' M N N' S S' : Nat .
     var U  : User .
     var E : Event .
     vars H H' : History .
     vars US US' : Map{User,Queue} .
 
     op makeOp : History History Nat -> Op .
-    eq makeOp(H', H, I) = compose(until(H', I)) o inv(compose(until(H, I))) .
+    eq makeOp(H', H, T) = compose(until(H', T)) o inv(compose(until(H, T))) .
 
     op makeResponse : Op Op Queue Nat -> Op .
-    eq makeResponse(O, O', Q, I) = O' o compose(until(Q, I)) o inv(O) .
+    eq makeResponse(O, O', Q, T) = O' o compose(until(Q, T)) o inv(O) .
 
     crl [server-receive] :
-        < U | out-queue : (Q msg(O, I, N)), in-queue : Q', A >
+        < U | out-queue : (Q msg(O, T, N)), in-queue : Q', A >
         < server | history : H, state : M, sites : (U |-> Q'', US), A' >
       =>
         < U | out-queue : Q,
               in-queue  : (msg(Or, s M, S) Q'), A >
         < server | history : H', state : s M, sites : US', A' >
         (send O' to US)
-      if  H'  := fix(put(O I M U, H)) /\
-          O'  := makeOp(H', H, I) /\
+      if  H'  := fix(put(O T M U, H)) /\
+          O'  := makeOp(H', H, T) /\
           S   := nextSeq(Q'', N) /\
-          Or  := makeResponse(O, O', Q'', I) /\
+          Or  := makeResponse(O, O', Q'', T) /\
           US' := (U |-> msg(Or, s M, s S), US) .
 endm
 
@@ -578,10 +578,7 @@ mod TEST is
     pr USER .
 
     var C : Configuration .
-    var I : Nat .
-    var I' : Nat .
-    var N : Nat .
-    var N' : Nat .
+    vars T T' N N' I : Nat .
     vars O O' : Op .
     vars Q Q' : Queue .
     var U : User .
