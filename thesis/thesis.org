@@ -41,8 +41,44 @@ Placeholder for abstract.
   :UNNUMBERED: t
   :END:
 
-Thanks to Rudi and Martin, Tore, Sigurd, Stian, Carl Martin, Kai, Jarle, Joshi,
-Fui, Sigmund, Jonny, Simen, my family, and so many more.
+  When I was looking for a thesis project, I got to talk with Rudi. It did not
+  take more than five minutes to realize that he would be a great supervisor.
+  Throughout the process he has shown genuine interest in the project and given
+  me the both the freedom I wanted and the guidance I needed. Martin has been a
+  tremendous help. He has given me the theoretical foundations that I sorely
+  needed, both as my supervisor and as a lecturer. He is a bottomless source of
+  knowledge, and I am convinced he has read every paper on theoretical computer
+  science since the early 70's. I would like to convey my deepest gratitude to
+  Rudi and Martin.
+
+  Throughout my years at the Department of Informatics I have been worked as a
+  teaching assistant and been actively involved in the department's student
+  council. Both of these arenas are simply packed with fantastic people that I
+  have been lucky enough to get to know. I want to thank the students who
+  attended my lessons for letting me have their attention; I like to think we
+  all learned a lot, and had a great time doing so. Furthermore, I would like
+  to thank the many faculty members who actively work to make the Department of
+  Informatics a fantastic place to study, and not shying from discussions with
+  the students where improvement is due. I would like to thank my wonderful
+  friends from the student council (FUI) who made my life at university a joy;
+  we excelled at having coffee and spending our "hard-earned" money on
+  tremendous feasts. There are simply too many to thank. This has made the
+  university a great place to be.
+
+  Thanks to the nano-gang, who I started my time at the university with and
+  still visit regularly on the fourth floor. I especially want to thank Jarle
+  and Kai for having long discussions about the thesis.
+
+  For the last couple of years, I have spent a fair share of my time with Tore
+  (the love of my life), Carl Martin and Sigurd, constantly having excited
+  discussions of both a fruitful and completely useless nature. I've thoroughly
+  enjoyed it, and would like to them to know that I kind-of love them.
+
+  Finally I want to thank my wonderful family. My sisters, Lisa and Julie, for
+  being the coolest kids I know, my father for being the one I can always turn
+  to for sound advice, my mother for being the most loving and caring person in
+  the world and finally, my brother, Vegard, for being my favorite person.
+
 
 * Preface
   :PROPERTIES:
