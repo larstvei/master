@@ -9,7 +9,7 @@
 #+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
 #+LATEX_HEADER: \usepackage[scale=0.85]{sourcecodepro}
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
-#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, multicol, subcaption}
+#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, multicol, siunitx, subcaption}
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
@@ -2616,11 +2616,258 @@ stored somewhere, as discussed in [[Sequence Number Scheme]], and a list of
 messages was already present in the specification, in order to model message
 queues.
 
+* Model Checking the Specification
+
+  The main advantage of writing a /formal/ specification of a system is the
+  possibility of analyzing properties of the system in an automated manner. We
+  are convinced that using such tools have led us to detect problems with the
+  algorithm that we otherwise would not, and provided useful output to further
+  aid our understanding of the problem. In addition, it has provided us with
+  confidence the algorithm is robust.
+
+  For this thesis, we have chosen to apply a well known technique for formal
+  verification, called model checking[fn:5]. Maude has good support for
+  performing model checking, via the its =search= command
+  cite:DBLP:conf/maude/2007, and a LTL (Linear Temporal Logic) model checker
+  cite:Eker2004162. We have taken a practical approach to model checking, using
+  it as a tool to aid the development of the algorithm. In this chapter we will
+  present how we have used it, and how we have been able to use the results of
+  the model checker to enhance the algorithm.
+
+  In previous chapters, we have seen numerous examples of scenarios which could
+  lead to inconsistencies unless certain measures are taken. All of these
+  examples have been found using the Maude LTL model checker.
+
+** Always Eventually Consistent
+
+   Our goal for the algorithm is that it must guarantee /eventual consistency/
+   cite:Vogels:2009:EC:1435417.1435432. It is typically used in the context of
+   data replication. In the context of real-time collaborative editing,
+   eventual consistency means that "if all users stop typing, then eventually
+   they will all be looking at the same buffer". It is a weak consistency
+   model, in the sense that it allows for an /inconsistency window/, meaning
+   that clients can be out of sync for a period of time.
+
+   Our motivation for using such a week consistency model is that it is a
+   reasonable minimum requirement for a real-time collaborative system.
+   However, it does not provide any guarantees with regards to preserving /user
+   intent/. If eventual consistency was the only requirement for our system,
+   then our system could simply tell every client to delete the contents of
+   their buffer at every change; this is obviously not a satisfactory solution.
+
+   We have not formalized any requirements with regards to user intent, and
+   rather taken a more intuitive approach. As we demonstrated in Chapter
+   [[Server-side Specification]], ensuring that conflicting operations with a
+   higher position are applied before operations with a lower position
+   preserves the users intentions. We choose to assume that this is by far the
+   most likely scenario, as it seems hard to imagine that users will find it
+   fruitful to persistently try to edit the exact same point of the buffer.
+   This does not mean that we completely ignore the case where this situation
+   would occur. The two requirements we set for such situations is that they do
+   not break consistency, and do not result in instructing the clients to
+   perform an operation which operates outside the bounds of their buffer.
+
+   We use LTL (Linear Temporal Logic) to formally express the property /always
+   eventually consistent/. A temporal logic is a tool for reasoning about time,
+   where, in LTL, time is simply represented as a sequence of states. The words
+   /always/ and /eventually/ expresses temporal relationships between states,
+   whilst /consistent/ is a property which states that all buffers in the
+   system are equal.
+
+** Expressing Consistency in Maude
+
+   The Maude model checker module cite:Eker2004162 provides a sort =Prop=; a
+   term of the sort =Prop= is a property. We define two function symbols
+   =consistent=, and =inconsistent= which are both of the sort =Prop= (and do
+   not take any arguments). The /semantics/ of a property is defined by
+   equations using the operator =|==, which takes a state and a property. A
+   state is simply a term which represents all the components of the system,
+   including the clients and the server.
+
+   The =consistent= property is defined as the negation of the =inconsistent=
+   property, which is easier to specify. The following Maude equation specifies
+   what it means for a state to be inconsistent.
+
+   #+BEGIN_EXAMPLE
+       eq < U  | buffer : B  >
+          < U' | buffer : B' >
+          C |= inconsistent = B =/= B' .
+       eq C |= inconsistent = false [owise] .
+   #+END_EXAMPLE
+
+   Any term which contains at least two clients will match the equation, where
+   =C= contains the rest of the state (for instance the server term). The first
+   equation expresses that a state containing two clients models the property
+   =inconsistent= if the buffers are not equal. The second states that in any
+   other case, the state does not model the =inconsistent= property. The
+   =consistent= property is defined as follows:
+
+   #+BEGIN_EXAMPLE
+       eq C |= consistent = not C |= inconsistent .
+   #+END_EXAMPLE
+
+   It states that a state that models the =consistent= property is a state that
+   does not model the =inconsistent= property.
+
+** Model Checking in Maude
+
+   Model checking is performed by supplying an initial state and a property. An
+   initial state of our system is defined by a function =init= that takes three
+   optional arguments; the initial buffer, the number of clients and the number
+   of operations that can occur during a session. Called with no arguments it
+   returns a state with an initially empty buffer, two clients and three
+   operations, and reduces to the following term:
+
+   #+BEGIN_EXAMPLE
+   < server | history : nil,
+              state : 1,
+              sites : (user 0 |-> msg(nop, 0, 0),
+                       user 1 |-> msg(nop, 0, 0)) >
+
+   < user 0 | buffer : nil,
+              seqno : 0,
+              token : 0,
+              in-queue : nil,
+              out-queue : nil >
+
+   < user 1 | buffer : nil,
+              seqno : 0,
+              token : 0,
+              in-queue : nil,
+              out-queue : nil >
+
+   [a b c d e]
+
+   (user 0 - (user 0, user 1) - (user 0, user 1))
+   #+END_EXAMPLE
+
+   Most importantly it contains terms that represent server and two clients.
+   The server consists of a history, a state token and a mapping from users to
+   the servers information about the clients; the information it keeps is a
+   list of rejected messages. The last two terms are there to impose the
+   restrictions described in Section [[Measures to Reduce the State Space]],
+   ensuring that characters are inserted alphabetically, and that controlling
+   what users may perform an operation in a given state.
+
+   We can perform model checking on this initial state, by calling the
+   =modelCheck= function. The following expression immediately returns /true/:
+
+   #+BEGIN_EXAMPLE
+   reduce modelCheck(init, consistent) .
+   #+END_EXAMPLE
+
+   The reason for this is that the clients' buffers are identical, and so the
+   initial state is consistent; there is no need to check any other states,
+   because no temporal connectives has been added. We have leveraged two
+   temporal connectives, namely /always/, symbolized by =[]=, and /eventually/,
+   symbolized by =<>=.
+
+   The connective /always/ takes a property, and its semantics is (informally)
+   defined as "the property holds in this state, and all future states".
+   Similarly, /eventually/ takes a property, and its semantics is (informally)
+   defined as "the property holds in this state, or in some future state".
+
+   Our system should be /eventually consistent/, but just checking if the
+   initial term models the property =<> consistent= is not sufficient. This is
+   because, initially, all buffers are equal, and so the property holds "in
+   this, or some future state". The property =[]<> consistent= will ensure that
+   the system will /from every state/ reach a consistent state at some point in
+   time.
+
+   The vast majority of the experiments we have conducted has been on the form:
+   #+BEGIN_EXAMPLE
+   reduce modelCheck(init B N M, []<> consistent) .
+   #+END_EXAMPLE
+   where =B=, =N= and =M= determines the buffer, number of clients and number
+   of operation. The experiment can reduce to =true=, indicating that the
+   system is eventually consistent within the given bounds. If the property
+   does not hold, the model checker provides a counter example which shows a
+   sequence of states that lead to an inconsistency. Lastly, the computation
+   may not terminate within a reasonable amount of time consume or too much
+   memory, which leaves us with an inconclusive result.
+
+   Some other experiments have been conducted using the =search= command, which
+   preforms a breadth-first search of the state space from an initial state,
+   until it matches a given pattern and satisfies an (optional) condition. The
+   pattern is just a term with variables, and the condition may refer to these
+   variables. This has been chosen in favor of using the LTL model checker
+   where the property could easily be expressed as a pattern, and where we knew
+   what to look for. Stated differently, we utilized the =search= command like
+   one might utilize a debugging tool, trying to narrow down what caused a bug
+   detected by the LTL model checker.
+
+** Experiments
+
+   The number of reachable states from an initial state depends on the size of
+   the initial buffer, the number of clients and the number of operations. It
+   grows exponentially with regards to the number of characters in the buffer;
+   allowing insertions makes the buffer grow further, and so, increasing the
+   number of operations causes the state space to grow drastically. We do not
+   consider our endeavour especially successful with regards to verifying the
+   system effectively.
+
+   #+NAME: experiments
+   #+CAPTION: Model checking has verified eventual consistency with the following bounds.
+   | Initial buffer size | Clients | Operations | CPU time                     |
+   |---------------------+---------+------------+------------------------------|
+   |                   0 |       2 |          3 | $182244\si{\milli\second}$   |
+   |                   1 |       2 |          3 | $10163132\si{\milli\second}$ |
+   |                   1 |       3 |          3 | $183918\si{\milli\second}$   |
+   |                   1 |       4 |          3 | $11883562\si{\milli\second}$ |
+   |                   2 |       3 |          3 | $20700\si{\milli\second}$    |
+   |                   3 |       3 |          3 | $1057138\si{\milli\second}$  |
+   |                   3 |       4 |          3 | $16491898\si{\milli\second}$ |
+   |                   1 |       2 |          4 | $3478879\si{\milli\second}$  |
+   |                   2 |       2 |          4 | $10664478\si{\milli\second}$ |
+
+   The experiments from Table [[experiments]], have been run on [[http://www.uio.no/english/services/it/research/hpc/abel/][The Abel computer
+   cluster]], allowing us to run multiple experiments simultaneously. The
+   computations are memory intensive jobs, which is why we decided on getting
+   access to the cluster. Note that Maude is single threaded, so we were not
+   able to leverage the many cores available in the cluster for single
+   computations.
+
+   We have naturally tried to increase the bounds found in Table [[experiments]],
+   but the experiments have not terminated within a week of computation, or
+   exceeded the $16\text{GB}$ memory limit. Though a non-terminating
+   computation does not prove anything, but it means that no counterexample was
+   found within reasonable time.
+
+** Processing Counter Examples
+
+   Model checking provides a counter example if the system does not conform to
+   a given property; these counter examples have been extremely valuable for
+   understanding what caused some particular problem. A counter example is
+   represented as a sequence of states, starting from a given initial state and
+   ending in some inconsistent state.
+
+   By default, all Maude terms are separated by a single space, which for large
+   terms quickly becomes difficult to read. The user can specify a format,
+   which can greatly improve the readability of terms. The initial state showed
+   in Section [[Model Checking in Maude]] exemplifies how we have chosen to
+   represent a state in the system. In the representation of a state, all lines
+   contain some piece of information we were interested in.
+
+   The counter examples provided by the model checker typically span hundreds
+   of lines, which makes them difficult to process. It is very useful to only
+   look at /changes/ between two given states. Because each line in a state
+   represents some specific part of the system, a simple program has been
+   written to extract the difference between consecutive states.
+
+   We found this program immensely useful, as it reduces the size of the output
+   by a factor between 2 and 3, and contained less visual noise. Our experience
+   is that spending some time optimizing the visual representation of the
+   output from the model checker greatly improves its usefulness, from a purely
+   practical point of view.
+
+[fn:5] For a good introduction to model checking, see
+cite:Clarke:2000:MC:332656.
+
 
 * Shared Buffer for Emacs --- Source Code
-
   #+INCLUDE: ../shared-buffer-clients/shared-buffer-emacs/shared-buffer.el src emacs-lisp
-
+* Shared Buffer Server --- Source Code
+  #+INCLUDE: ../shared-buffer-server/src/shared_buffer_server/core.clj src clojure
 * LISP In Summer Projects contribution
 
   The following is the project description submitted for the LISP In Summer
