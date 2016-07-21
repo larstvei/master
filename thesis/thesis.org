@@ -2101,7 +2101,7 @@ not satisfy ref:eqn:C1.
      \\
      et(nop(O_i \circ O_j), O_j) &= O_i
      \\
-     et(O_i, O_j \circ O_k) &= et(et(O_i, O_k), O_j) \text{\quad\ \ if $O_j$ is not composed}
+     et(O_i, O_j \circ O_k) &= et(et(O_i, O_j), O_k) \text{\quad\ \ if $O_j$ is not composed}
      \\
      et(O_i, O_j) &= O_i \text{\qquad\qquad\qquad\quad\ \ \ otherwise}
    \end{align*}

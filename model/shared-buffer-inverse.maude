@@ -196,7 +196,7 @@ fmod TRANSFORMATION is
 
     eq et(nop(O o O'), O') = O .
 
-    ceq et(O, O' o O'') = et(et(O, O''), O') if type(O') =/= comp .
+    ceq et(O, O' o O'') = et(et(O, O'), O'') if type(O') =/= comp .
     eq  et(O, O') = O [owise] .
 endfm
 
