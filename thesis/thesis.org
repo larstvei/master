@@ -1985,10 +1985,10 @@ not satisfy ref:eqn:C1.
    conflict this would be the head of the list). However, in the example
    visualized in Figure [[ref:fig:precedence]], this approach would break user
    intent. We have not found a way to completely avoid breaking user intent,
-   but we have found a way to make it less frequent (see Section SECTION). The
-   idea is to find the first event (i.e. the most recent) that is not
-   concurrent with the event that is being added, and let the event skip past
-   events until it precedes the event to its left.
+   but we have found a way to make it less frequent. The idea is to find the
+   first event (i.e. the most recent) that is not concurrent with the event
+   that is being added, and let the event skip past events until it precedes
+   the event to its left.
 
    A function $collect$ collects all events until it finds one that is not
    concurrent with $E$; its dual, $drop$, skips all events until it finds one
