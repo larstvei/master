@@ -3270,11 +3270,11 @@ cite:Clarke:2000:MC:332656.
    preserved simply by using modulo arithmetic. In TCP this is solved by using
    the following definition for less than: "If $s$ and $t$ are timestamp
    values, $s < t$ if $0 < (t - s) < 2^{31}$, computed in unsigned 32-bit
-   arithmetic"cite:Jacobson:1992:TEH:RFC1323. A similar scheme could be
-   included in Shared Buffer, but choosing some lower bound in order to support
-   Emacs (and potentially other languages). This can be achieved without adding
-   any additional complexity on the client side, because the client only sets
-   the token it receives from the server.
+   arithmetic"cite:RFC1323. A similar scheme could be included in Shared
+   Buffer, but choosing some lower bound in order to support Emacs (and
+   potentially other languages). This can be achieved without adding any
+   additional complexity on the client side, because the client only sets the
+   token it receives from the server.
 
 ** Implementing Shared Buffer for Emacs
 
