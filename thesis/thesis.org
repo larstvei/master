@@ -1066,9 +1066,10 @@ Placeholder for abstract.
    is part of our motivation for using formal methods.
 
    The corrected version of $T$ satisfies ref:eqn:C1, but this is not
-   sufficient for guaranteeing convergence. It handles all conflicts where only
-   two operations are involved; in order to handle any number of concurrent
-   operations, being executed in arbitrary order, $T$ must also satisfy:
+   sufficient for guaranteeing convergence in a fully distributed setting. It
+   handles all conflicts where only two operations are involved; in order to
+   handle any number of concurrent operations, being executed in an arbitrary
+   order, $T$ must also satisfy:
    #+BEGIN_EXPORT latex
    \begin{equation*}
      \tag{$C_2$}
@@ -1204,15 +1205,15 @@ not satisfy ref:eqn:C1.
    distributed systems cite:peter.
 
    A Maude specification consists of /sorts/, /signatures/, /variables/,
-   /equations/ and /rewrite rules/. The sorts are simply labels that are
-   associated with some data type. A signature defines a function symbol, along
-   with its domains, which constitutes the values of a data type (where a
+   /equations/ and /rewrite rules/. A sort is simply a label that is associated
+   with some value. A signature defines a function symbol, along with its
+   domain and codomain, which constitutes the values of a sort (where a
    constant is represented as a function symbol with arity zero). The values of
-   a specification, which are constructed by applying function symbols with
-   respect to their domains, yields what is called a /ground term/. Variables
-   must be of a given sort and is essentially a placeholder for a ground term;
-   a term (i.e. "non-ground") can contain variables, which is what separates it
-   from a /ground/ term.
+   a specification are constructed by applying function symbols with respect to
+   their domains, and yields what is called a /ground term/. Variables must be
+   of a given sort and is essentially a placeholder for a ground term; a term
+   (i.e. "non-ground") can contain variables, which is what separates it from a
+   /ground/ term.
 
    An equation is a relation that takes a left-hand and a right-hand term; it
    symbolizes that the terms are considered equivalent. Rewriting rules are
