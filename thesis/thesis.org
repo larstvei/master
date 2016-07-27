@@ -2832,8 +2832,8 @@ queues.
    #+CAPTION: Model checking has verified eventual consistency with the following bounds.
    | Initial buffer size | Clients | Operations | CPU time                      |
    |---------------------+---------+------------+-------------------------------|
-   |                   0 |       2 |          3 | 313 milliseconds              |
-   |                   1 |       2 |          3 | 2.368 seconds                 |
+   |                   0 |       2 |          3 | 0.3 seconds                   |
+   |                   1 |       2 |          3 | 2.4 seconds                   |
    |                   1 |       3 |          3 | 22.8 seconds                  |
    |                   2 |       3 |          3 | 2 minutes 25 seconds          |
    |                   1 |       4 |          3 | 2 minutes 58 seconds          |
