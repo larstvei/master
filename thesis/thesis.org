@@ -134,15 +134,16 @@ Placeholder for abstract.
   different locations, to work on the same document /simultaneously/. The idea
   has been around for a long time, and was demoed by Douglas Engelbart in the
   Mother of All Demos cite:engelbart1968mother already in 1968. In this thesis
-  we aim to formally verify and develop a system for real-time collaboration.
+  we leverage formal methods to aid the development of a real-time
+  collaboration system.
 
   First, let us make it clear what we will characterize as a real-time
   collaborative editor. An /editor/ is a program that allows a user to
-  manipulate a document. The editor is considered /collaborative/ if it has
-  features that makes it easier for multiple users to form a document together.
-  Furthermore, it is considered /real-time/ if multiple users can edit the
-  document simultaneously cite:ellis1989concurrency, and that changes are
-  propagated to the other users within a reasonably short amount of time.
+  manipulate a plain text document. The editor is considered /collaborative/ if
+  it has features that makes it easier for multiple users to form a document
+  together. Furthermore, it is considered /real-time/ if multiple users can
+  edit the document simultaneously cite:ellis1989concurrency, and that changes
+  are propagated to the other users within a reasonably short amount of time.
 
   The first actual implementation of such an editor that was documented in the
   literature, came with GROVE (GROUP Outline Viewing Editor)
@@ -173,11 +174,10 @@ Placeholder for abstract.
   to any text editor, or any program that embeds a text editor.
 
   A client-server model is chosen, as opposed to a fully decentralized
-  solution. We consequently move complexity to the server, if this can simplify
-  the client-side algorithm; this is chosen in order to ensure portability.
-  Furthermore, proving correctness for a fully decentralized solution has
-  proven to be very difficult
-  cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
+  solution. We have tried to move complexity to the server whenever possible,
+  if this simplifies the client-side algorithm. Furthermore, proving
+  correctness for a fully decentralized solution has proven to be very
+  difficult cite:formalOT,DBLP:journals/corr/abs-1302-3292,Imine2003.
 
   Our prototype client is for the text editor Emacs. The name Shared Buffer
   reflects a choice in design; in Emacs, text is stored in a /buffer/; when a
@@ -263,15 +263,15 @@ Placeholder for abstract.
    #+END_EXPORT
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
-   $u_0$ has an empty buffer which she precedes to insert an ="a"= into.
-   Meanwhile, $u_1$ inserts a ="b"= in front of the ="a"= that just popped up
-   in her buffer. The ="b"= eventually reaches $u_0$, and the end result of the
+   $u_0$ has an empty buffer which she precedes to insert an ="a"= into. Then
+   $u_1$ inserts a ="b"= in front of the ="a"= that just showed up in her
+   buffer. The ="b"= eventually reaches $u_0$, and the end result of the
    interaction is that they both will be looking at a buffer containing ="ba"=.
    In this scenario the buffers ended up identical, so we say that we have
    reached a /consistent state/.
 
    Simple scenarios like the one we saw, where only one message is "in flight"
-   at any one time, would be gracefully handled by even the naïve approach. We
+   at any one time, would be gracefully handled even by the naïve approach. We
    can see that ="a"= was inserted prior to the ="b"= at both $u_0$ and $u_1$,
    hence they cannot have been applied concurrently. We will now demonstrate
    that the approach does not work when we introduce concurrent edits.
@@ -350,18 +350,18 @@ Placeholder for abstract.
 
    In this thesis we use a formal verification technique called /model
    checking/ cite:Clarke:2000:MC:332656. This technique requires us to obtain a
-   mathematical model of the system we wish to validate. A model is represented
-   as a set of states, and transitions between these states. We can think of
-   model checking as a graph search, where the states acts as nodes, and edges
+   formal model of the system we wish to validate. A model is represented as a
+   set of states, and transitions between these states. We can think of model
+   checking as a graph search, where the states acts as nodes, and edges
    represent the possibility of going from one state to another. If the graph
    is finite, we can prove that the model has a certain property by checking
    whether the property holds true in every state. Furthermore, we want to use
    Linear Temporal Logic (LTL) to express properties over paths, which are
    sequences of states.
 
-   The model is generally an abstraction of a given system, where one carefully
-   chooses what parts of the system is necessary to represent, in order to
-   prove the properties that are of interest.
+   The model is an abstraction of a given system, where one carefully chooses
+   what parts of the system is necessary to represent, in order to prove the
+   properties that are of interest.
 
    Moreover, we use the model as a way of driving the development process, or
    rather, solving the problem. When model checking a property, a counter
@@ -373,9 +373,9 @@ Placeholder for abstract.
 
    [[http://maude.cs.illinois.edu/][The Maude System]] is our chosen modeling language and verification tool. It
    provides an expressive language, that is well suited for modeling concurrent
-   and distributed systems [[cite:DBLP:conf/maude/2007]]. In addition, it provides
-   The LTL Model Checker cite:Eker2004162, which allows us to specify and
-   verify LTL properties.
+   and distributed systems [[cite:DBLP:conf/maude/2007]]. In addition, it
+   provides an LTL Model Checker cite:Eker2004162, which allows us to specify
+   and verify LTL properties.
 
 ** Contributions
 
@@ -385,8 +385,8 @@ Placeholder for abstract.
    eventual consistency for a limited number of clients and operations.
 
    In the process we have:
-   - provided a mathematical description of our system based on OT,
-   - demonstrated the how modeling has been used to drive the development,
+   - provided a formal description of our system based on OT,
+   - demonstrated how modeling has been used to drive the development,
    - presented a representation of the system in Maude,
    - performed LTL model checking on our model in Maude,
    - provided a client as an extension for Emacs,
@@ -437,13 +437,13 @@ Placeholder for abstract.
 
   A model of a given system is an abstraction of that system cite:Lamport:2002,
   which means only some aspects of the system are described. In our case, the
-  fundamental capabilities of a text editor, namely the insertion and
-  deletions of characters in a buffer, should be captured, along with the order
-  in which they are performed. The time between operations is an example of
-  something /not/ represented in the model; as a result the model cannot be
-  used to analyze the real time performance of the system. Other features of a
-  text editor, like "search and replace", are also omitted, because such
-  features can be represented as a series of deletions and insertions.
+  fundamental capabilities of a text editor, namely the insertion and deletion
+  of characters in a buffer, should be captured, along with the order in which
+  they are performed. The time between operations is an example of something
+  /not/ represented in the model; as a result the model cannot be used to
+  analyze the real time performance of the system. Other features of a text
+  editor, like "search and replace", are also omitted, because such features
+  can be represented as a series of deletions and insertions.
 
   In this chapter we introduce a formal definition of editing operations. The
   definitions are based on
@@ -630,8 +630,8 @@ Placeholder for abstract.
    we will introduce /Operational Transformation/ which, at its core, is a
    technique for restoring commutativity for operations.
 
-   Furthermore, it is worth noting that the structure $\langle \mathcal O,
-   \circ \rangle$ is a /monoid/ because it satisfies the following properties:
+   Furthermore, the structure $\langle \mathcal O, \circ \rangle$ is a /monoid/
+   because it satisfies the following properties:
 
    - $nop$ is the identity element of $\circ$.
      \begin{proof}
@@ -678,9 +678,9 @@ Placeholder for abstract.
     \[ O \circ O^{-1} = O^{-1} \circ O = nop \]
     #+END_EXPORT
     /Undo/ is a common feature in text editors, and should guide us in
-    constructing an inverse function for $\mathcal O$. Intuitively it seem to
+    constructing an inverse function for $\mathcal O$. Intuitively it seems to
     satisfy the equation, in the sense that adding a character to a buffer,
-    followed by an undo is the same as having done nothing at all.
+    followed by an undo, is the same as having done nothing at all.
 
     Guided by this intuition, the inverse of $\ins{0}{a}$ should be $del(0)$,
     because applying $del(0) \circ \ins{0}{a}$ to a buffer will always yield
@@ -717,9 +717,9 @@ Placeholder for abstract.
       \[ (O_j \circ O_i)^{-1} = O_i^{-1} \circ O_j^{-1} \]\hfill$\dashv$
     \end{definition}
     #+END_EXPORT
-    Now that we have defined an inverse for all operations, we can check if the
-    invertibillity axiom holds. Say we have the operation $\ins{0}{a}$, then
-    its inverse is $\del{0}{a}$. We apply $\del{0}{a} \circ \ins{0}{a}$ to the
+    Now that we have defined an inverse for all operations, we can check if
+    invertibillity holds. Say we have the operation $\ins{0}{a}$, then its
+    inverse is $\del{0}{a}$. We apply $\del{0}{a} \circ \ins{0}{a}$ to the
     empty buffer $\epsilon$:
     #+BEGIN_EXPORT latex
     \begin{align*}
@@ -729,7 +729,7 @@ Placeholder for abstract.
     #+END_EXPORT
     In order to satisfy the invertibility axiom, the reverse should be true as
     well. It is not because applying $\ins{0}{a} \circ \del{0}{a}$ on the empty
-    buffer $\epsilon$, because it is not well defined. Consequently the
+    buffer $\epsilon$, because it is not well defined. Consequently, the
     invertibility axiom does not hold, and so $\langle \mathcal O, \circ
     \rangle$ is not a group.
 
@@ -751,12 +751,12 @@ Placeholder for abstract.
   and the very interesting work of Imine et al. on proving correctness for
   transformation functions using formal verification techniques
   cite:DBLP:conf/ecscw/ImineMOR03,DBLP:journals/corr/abs-1302-3292,formalOT.
-  The chapter should sufficiently convay the basic idea of OT and how it
-  works, without going into the finer details. We use notation estabelished in
+  The chapter should sufficiently convey the basic idea of OT and how it
+  works, without going into the finer details. We use notation established in
   Chapter [[Formal Semantics of Editing Operations]] to describe the workings of
   OT.
 
-** Basics of OT
+** Basics of Operational Transformation
 
    Ellis and Gibbs introduced the dOPT (Distributed Operational Transformation)
    algorithm cite:ellis1989concurrency, and with it, /Operational
@@ -905,13 +905,13 @@ Placeholder for abstract.
    of great complexity --- it is not given that the transformation function can
    resolve every conflict that can arise.
 
-** Discussing Consistency in OT
+** Discussing Consistency in Operational Transformation
 
    This section introduces some consistency models that have been used to
    describe correctness of OT algorithms, and achievements in trying to verify
-   these algorithms. In OT it is common to refer to a /site/ as an uniquely
+   these algorithms. In OT it is common to refer to a /site/ as a uniquely
    identified object with a data segment (for example a document) which a user
-   can manipulate. When no messages are "in flight" the system is said to be
+   can manipulate. When no messages are "in flight", the system is said to be
    /quiescence/.
 
    The consistency model of cite:ellis1989concurrency, is defined by the
@@ -1085,11 +1085,11 @@ Placeholder for abstract.
    cite:ellis1989concurrency, or any of transformation functions from
    cite:DBLP:conf/cscw/ResselNG96,DBLP:journals/tochi/SunJZYC98,DBLP:conf/group/SuleimanCF97
    satisfies [[ref:eqn:C1]] and ref:eqn:C2. Furthermore, they propose a
-   transformation of their own, which was proved correct by their theorem
-   prover. Yet, in cite:DBLP:journals/corr/abs-1302-3292, they prove their own
-   proposed transformation function wrong. This paper also shows that there
-   does not exist a transformation function that satisfies [[ref:eqn:C1]] and
-   ref:eqn:C2 without adding additional parameters to the operations.
+   transformation function of their own, which was proved correct by their
+   theorem prover. Yet, in cite:DBLP:journals/corr/abs-1302-3292, they prove
+   this transformation function wrong. This paper also shows that there does
+   not exist a transformation function that satisfies [[ref:eqn:C1]] and ref:eqn:C2
+   without adding additional parameters to the operations.
 
    To the best of our knowledge, there has not been found a transformation
    function that satisfies the consistency model of Sun et al.
@@ -1133,10 +1133,10 @@ not satisfy ref:eqn:C1.
 
    The Google Wave protocol is largely based on the Jupiter Collaboration
    System cite:WaveOT. In contrast to the Jupiter Collaboration System, the
-   Google Wave protocol requires that clients wait for acknowldgement before
+   Google Wave protocol requires that clients wait for acknowledgement before
    sending new operations. Clients may still apply changes to their local copy,
    but need to queue the operations, and send them on reception of an
-   acknowldgement. This reduces the memory consumption at the server, because
+   acknowledgement. This reduces the memory consumption at the server, because
    the server will only need to keep one history of operations.
 
 * Client-side Specification and Maude
@@ -1152,11 +1152,11 @@ not satisfy ref:eqn:C1.
 
   Earlier work on formal verification of /Operational Transformation/ (OT)
   algorithms has been focused on verifying properties of the /transformation
-  functions/ (as discussed in Section [[Discussing Consistency in OT]]), which is
-  an essential part of all OT algorithms. However, there are other aspects of
-  the algorithms, that are left unverified, leaning on analytical proofs by the
-  original authors. Instead of writing analytical proofs we leverage formal
-  methods to ensure robustness of the system.
+  functions/ (as discussed in Section [[Discussing Consistency in Operational
+  Transformation]]), which is an essential part of all OT algorithms. However,
+  there are other aspects of the algorithms, that are left unverified, leaning
+  on analytical proofs by the original authors. Instead of writing analytical
+  proofs we leverage formal methods to ensure robustness of the system.
 
   We aim at modeling the clients, the server and the communication between
   these, but restrict ourselves to editing sessions where all the clients have
@@ -1199,14 +1199,14 @@ not satisfy ref:eqn:C1.
 
    The Maude System consists of a programming and modeling language, as well as
    tools for exploring the state space of the model. In essence, Maude is an
-   implementation of /rewriting logic/ which has been proved useful for
-   modeling distributed systems cite:peter.
+   implementation of /rewriting logic/ which has proved useful for modeling
+   distributed systems cite:peter.
 
    A Maude specification consists of /sorts/, /signatures/, /variables/,
    /equations/ and /rewrite rules/. The sorts are simply labels that are
    associated with some data type. A signature defines a function symbol, along
    with its domains, which constitutes the values of a data type (where a
-   constant is represented as a function symbol with arty zero). The values of
+   constant is represented as a function symbol with arity zero). The values of
    a specification, which are constructed by applying function symbols with
    respect to their domains, yields what is called a /ground term/. Variables
    must be of a given sort and is essentially a placeholder for a ground term;
@@ -1215,13 +1215,13 @@ not satisfy ref:eqn:C1.
 
    An equation is a relation that takes a left-hand and a right-hand term; it
    symbolizes that the terms are considered equivalent. Rewriting rules are
-   similar to equations, but the terms does not need to be equivalent. Rather a
-   rewriting rule symbolizes that the left-hand term /may evolve/ to the
+   similar to equations, but the terms does not need to be equivalent. Rather,
+   a rewriting rule symbolizes that the left-hand term /may evolve/ to the
    right-hand term, and is strictly read left to right. The equations of the
    system represents the /static/ part of the system, and the rewrite rules
    represent the /dynamic/ part of the system.
 
-   The Maude System have two fundamental commands that sheds light on how
+   Two fundamental commands in The Maude System helps to shed light on how
    equations and rewriting rules operate. The /reduce/ command takes a term and
    if the term (or a subterm) matches the left-hand term of an equation, it is
    rewritten to the right hand term, and the process continues until the
@@ -1241,7 +1241,7 @@ not satisfy ref:eqn:C1.
    In our specification, we use rewrite rules to describe nondeterministic
    changes in the system, like a user inserting or deleting a character from
    its buffer. The equations are used to describe the system's reaction to the
-   changes in the system, which should is deterministic.
+   changes in the system, which is deterministic.
 
    # The equational membership logic is very similar to a functional programming
    # language, in the sense that they are both declarative and have the same
@@ -1307,8 +1307,8 @@ not satisfy ref:eqn:C1.
    represents that =C= was inserted at position =size(B)=. The current state
    token =T= and sequence number =S= is added to the message. Lastly, the
    client must increment its sequence number, using the successor function =s=.
-   The rule for deletion is almost identical, with the distinction of removing
-   a character from the buffer, rather than inserting one, and labeling the
+   The rule for deletion is almost identical, with the difference of removing a
+   character from the buffer, rather than inserting one, and labeling the
    operation =del=.
 
    The server can put messages on a client's incoming queue, which the client
@@ -1357,7 +1357,7 @@ not satisfy ref:eqn:C1.
    #+END_EXAMPLE
 
    From the resulting term we can read that $u_0$ (i.e. =user 0=) has inserted
-   an =a=, and deleted it afterwards, whilst $u_1$ has inserted a =b=.
+   an =a=, and deleted it afterwards, while $u_1$ has inserted a =b=.
 
 *** Measures to Reduce the State Space
 
@@ -1366,12 +1366,9 @@ not satisfy ref:eqn:C1.
     an initial state must be given; in Maude this corresponds to a term. If the
     term matches a rewrite rule, it may be applied which in turn yields a new
     state. A term can match multiple rewrite rules, so the number of reachable
-    state is given by the sum how many rewrite rules the initial term matches,
-    and how many rewrite rules each of the resulting terms matches and so on.
-    This number may be infinite; a minimal example is a system where each state
-    consists only of a natural number, which can be rewritten to the successor
-    of that number --- because there is no largest natural number, the rewrite
-    rule can always be applied, and so the set of reachable states is infinite.
+    states is given by the sum of how many rewrite rules the initial term
+    matches, and how many rewrite rules each of the resulting terms matches and
+    so on. There may be an infinite number of reachable states.
     # The number of /reachable/ states from that term is given by all the
     # possible ways that rewrite rules can be applied. The number of reachable
     # states is often exponential with regards to the
@@ -1426,8 +1423,8 @@ not satisfy ref:eqn:C1.
           \node (u0) at (0, 4) {$u_0$};
           \node (u0e) at (0, 0) {};
           \node[O_0, below = of u0] (u00) {};
-          \node[O_0, above = of u01] (u00a) {};
           \node[O_1, above = 2em of u0e] (u01) {};
+          \node[O_0, above = of u01] (u00a) {};
 
           %% User 1 generates/receives in this order
           \node (u1) at (5, 4) {$u_1$};
@@ -1533,7 +1530,7 @@ not satisfy ref:eqn:C1.
 
 * Server-side Specification
 
-  At this point the behaviour of clients has been specified. The more
+  At this point the behavior of clients has been specified. The more
   interesting part of the system is the server, as it handles most of the
   complexity in the algorithm.
 
@@ -1556,7 +1553,7 @@ not satisfy ref:eqn:C1.
    \begin{definition}[Events]
      The events on a server $S$ communicating with a set of clients, identified by
      users in $\mathcal U$, is formally defined as the smallest set of four-tuples
-     $\mathbb E$, where every $\tuple{O,t,m, u} \in \mathbb E$ satisisfies the
+     $\mathbb E$, where every $\tuple{O,t,m, u} \in \mathbb E$ satisfies the
      following:
      \begin{itemize}
      \item \(O \in \mathcal O\) and $O$ is not a composition of operations
@@ -1581,14 +1578,13 @@ not satisfy ref:eqn:C1.
    applied. In the case where there are no concurrent events, the arrival time
    is used to determine what event should precede the other. But in order to
    decide an order, we first need to be able to detect concurrent operations.
-   Intuitively, are two operations concurrent if they where generated
+   Intuitively, two operations are concurrent if they were generated
    independently from each other.
    #+BEGIN_EXPORT latex
    \\
-   \begin{definition}[Concurrent Events]
+   \begin{definition}[Concurrent Events]\label{def:concurrent}
      Two events $E_i = \tuple{O_i, t_i, m_i, u_i}$ and $E_j = \tuple{O_j, t_j,
-       m_j, u_j}$, where $E_i, E_j \in \mathbb E$, are said to be concurrent if and
-     only if:
+       m_j, u_j}$, where $E_i, E_j \in \mathbb E$, are said to be concurrent if:
      \[ u_i \not= u_j \land ((t_i \leq t_j \land m_i \geq t_j) \lor (t_j \leq t_i \land m_j \geq t_i)) \]
      $E_i$ is concurrent with $E_j$ is denoted $E_i \parallel E_j$.
      \hfill$\dashv$
@@ -1619,9 +1615,9 @@ not satisfy ref:eqn:C1.
    happened before the other in /real/ time.
    #+BEGIN_EXPORT latex
    \\
-   \begin{definition}[Happened Before]
+   \begin{definition}[Happened Before]\label{def:happened-before}
      An event $E_i = \tuple{O_i, t_i, m_i, U_i}$ \textit{happened before} $E_j =
-     \tuple{O_j, t_j, m_j, U_j}$, where $E_i, E_j \in \mathbb E$, if and only if:
+     \tuple{O_j, t_j, m_j, U_j}$, where $E_i, E_j \in \mathbb E$, if:
      \[ E_i \nparallel E_j \land m_i < m_j \]
      $E_i$ \textit{happened before} $E_j$ is denoted $E_i \longrightarrow E_j$. \hfill$\dashv$
    \end{definition}
@@ -1808,7 +1804,7 @@ not satisfy ref:eqn:C1.
      Two events $E_i = \tuple{O_i, t_i, m_i, U_i}$ and $E_j = \tuple{O_j, t_j,
        m_j, U_j}$ where $E_i, E_j \in \mathbb E$ are given. Let $p_i = pos(O_i)$,
      $p_j = pos(O_j)$, $type_i = type(O_i)$ and $type_j = type(O_j)$.
-     An event $E_i$ \textit{precedes} $E_j$ if and only if:
+     An event $E_i$ \textit{precedes} $E_j$ if:
      \[
      E_i \prec E_j =
      \begin{cases}
@@ -1918,7 +1914,7 @@ not satisfy ref:eqn:C1.
     /sort/ events based on $\prec$, nor use a standard ordered data structure,
     due to its lack of transitivity. The other is that there exists multiple
     plausible orderings of a given set of events, meaning that there are
-    multiple orders where precedence relation is satisfied between each
+    multiple orders where the precedence relation is satisfied between each
     consecutive pair of events.
 
     A possible resolution to this is discussed in Future Work, Section
@@ -1936,7 +1932,7 @@ not satisfy ref:eqn:C1.
    The /happened before/ relation yields a partial order of events, leaving
    some events unordered, due to them being concurrent; the precedence
    relation preservers the ordering provided by the happened before relation,
-   whilst trying to order the concurrent events in a way that preserves the
+   while trying to order the concurrent events in a way that preserves the
    users intentions.
 
    #+BEGIN_EXPORT latex
@@ -2081,19 +2077,19 @@ not satisfy ref:eqn:C1.
    transformation function and $et$ is the exclusion transformation function.
    $it$ is derived from the (corrected) transformation from Figure
    [[ref:fig:transformation-function]] (page [[pageref:fig:transformation-function]]),
-   whereas $et$ is derived from cite:sun1998reversible. Furthermore we define
+   whereas $et$ is derived from cite:sun1998reversible. Furthermore, we define
    both $it$ and $et$ for composed operations, which is derived from
    cite:formalOT.
 
    One alteration has been made. When applying an inclusion transformation on
-   two deletions with the same position the result is $nop$. To reverse this
+   two deletions with the same position, the result is $nop$. To reverse this
    effect, $et$ must be able to retrieve the deletion that was omitted (i.e.
    transformed to $nop$). Using an exclusion transformation on $nop$ cannot be
    done, because it contains no information about what character was deleted.
-   In cite:sun1998reversible this is handled by keeping a lookup table. Instead
-   we store the information in the $nop$ object itself, by letting $nop$
-   (optionally) contain an operation; its semantics is not changed, meaning
-   applying $nop$ has no effect regardless.
+   In cite:sun1998reversible this is handled by keeping a lookup table.
+   Instead, we store the information in the $nop$ object itself, by letting
+   $nop$ (optionally) contain an operation; its semantics is not changed,
+   meaning applying $nop$ has no effect regardless.
 
    Note that the following equations, defining $it$ and $et$, uses the word
    /otherwise/ as it is used in Maude. It means that if none of the above
@@ -2198,9 +2194,9 @@ not satisfy ref:eqn:C1.
    question of getting all clients to conform to this history still remains.
    This section concludes the specification of the server-side algorithm, and
    shows how the history, and properties of editing operations, are leveraged
-   to guarantee eventual consistency. The only nondeterministic behaviour at
-   the server is the reception of a message; this section describes the
-   server's /reaction/ to incoming messages.
+   to guarantee eventual consistency. The only nondeterministic behavior at the
+   server is the reception of a message; this section describes the server's
+   /reaction/ to incoming messages.
 
    Messages from the server are on exactly the same form as messages from a
    client, namely a $msg(O, t, s)$ where $O$ is an operation, $t$ is a token
@@ -2355,10 +2351,10 @@ not satisfy ref:eqn:C1.
     The main benefits of this scheme are that it remains very simple on the
     client side (seeing that it only increments after every send or receive)
     and that it guarantees that clients do not perform operations from the
-    server which are based on outdated information. Instead the client rejects
+    server which are based on outdated information. Instead, the client rejects
     messages for the duration of a conflict with the server. The disadvantage
     is that the system is not responsive during long lasting conflicts, which
-    may arise if a users, for instance, holds down a button on her keyboard for
+    may arise if a user, for instance, holds down a button on her keyboard for
     a long time. However, it seems reasonable to assume that such situations
     are unlikely to occur, and even less likely to cause problems in practical
     uses of the system.
@@ -2461,8 +2457,9 @@ not satisfy ref:eqn:C1.
     (along with the corresponding token). The operation from $makeResponse$
     ensures that previously rejected operations are performed; it is very
     important not to perform these rejected operations again if a new conflict
-    arises. The solution is to replace the list with a singleton list, only
-    containing the operation constructed by $makeResponse$ and the token $m+1$.
+    arises. To solve this problem, the list is replaced with a singleton list
+    which only contains the operation constructed by $makeResponse$ and the
+    token $m+1$.
 
 **** A Summarizing Example
 
@@ -2602,7 +2599,7 @@ not satisfy ref:eqn:C1.
    This chapter is in essence a comprehensive walk through of the equations of
    the Maude specification that are related to the server-side of the
    specification. The reception of a message is the only nondeterministic
-   behaviour at the server; this is expressed as a single rewriting rule in
+   behavior at the server; this is expressed as a single rewriting rule in
    Maude. This rule calls the functions we have described in the preceding
    sections.
 
@@ -2667,7 +2664,7 @@ queues.
 
   For this thesis, we have chosen to apply a well known technique for formal
   verification, called model checking[fn:5]. Maude has good support for
-  performing model checking, via the its =search= command
+  performing model checking, via its =search= command
   cite:DBLP:conf/maude/2007, and a LTL (Linear Temporal Logic) model checker
   cite:Eker2004162. We have taken a practical approach to model checking, using
   it as a tool to aid the development of the algorithm. In this chapter we will
@@ -2688,7 +2685,7 @@ queues.
    model, in the sense that it allows for an /inconsistency window/, meaning
    that clients can be out of sync for a period of time.
 
-   Our motivation for using such a week consistency model is that it is a
+   Our motivation for using such a weak consistency model is that it is a
    reasonable minimum requirement for a real-time collaborative system.
    However, it does not provide any guarantees with regards to preserving /user
    intent/. If eventual consistency was the only requirement for our system,
@@ -2710,9 +2707,9 @@ queues.
    We use LTL (Linear Temporal Logic) to formally express the property /always
    eventually consistent/. A temporal logic is a tool for reasoning about time,
    where, in LTL, time is simply represented as a sequence of states. The words
-   /always/ and /eventually/ expresses temporal relationships between states,
-   whilst /consistent/ is a property which states that all buffers in the
-   system are equal.
+   /always/ and /eventually/ expresses temporal properties over sequences of
+   states, while /consistent/ is a property which states that all buffers in
+   the system are equal.
 
 ** Expressing Consistency in Maude
 
@@ -2775,22 +2772,14 @@ queues.
               token : 0,
               in-queue : nil,
               out-queue : nil >
-
-   [a b c d e]
-
-   (user 0 - (user 0, user 1) - (user 0, user 1))
    #+END_EXAMPLE
 
-   Most importantly it contains terms that represent server and two clients.
-   The server consists of a history, a state token and a mapping from users to
-   the servers information about the clients; the information it keeps is a
-   list of rejected messages. The last two terms are there to impose the
-   restrictions described in Section [[Measures to Reduce the State Space]],
-   ensuring that characters are inserted alphabetically, and that controlling
-   what users may perform an operation in a given state.
-
-   We can perform model checking on this initial state, by calling the
-   =modelCheck= function. The following expression immediately returns /true/:
+   It contains terms that represent server and two clients. The server consists
+   of a history, a state token and a mapping from users to the server's
+   information about the clients; the information it keeps is a list of
+   rejected messages. We can perform model checking on this initial state, by
+   calling the =modelCheck= function. The following expression immediately
+   returns /true/:
 
    #+BEGIN_EXAMPLE
    reduce modelCheck(init, consistent) .
@@ -2843,7 +2832,7 @@ queues.
    grows exponentially with regards to the number of characters in the buffer;
    allowing insertions makes the buffer grow further, and so, increasing the
    number of operations causes the state space to grow drastically. We do not
-   consider our endeavour especially successful with regards to verifying the
+   consider our endeavor especially successful with regards to verifying the
    system effectively.
 
    #+NAME: experiments
@@ -2873,6 +2862,18 @@ queues.
    computation does not prove anything, but it means that no counterexample was
    found within reasonable time.
 
+   Lastly, we want to emphasize that we consider the experiments that produced
+   counter examples, which are in a vast majority, to have been of great value
+   to the development of the algorithm. Sadly, we cannot document these to the
+   same degree as the ones that did not produce a counter example. This is
+   because that, for a long time, the specification was under rapid
+   development, and counter examples were produced within a short amount of
+   time on a local computer. It was first when the specification started
+   showing real promise that we needed to access more computing power in order
+   to produce counter examples. We have been able to correct all errors that
+   have been found by the model checker, and as of now, we have not been able
+   to produce further counter examples.
+
 ** Processing Counter Examples
 
    Model checking provides a counter example if the system does not conform to
@@ -2890,15 +2891,17 @@ queues.
 
    The counter examples provided by the model checker typically span hundreds
    of lines, which makes them difficult to process. It is very useful to only
-   look at /changes/ between two given states. Because each line in a state
-   represents some specific part of the system, a simple program has been
-   written to extract the difference between consecutive states.
+   look at /changes/ between two given states.
 
-   We found this program immensely useful, as it reduces the size of the output
-   by a factor between 2 and 3, and contained less visual noise. Our experience
-   is that spending some time optimizing the visual representation of the
-   output from the model checker greatly improves its usefulness, from a purely
-   practical point of view.
+   Because each line in a state represents some specific part of the system, a
+   simple program has been written to extract the difference between
+   consecutive states. We found this program immensely useful, as it reduces
+   the size of the output by a factor between 2 and 3, and contained less
+   visual noise.
+
+   Our experience is that spending some time optimizing the visual
+   representation of the output from the model checker greatly improves its
+   usefulness, from a purely practical point of view.
 
 [fn:5] For a good introduction to model checking, see
 cite:Clarke:2000:MC:332656.
@@ -3644,129 +3647,12 @@ why the empty list is treated as an "alternative" identity element.
   #+INCLUDE: ../shared-buffer-clients/shared-buffer-emacs/shared-buffer.el src emacs-lisp
 * Shared Buffer Server --- Source Code
   #+INCLUDE: ../shared-buffer-server/src/shared_buffer_server/core.clj src clojure
-* LISP In Summer Projects contribution
+* Maude Specification --- Source Code
+  #+INCLUDE: ../model/shared-buffer-inverse.maude src haskell
+  #+LaTeX:\backmatter{}
+  #+LaTeX:\printbibliography
 
-  The following is the project description submitted for the LISP In Summer
-  Projects contest.
 
-** Purpose
-
-   # What is your project? In about 50 words, describe your project.
-
-   Shared buffer is a project that enables real-time collaborative editing in
-   Emacs. It is split up in two parts, client and server. The client is an
-   Emacs extension entirely written in Emacs Lisp. The server is a small
-   Common Lisp program; there is currently a server running on 'virvel.de'.
-
-** Function
-
-   # What does your project do? In about 50 words, describe what your project
-   # does.
-
-   In Emacs one is simply able to share a buffer and connect to a buffer that
-   is already shared. This is done by requesting a connection to a shared
-   buffer server. Once a connection is established all changes in your buffer
-   is sent to the server. The server simply redirects these messages to all
-   Emacs clients connected to that shared buffer.
-
-** Motivation
-
-   # Why did you choose this project?  In about 50 words, describe what was
-   # your motivation was for doing this particular project?
-
-   Working on a small scale project with friends, fellow students and
-   coworkers was not simple enough to do with Emacs. Having recently started
-   learning Lisp, it seemed like a fun and ambitious project.
-
-** Audience
-
-   # Who did you write this for? In about 50 words, describe the intended
-   # target audience and anticipated users.
-
-   Initially me, and whomever I wanted to work with. After realizing I’d
-   might actually make it work, I think it can be useful for anyone using
-   Emacs in collaboration with others. It is written with small scale
-   software projects in mind, but can be used for all kinds of text editing.
-
-** Methodology
-
-   # How does it work?  In about 300-400 words, describe the technical details
-   # of how your software works.  This might include high-level algorithms, the
-   # technical stack and technical or social challenges you faced.
-
-   The project is divided into two parts, a client and a server. The server
-   is written in Common Lisp, and it's main job is to allow the clients to
-   communicate. The client is an Emacs extension written in Emacs Lisp which
-   mainly send changes to the server, or receives changes from the server.
-
-   The client may ask to establish a new session or connect to an existing
-   one. If a new session is required, the client provides a key. This key is
-   used by the server as key in a hash table, containing lists of clients. A
-   client asking to connect to a shared buffer is simply added to the list of
-   clients that corresponds to the given key.
-
-   When a new client connects to an already established session, a single
-   client is asked by the server to send it's entire buffer content. This
-   package is marked as being for new clients only. From that point on they
-   should keep synced. The session is kept alive as long as there are clients
-   connected to it.
-
-   The main challenge in this project was to figure out how to keep several
-   separate Emacs buffers mirrored. This is resolved by sending a message for
-   every command a user invokes (this is done by adding functions to
-   after-change-hook and post-command-hook, both built-in variables in
-   Emacs). These messages will dictate a change that happened in a
-   buffer. Assuming the shared buffers are identical to the one sending the
-   message prior of that change, we can safely apply that change to any
-   client that receives this message.
-
-   A problem arises if our assumption is wrong. The most common situation is
-   that a client has made changes in a buffer between the time the message
-   was sent and received. The point where the change should be applied is
-   then calculated by using the difference in the size of the buffer the
-   message was sent from, and the size of the buffer receiving the
-   message. This works in most cases.
-
-** Conclusion
-
-   # In 100-200 words, clearly summarize both the accomplishments and
-   # limitations of your software.  Describe future directions for your
-   # projects. This can include enhancements as well as extensions.
-
-   After a summers worth of coding I am glad to say that the core
-   functionality is up and running. It is fast and lightweight. A lot of time
-   has gone into finding the /right/ solution to the big problems, and
-   finding good workarounds for Emacs's many idiosyncrasies. I believe the
-   project has great potential.
-
-   The main issue that needs fixing is how to detect and resolve problems
-   with synchronization. As of now, once buffers go out of sync, there is
-   really no other solution than to disconnect and reconnect. There are also
-   quite a few bugs triggered by Emacs's many features and extensions, and
-   I'm hoping to resolve these after the competition is over.
-
-   I plan to make Shared buffer more user friendly, by supplying a Emacs
-   minor mode accompanied by a chat feature. When these things are in order
-   it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
-
-   #+LaTeX:\backmatter{}
-   #+LaTeX:\printbibliography
-
-    After a summers worth of coding I am glad to say that the core
-    functionality is up and running. It is fast and lightweight. A lot of time
-    has gone into finding the /right/ solution to the big problems, and
-    finding good workarounds for Emacs's many idiosyncrasies. I believe the
-    project has great potential.
-
-    The main issue that needs fixing is how to detect and resolve problems
-    with synchronization. As of now, once buffers go out of sync, there is
-    really no other solution than to disconnect and reconnect. There are also
-    quite a few bugs triggered by Emacs's many features and extensions, and
-    I'm hoping to resolve these after the competition is over.
-
-    I plan to make Shared buffer more user friendly, by supplying a Emacs
-    minor mode accompanied by a chat feature. When these things are in order
-    it will be released in [[http://melpa.milkbox.net/][melpa]], and will hopefully be found useful.
 
 * COMMENT Local variables
   # Local Variables:
