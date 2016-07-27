@@ -2714,37 +2714,29 @@ queues.
 ** Expressing Consistency in Maude
 
    The Maude model checker module cite:Eker2004162 provides a sort =Prop=; a
-   term of the sort =Prop= is a property. We define two function symbols
-   =consistent=, and =inconsistent= which are both of the sort =Prop= (and do
-   not take any arguments). The /semantics/ of a property is defined by
-   equations using the operator =|==, which takes a state and a property. A
-   state is simply a term which represents all the components of the system,
-   including the clients and the server.
+   term of the sort =Prop= is a property. We define a function symbol
+   =consistent= which is of the sort =Prop= (and does not take any arguments).
+   The /semantics/ of a property is defined by equations using the operator
+   =|==, which takes a state and a property. A state is simply a term which
+   represents all the components of the system, including the clients and the
+   server.
 
-   The =consistent= property is defined as the negation of the =inconsistent=
-   property, which is easier to specify. The following Maude equation specifies
-   what it means for a state to be inconsistent.
-
-   #+BEGIN_EXAMPLE
-       eq < U  | buffer : B  >
-          < U' | buffer : B' >
-          C |= inconsistent = B =/= B' .
-       eq C |= inconsistent = false [owise] .
-   #+END_EXAMPLE
-
-   Any term which contains at least two clients will match the equation, where
-   =C= contains the rest of the state (for instance the server term). The first
-   equation expresses that a state containing two clients models the property
-   =inconsistent= if the buffers are not equal. The second states that in any
-   other case, the state does not model the =inconsistent= property. The
-   =consistent= property is defined as follows:
+   A state being =consistent= is defined as "all buffers in the system are
+   equal to each other". This is expressed by using a function that gathers all
+   buffers in a given state, adding them to a set, and checking if the size of
+   this set is (less than or) equal to one. We allow for an empty set, because
+   a system with no clients should be consistent. The property is formally
+   specified as:
 
    #+BEGIN_EXAMPLE
-       eq C |= consistent = not C |= inconsistent .
+       eq C |= consistent = | buffers(C) | <= 1 .
+       eq C |= consistent = false [owise] .
    #+END_EXAMPLE
 
-   It states that a state that models the =consistent= property is a state that
-   does not model the =inconsistent= property.
+   The equations state that a state =C= is a model for the property
+   =consistent= if the size of a set containing all the buffers in the state is
+   less than or equal to one. In all other cases, =C= is not a model for the
+   property =consistent=.
 
 ** Model Checking in Maude
 

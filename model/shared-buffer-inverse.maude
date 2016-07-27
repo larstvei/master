@@ -70,6 +70,10 @@ fmod BUFFER is
     subsort List{Str} < Buffer .
 endfm
 
+view Buffer from TRIV to BUFFER is
+    sort Elt to Buffer .
+endv
+
 fmod ERROR is
     pr BUFFER .
 
@@ -526,25 +530,26 @@ mod PREDICATES is
     pr MODEL-CHECKER .
     pr SATISFACTION .
     pr SERVER .
+    pr SET{Buffer} .
     pr SITE .
     pr HISTORY .
 
     subsort Configuration < State .
 
-    ops consistent inconsistent : -> Prop .
+    ops consistent : -> Prop .
 
-    vars A A' : AttributeSet .
-    vars B B' : Buffer .
-    vars U U' : User .
+    var A : AttributeSet .
+    var B : Buffer .
+    var U : User .
     var C : Configuration .
     var H : History .
-    
-    eq < U  | buffer : B,  A  >
-       < U' | buffer : B', A' >
-       C |= inconsistent = B =/= B' .
-    eq C |= inconsistent = false [owise] .
 
-    eq C |= consistent = not C |= inconsistent .
+    op buffers : Configuration -> Set{Buffer} .
+    eq buffers(< U | buffer : B, A > C) = B, buffers(C) .
+    eq buffers(C) = empty [owise] .
+
+    eq C |= consistent = | buffers(C) | <= 1 .
+    eq C |= consistent = false [owise] .
 
     op legal : Buffer -> Prop .
     eq < server | history : H, A > C |= legal(B) =
@@ -566,6 +571,7 @@ mod TEST is
     pr SITE .
     pr SITE-RULES .
     pr STR .
+    pr SET{Buffer} .
     pr HISTORY .
     pr TRANSFORMATION .
     pr UNIQUE .
