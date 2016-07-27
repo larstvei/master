@@ -6,10 +6,11 @@
 #+LaTeX_CLASS_OPTIONS: [USenglish, hidelinks]
 #+LaTeX_CLASS: ifimaster
 #+LATEX_HEADER: \usepackage{tikz}
-#+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning}
+#+LATEX_HEADER: \usetikzlibrary{shapes, arrows, arrows.meta, positioning, decorations.pathreplacing, automata}
 #+LATEX_HEADER: \usepackage[scale=0.85]{sourcecodepro}
 #+LATEX_HEADER: \usepackage[backend=biber,bibencoding=utf8]{biblatex}
-#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, multicol, siunitx, subcaption}
+#+LATEX_HEADER: \usepackage{amsthm, centernot, parskip, multicol, siunitx, subcaption, url}
+#+LATEX_HEADER: \usepackage[hang]{footmisc}
 #+LATEX_HEADER: \bibliography{ref}
 #+LaTeX_HEADER: \urlstyle{sf}
 
@@ -21,6 +22,8 @@
 #+LaTeX_HEADER: \newenvironment{ritemize}{\begin{itemize}\raggedright}{\end{itemize}}
 #+LaTeX_HEADER: \theoremstyle{definition}
 #+LaTeX_HEADER: \newtheorem{definition}{Definition}[section]
+
+#+LaTeX_HEADER: \setlength\footnotemargin{5pt}
 
 #+LaTeX: \pgfdeclarelayer{bg}    % declare background layer
 #+LaTeX: \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
@@ -2898,6 +2901,742 @@ queues.
 
 [fn:5] For a good introduction to model checking, see
 cite:Clarke:2000:MC:332656.
+
+* Implementation of Shared Buffer
+
+  Shared Buffer has been implemented by first writing a formal specification,
+  and then writing a program that conforms to that specification. Care has been
+  taken to write the specification in a way that eases the process of
+  translating the specification to a programming language. This has mainly been
+  done through minimizing the use of features specific to Maude, and specifying
+  the algorithm at a fairly low level of abstraction. The act of implementing
+  the system can be viewed as a test to see how well we have achieved this.
+
+  We provide a prototype implementation of a real-time collaborative system,
+  where the server is written in Clojure and a client is developed as an
+  extension for the text editor Emacs. The full source code of the Emacs
+  extension is found in Appendix [[Shared Buffer for Emacs --- Source Code]]. As
+  for the server source code, the core is found in Appendix [[Shared Buffer
+  Server --- Source Code]], but not the complete implementation. The parts that
+  are direct translations of functions covered thoroughly in Chapter
+  [[Server-side Specification]] are not included, as well as some utility
+  functions.
+
+  Note that the implementation is in a prototype stage, where some control
+  mechanisms covered in Chapter [[Server-side Specification]] have not yet been
+  implemented. This is due to time limitations, as there has been made changes
+  to the specification close to the submission of the thesis.
+
+  This chapter attempts to bridge the gap between the specification and the
+  implementation, and present solutions to problems that are not present in the
+  abstract model of the system.
+
+** Editing Sessions
+
+   The server can handle multiple independent editing sessions, all of which
+   are identified by a key. A client can either join a session by providing a
+   key, or the server will create a new session with a random generated key. If
+   the client specifies a key which is not associated with any existing editing
+   session, a new session is created which is identified by the specified key.
+   The editing session exists as long as there are connected clients associated
+   with the session.
+
+   For a client to join an editing session it must first establish a connection
+   to the server. After a connection is established, the client sends a
+   =connect-request= message, optionally specifying a session key. The client
+   may not perform any operations until it receives the first message from the
+   server. If no session key was provided, or the session did not already
+   exist, then this is a =connect-response= message, containing a random
+   generated session key. If the client joins an ongoing session, it receives
+   one or more operations which will make it consistent with the other clients.
+   After the first message is received, the client is considered initialized,
+   and it may start to perform operations.
+
+   Because the server does not keep a copy of the buffer, the buffer must be
+   fetched from an initialized client. This means that a client needs to be
+   able to send its entire buffer on the server's request. Conflicts can arise
+   during this process, which is discussed in Section [[Conflicts During Client
+   Initialization]]. This is a design choice made in order to lower the memory
+   consumption on the server. If we would later regret this decision, it would
+   not be difficult to implement a "silent client" on the server (i.e. one that
+   receives, but never generates operations), and always fetch the buffer from
+   this particular client.
+
+   The server can handle changes in multiple editing sessions concurrently,
+   because they are completely independent. Changes in the /same/ editing
+   session must be handled completely synchronously on the server.
+
+** Wire Protocol
+
+   Communication between a client and the server is done through WebSockets,
+   which is a two-way communication protocol based on TCP cite:rfc6455. It is
+   chosen in order to achieve interoperability with modern browsers, as well as
+   many programming languages. As WebSockets are TCP-based, it guarantees that
+   data is not damaged, delivered in order and without duplication cite:rfc793.
+
+   Messages are sent using the JSON object encoding format cite:RFC7159 as
+   UTF-8-encoded strings. A JSON object is a collection of key/value pairs,
+   where a key is a string, and a value can be a string, a number, a JSON
+   object, an array, =true=, =false= or =null=.
+
+   Every message between clients and the server has a key =type=; its
+   associated value determines the type of the message. A message may have
+   several additional keys, depending on the message type. We first describe
+   what each message of a given message type contains; this is specified in
+   Tables [[msg-connect-request]] -- [[msg-buffer-resp]]. Some of the message types
+   refers to an operation (of type object), which is specified in Table
+   [[op-spec]].
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-connect-request
+   #+CAPTION: Specification for messages of type =connect-request=.
+   | Key       | Type   | Description                               |
+   |-----------+--------+-------------------------------------------|
+   | =session= | string | A string identifying a session (optional) |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-connect-response
+   #+CAPTION: Specification for messages of type =connect-response=.
+   | Key       | Type   | Description                    |
+   |-----------+--------+--------------------------------|
+   | =session= | string | A string identifying a session |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-operation
+   #+CAPTION: Specification for messages of type =operation=.
+   | Key         | Type   | Value description              |
+   |-------------+--------+--------------------------------|
+   | =operation= | object | An operation                   |
+   | =session=   | string | A string identifying a session |
+   | =seqno=     | number | The sequence number            |
+   | =token=     | number | The state token number         |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-operations
+   #+CAPTION: Specification for messages of type =operations=.
+   | Key          | Type   | Value description              |
+   |--------------+--------+--------------------------------|
+   | =operations= | array  | An array of operations         |
+   | =session=    | string | A string identifying a session |
+   | =seqno=      | number | The sequence number            |
+   | =token=      | number | The state token number         |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-buffer-req
+   #+CAPTION: Specification for messages of type =buffer-request=.
+   | Key          | Type   | Value description              |
+   |--------------+--------+--------------------------------|
+   | =session=    | string | A string identifying a session |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: msg-buffer-resp
+   #+CAPTION: Specification for messages of type =buffer-response=.
+   | Key         | Type   | Value description              |
+   |-------------+--------+--------------------------------|
+   | =operation= | object | An operation                   |
+   | =session=   | string | A string identifying a session |
+   | =token=     | number | The state token number         |
+
+   #+ATTR_LATEX: :placement [H]
+   #+NAME: op-spec
+   #+CAPTION: Specification of operation objects.
+   | Key   | Type   | Description                                  |
+   |-------+--------+----------------------------------------------|
+   | =ins= | string | The inserted string, present if =del= is not |
+   | =del= | string | The deleted string, present if =ins= is not  |
+   | =pos= | number | The position of the operation                |
+
+   The diagram in Figure [[fig:client-message-flow]] describes the flow of messages
+   from a client's perspective. It captures how a client must send a
+   =connect-request= to get out of an uninitialized state, and must wait until
+   it receives a message from the server, before it is ready to generate and
+   receive operations. States that are labeled "Process", are there to show how
+   most events (like a user typing or a message is received) require some sort
+   of reaction, and that this must be completed before the client is free to
+   continue typing or receiving messages.
+
+   #+BEGIN_SRC dot :file client.png
+      digraph finite_state_machine {
+              graph [ dpi = 150 ];
+              node [shape = ellipse, fixedsize=true, width=1.2];
+              1 [label="Process"];
+              2 [label="Process"];
+              3 [label="Process"];
+
+              Ready -> 1 [label = "user types", fontsize=12, minlen="4.0"];
+              1 -> Ready [label = "send(operation)", fontsize=12, minlen="4.0"];
+
+              Ready -> 2 [label = "receive(operations)", fontsize=12, minlen="4.0"];
+              2 -> Ready [label = "apply operations", fontsize=12, minlen="4.0"];
+
+              Ready -> 3 [label = "receive(buffer-request)", fontsize=12, minlen="2.0"];
+              3 -> Ready [label = "  send(buffer-response)", fontsize=12, minlen="2.0"];
+
+              Uninitialized -> Wait [ label = "send(connect-request)", fontsize=12];
+              Wait -> Ready [ label = "receive(connect-responce)", fontsize=12, minlen="2.0"];
+              Wait -> Ready [ label = "  receive(operations)", fontsize=12, minlen="2.0"];
+
+              {rank=same Wait Uninitialized}
+              {rank=same 1 Ready 2}
+      }
+   #+END_SRC
+   #+CAPTION: Client message flow diagram.
+   #+LABEL: fig:client-message-flow
+   #+RESULTS:
+   [[file:client.png]]
+
+   A similar diagram is provided in Figure [[fig:server-message-flow]] to show how
+   different messages trigger different responses from the server.
+
+   #+BEGIN_SRC dot :file server.png
+   digraph finite_state_machine {
+           graph [ dpi = 150 ];
+           node [shape = ellipse, fixedsize=true, width=1.2];
+
+           1 [label="Process"];
+           2 [label="Process"];
+           3 [label="Process"];
+
+           Ready -> 1 [label = "  receive(connect-request)", fontsize=12]
+           1 -> Ready [label = "send(connect-response)", fontsize=12]
+           1 -> Ready [label = " send(buffer-request)", fontsize=12]
+
+           Ready -> 2 [label = "receive(operation)", fontsize=12]
+           2 -> Ready [label = "send(operations)", fontsize=12]
+
+           Ready -> 3 [label = "receive(buffer-response)", fontsize=12]
+           3 -> Ready [label = "  send(operations)", fontsize=12]
+   }
+   #+END_SRC
+   #+CAPTION: Server message flow diagram.
+   #+LABEL: fig:server-message-flow
+   #+RESULTS:
+   [[file:server.png]]
+
+** Conflicts During Client Initialization
+
+   In the specification we assumed that the connected clients stayed constant
+   throughout an editing session. The system needs to support clients
+   connecting during an ongoing editing session, which needs to be handled in
+   the implementation. Because the server does not have its own copy of the
+   buffer, the buffer must be fetched from a client. This can happen during a
+   conflict, which poses a problem.
+
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=4em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+       \tikzstyle{O_2} = [vertex, fill=black!30!red]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+       \tikzstyle{toO_2} = [to, color=black!30!red]
+
+       \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\small]
+
+       %% Server receives operations in this order
+       \node (s) at (4, 6) {$S$};
+       \coordinate (se) at (4, 0) {};
+       \node[O_0, below = 2em of s,] (s1) {};
+       \node[O_1, below = 2em of s1,] (s2) {};
+       \node[O_2, below = 2em of s2,] (s3) {};
+       \node[O_1, below = 3em of s3,] (s4) {};
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (10, 6) {$u_0$};
+       \node (u0e) at (10, 0) {};
+       \node[O_2, below = 2em of u0,] (u01) {};
+       \node[O_0, below = 2em of u01,] (u02) {};
+       \node[O_1, below = 3em of u02,] (u03) {};
+       \node[O_2, below = 2em of u03,] (u04) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (7, 6) {$u_1$};
+       \node (u1e) at (7, 0) {};
+       \node[O_0, below = 1em of u1,] (u10) {};
+
+       %% User 2 generates/receives in this order
+       \node (u2) at (0, 6) {$u_{new}$};
+       \node (u2e) at (0, 0) {};
+       \node[O_1, below = 2em of u2] (u20) {};
+       \node[O_1, below = 10em of u20] (u21) {};
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         \draw[to, color=black!30] (s) -- (se);
+         \draw[to, color=black!30] (u0) -- (u0e);
+         \draw[to, color=black!30] (u1) -- (u1e);
+         \draw[to, color=black!30] (u2)  -- (u2e);
+
+         % Life of O_0
+         \draw[toO_0] (u10) -- (s1) node [op, near end] {$O_0$};
+         \draw[toO_0] (s1) -- (u02) node [op, pos=0.6] {$O_0$};
+
+         % Life of O_1
+         \draw[toO_1] (u20) -- (s2) node [op] {\texttt{connect-request}};
+         \draw[toO_1] (s2) -- (u03) node [op, pos=0.72] {\texttt{buffer-request}};
+         \draw[toO_1] (u03) -- (s4) node [op, near end] {$O_a$};
+         \draw[toO_1] (u03) -- (s4) node [op, draw=none, near end, below=-2pt] {\texttt{buffer-response}};
+         \draw[toO_1] (s4) -- (u21) node [op] {$O_1 \circ O_0 \circ O_1^{-1} \circ O_a$};
+         \draw[toO_1] (s4) -- (u21) node [op, draw=none, below=-2pt] {\texttt{operations}};
+         \draw [decorate,shorten >=0pt,decoration={brace, amplitude=10pt}] (u21.west) -- (u20.west) node [midway,xshift=-0.8cm] {\footnotesize wait};
+
+         % Life of O_2
+         \draw[toO_2] (u01) -- (s3) node [op, pos=0.6] {$O_1$};
+         \draw[toO_2] (s3) -- (u04) node [op, pos=0.35] {$O_1 \circ O_0 \circ O_1^{-1}$};
+       \end{pgfonlayer}
+     \end{tikzpicture}
+     \caption{Client initialization.}
+     \label{fig:init-conflict}
+   \end{figure}
+    #+END_EXPORT
+
+    When a client connects to an editing session, it is important that it waits
+    until it receives the first message from the server; this is in order to
+    avoid conflicts between the uninformed client and the server. This is a
+    reasonable restriction because if the client connects to an ongoing editing
+    session, we deem it unlikely that the client can provide useful
+    contributions to the buffer before having received the buffer. Before the
+    server sends this first message to the client, the client is said to be
+    /uninitialized/.
+
+    The server arbitrarily chooses an initialized client, and sends it a
+    message of type =send-buffer=. The client immediately responds with a
+    message of type =buffer=, containing the =session=, the current =token= and
+    an operation $O_a$ which is an insertion at position zero with the entire
+    contents of the buffer. It is not, however, guaranteed that the buffer is
+    sent from a consistent state.
+
+    Remember from Section [[Constructing Operations]], that the server keeps a list
+    of (possibly) rejected operations, each corresponding to a token for every
+    client. When the server receives the =buffer= message, containing $O_a$, it
+    constructs an operation which contains $O_a$ and the operations needed to
+    make the new client consistent with the current state. These operations are
+    gathered by calling the $rejected$ function, with the list of rejected
+    operations associated with the client that sent the =buffer= message, and
+    the token the message was sent from. A function $makeInitialOp$, which is
+    similar to $makeResponse$ from Section [[Constructing Operations]], is defined
+    as follows:
+
+    #+BEGIN_EXPORT latex
+    \[ makeInitialOp(O_a, R, t) = compose(rejected(R, t)) \circ O_a \]
+    #+END_EXPORT
+
+    Where $O_a$ is the operation that inserts the entire buffer, $R$ is the
+    list of operations (with corresponding tokens), and $t$ is the token from
+    the =buffer= message (i.e. the token at the time the =buffer= message was
+    sent). A message containing a constructed operation (using $makeInitialOp$)
+    is sent along with the server's current token and sequence number 0 to the
+    new client, and it is set to initialized. Such a scenario is visualized in
+    Figure ref:fig:init-conflict (note that responses to $u_1$ is omitted).
+
+    This solution is present in the prototype implementation.
+
+** Sequence and Token Numbers
+
+   There are two important considerations with regards to the sequence number
+   scheme. One is that a sequence number should only be incremented on the
+   client side when a sequence number is included in the message, i.e. when it
+   generates or receives operations. This means that the sequence should for
+   instance /not/ be incremented at the client when it sends a message with
+   type =buffer=.
+
+   The other consideration is with regards to that many languages keep an upper
+   bound to the size of an integer. A number in JSON can be arbitrarily large,
+   so it is feasible to let sequence and token numbers to grow arbitrarily
+   large. Clojure supports arbitrarily large integers, so this is a possibility
+   on the server side. But because we do not know what languages will implement
+   the protocol we cannot assume that this is easily available for all
+   implementation languages.
+
+   For instance, Emacs Lisp integers have an upper bound of $2^{29}-1$ (on
+   32-bit platforms)cite:gnu-emacs. Assuming that there is only one participant
+   who types at 80 words per minute cite:ostrach1997typing (which is higher
+   than the average typist) and words are of length six on average, then this
+   user could type continuously for over a year before a problem occurs. The
+   time it takes will decrease as more users connect to the editing session,
+   but it still seems like a low-priority issue, and is therefore not solved in
+   the prototype implementation.
+
+   For sequence numbers, the problem could be easily solved by using modulo
+   arithmetic and some chosen $n$ (for instance $2^{16}$). The only relation
+   used with the sequence number is the equality relation, and so, by always
+   applying modulo $n$ after calculating a sequence number then equality is
+   ensured, assuming no conflicts are of size $2^{16}-1$ or greater. This would
+   have to be done at both the server and the clients.
+
+   The token numbers are compared with the less than relation, which is not
+   preserved simply by using modulo arithmetic. In TCP this is solved by using
+   the following definition for less than: "If $s$ and $t$ are timestamp
+   values, $s < t$ if $0 < (t - s) < 2^{31}$, computed in unsigned 32-bit
+   arithmetic"cite:Jacobson:1992:TEH:RFC1323. A similar scheme could be
+   included in Shared Buffer, but choosing some lower bound in order to support
+   Emacs (and potentially other languages). This can be achieved without adding
+   any additional complexity on the client side, because the client only sets
+   the token it receives from the server.
+
+** Implementing Shared Buffer for Emacs
+
+   A minimal client is written in /Emacs Lisp/, which is a programming language
+   embedded in the text editor /Emacs/. Having a Lisp interpreter as a part of
+   the running program makes Emacs uniquely extendable, as code can be
+   evaluated at run time, changing the behavior of Emacs without needing to
+   recompile, or even restart the program. The implementation of Shared Buffer
+   is at a very manageable size around 250 lines of Emacs Lisp code (where 100+
+   lines are documentation). This section covers the main considerations in
+   writing a client for Emacs, and can be seen as an example on how to
+   implement the protocol in an existing editor.
+
+   In Emacs, every piece of text is located in a buffer (often associated with
+   some file). It is important that Shared Buffer is enabled for a single
+   buffer at the time, if not, the changes made in other buffers would be
+   communicated to the server, which would quickly break consistency. The idea
+   of a buffer-local variable is important, as it allows for a single variable
+   to have different values depending of the current buffer.
+
+   Shared Buffer stores its state in four buffer-local variables: A key that
+   identifies an editing session, a reference to the socket for communicating
+   with the server, a sequence number and a token number. The key is only set
+   when starting a new editing session, or if a =connect= message is received
+   from the server. The socket is only set when starting a new editing session.
+   The sequence and token number is set according to the specification (Section
+   [[Client-side Specification]]).
+
+   For communication with the server, two libraries are utilized, namely
+   [[https://elpa.gnu.org/packages/websocket.html][WebSockets]] and [[http://git.savannah.gnu.org/cgit/emacs.git/tree/lisp/json.el][JSON]] (which is built in). The WebSockets library provides a
+   function for opening a connection to a given host, which can take functions
+   as argument which are called on different events on the socket. The JSON
+   library provides functions for encoding a native Emacs Lisp data structure
+   to a JSON string, and similarly read JSON strings, which returns an Emacs
+   Lisp data structure. Together, these libraries provide a very simple
+   interface for communicating with the server.
+
+   The main challenge is to detect all changes in the buffer. In Emacs, a
+   /hook/ refers to a variable that contains a list of functions that are
+   triggered by certain events. Emacs provides two hooks that are called before
+   and after every change. A function for sending insertions is added to the
+   =after-change-hook= and a function for sending deletions is added to the
+   =before-change-hook=. Insertions must be detected /after/ it has been
+   performed, in order to retrieve the text that was inserted, and similarly,
+   deletions must be detected /before/ the change in order to retrieve the text
+   that was deleted.
+
+   The documentation for change hooks clearly state that "These hook variables
+   let you arrange to take notice of all changes in all buffers (or in a
+   particular buffer, if you make them buffer-local)"cite:stallman2015gnu. This
+   is not completely true, due to the existence of a variable
+   =inhibit-modification-hooks=. If this variable is set to a true value, then
+   the change hooks are not executed, which poses a problem for Shared Buffer
+   because /all/ changes must be detected. Some functions that binds this
+   variable have caused problems with the current implementation of Shared
+   Buffer.
+
+   We contacted the [[http://lists.gnu.org/archive/html/emacs-devel/2016-07/msg00721.html][emacs-devel mailing list]] asking whether this was intended,
+   because it breaks the guarantee that the change hooks should provide. Stefan
+   Monnier, a seasoned Emacs developer gave the following reply:
+
+   #+BEGIN_QUOTE
+   Making "real" modifications to the buffer while binding
+   inhibit-modification-hooks to a non-nil value sounds like a bug.
+   #+END_QUOTE
+
+   This gives the impression that using these hooks should be a viable option,
+   and so we have not made efforts to get around this problem. The variable is
+   toggled around 50 times in the Emacs source code, so submitting bug reports
+   where the usage causes problems seems like a manageable task. It is worth
+   noting that Emacs has a large ecosystem of external packages, and exploring
+   all of these seems like a daunting task. It is possible to keep a list of
+   functions that are known to set the variable in a way that interferes with
+   Shared Buffer, and disable these during a shared editing session --- this is
+   assuming that the number functions is reasonably small.
+
+   We have two suggestions to alternative approaches. One is to rely on the
+   undo-history that is stored in Emacs, in addition to keeping track of which
+   changes have been communicated to the server. Another is to take regular
+   "snapshots" of the buffer, and breaking the difference between a snapshot
+   and the next into operations, which can then be communicated to the server.
+   Bot of these may be viable alternatives for other editors that might not
+   provide something similar to change hooks.
+
+   It is worth noting that Emacs runs in a single thread; this excludes many
+   edge-cases, like what would happen if a message is received at the same time
+   as the user generates an operation. This is something that is worth
+   considering if one were to implement the protocol in a multithreaded
+   environment.
+
+   A small set of functions are added to create an interface for the user;
+   these functions are called /interactive/ functions, which can be added to a
+   key binding and called using =M-x=, which is Emacs' interface to all
+   interactively callable functions. A function =sb-share-buffer= may be called
+   to share the current buffer; a session key is randomly generated by the
+   server and sent back in a =connect= message; the session key is added to the
+   clipboard. To connect to an editing session, a function =sb-join-session= is
+   provided, where the user must provide a session key. A function
+   =sb-disconnect= simply disconnects the buffer to the shared editing session
+   (but leaving the buffer as it was before disconnecting). Lastly,
+   =sb-add-key-to-kill-ring= is a function to add the current session key to
+   the clipboard ("kill-ring" is Emacs jargon for the clipboard), making it
+   easier to share to others. Note that every function is prefixed with =sb=,
+   which is an established code convention in Emacs, due to it having a single
+   name space for all global variables and functions.
+
+** Implementing Shared Buffer in Clojure
+
+   The main task of implementing Shared Buffer in Clojure is simply translating
+   Maude equations to Clojure functions, most of which have been described in
+   Chapter [[Server-side Specification]]. This is mostly a straight forward task,
+   due to the both being declarative languages.
+
+*** State Management
+
+   Clojure separates /identity/ and /state/, where an identity is [[http://clojure.org/about/state]["a stable
+   logical entity associated with a series of different values over time"]].
+   Though mutating variables directly is possible, it is greatly discouraged.
+   There are three encouraged ways of dealing with mutating state which can be
+   summarized as cite:Fogus:2011:JCT:2018918:
+   - *Refs* --- use for synchronous and coordinated state change,
+   - *Atoms* --- use for synchronous and uncoordinated state change,
+   - *Agents* --- use for asynchronous and uncoordinated state change.
+   Shared Buffer follows a common Clojure idiom, which is to keep the entire
+   application state inside a single /atom/. Every change to an atom is
+   /atomic/, meaning that it never has an intermediate state; either a change
+   has happened or it has not. This generally yields a maintainable code base.
+   Changes to atoms are mainly done by applying a function to the current state
+   of the atom. It is important that the function is /pure/ (i.e. no side
+   effects), because it may be called multiple times.
+
+   The state is a nested map, keeping track of the sessions and the connected
+   clients, along with a function for shutting down the server. Changes made to
+   the state are limited to functions that /inherently/ has side-effects,
+   namely the functions that either sends or receives messages. Note that there
+   is a correspondence between when we allow state changes in the system, and
+   when we used rewrite rules in Maude. If an error occurs in a purely
+   functional program, then a stack trace will give a very precise location of
+   where the error occurred; either the function is erroneous or it is called
+   with a bad argument; this greatly reduces the potential locations of the
+   error.
+
+   To get an idea of how the state is structured, we provide an example of a
+   state. The state is a nested map, which maps keys to values, and is
+   represented by surrounding the pairs with curly braces ={}=. The keys can be
+   any value, but often keywords are preferred; they are symbols prefixed with
+   =:=, and can be used as functions that look up values in a map. Lists are
+   denoted as parenthesized expressions and sets are denoted with curly braces
+   prefixed with a hash tag =#{}=. This is an actual state of the system, but
+   some values has been replaced with variables for readability:
+   #+BEGIN_SRC clojure
+   {:sessions {:key1 {:tokens {c1 4, c2 2},
+                      :clients #{c2 c1},
+                      :token 5,
+                      :lock obj1,
+                      :history h}},
+    :clients {c1 {:id u1,
+                  :seqno 6,
+                  :session :key1,
+                  :initialized true,
+                  :ops r1},
+              c2 {:id u2,
+                  :seqno 7,
+                  :session :key1,
+                  :initialized true,
+                  :ops r2}},
+    :server shut-down-function}
+   #+END_SRC
+   The changes that happen within a single session mush be handled in a
+   coordinated way; it is important a change in a session is based on updated
+   information. On every receive, a lock associated with a session is held
+   until the change is complete. This allows for independent sessions to be
+   handled concurrently, with the small exception of making changes to the
+   atom. We have tried to minimize the number of changes done to the atom, but
+   think that there is still room for improvement here.
+
+*** Operations
+
+    Maude has great support for defining algebraic data-types, which made
+    defining operations very simple. In Clojure, most data is built from the
+    language primitives, and is largely based on collections. As we showed in
+    Section [[Algebraic Properties]], operations under composition is a /monoid/.
+    Basing the representation on a monoidal structure gives a guarantee that
+    some key properties are preserved.
+
+    Lists under concatenation is a [[https://en.wikibooks.org/wiki/Haskell/Monoids][monoid]]. This motivates the choice of using
+    lists as the underlying representation of operations. A singleton operation
+    (i.e. insertion or deletion) is a singleton list, containing a map with the
+    keys =:ins= or =:del= (exclusively) and =:pos=. The composition function
+    simply calls the concatenation function =concat=.
+
+    The empty list represents a $nop$ element. A map which contains a key
+    =:nop= is also treated as the $nop$ element[fn:7]; this is because an
+    exclusion transformation can generate a $nop$ element, in which case we
+    need to store the excluded operation (as discussed in Section [[Transform the
+    History]]). Such an operation will only be stored in an event, and a client
+    will never observe its existence, because it will be omitted before the
+    operation is sent.
+
+    The following function defines the inverse of an operation:
+    #+BEGIN_SRC clojure
+    (defn inv
+      "Returns the inverse of x."
+      [x]
+      (if (seq? x)
+        (map inv (reverse x))
+        (rename-keys x {:ins :del, :del :ins})))
+    #+END_SRC
+    It reverses the list, and replaces all =:ins= with =:del= and vise versa.
+
+    Operations constructed by the Clojure-equivalents of $makeOp$ and
+    $makeResponse$ can often be simplified by removing adjacent pairs of
+    operations that are inverses of each other. In Maude this is easily
+    achievable by stating an equation. This has to be done explicitly in
+    Clojure.
+
+    The following Clojure function simplifies a given operation in linear
+    time[fn:6]. It looks at one element of the list (i.e. one map which
+    represents a deletion or insertion) at the time and adds it to the stack
+    /unless/ it is a $nop$ element or the inverse of the top of the stack; in
+    that case, both the top of the stack and the element will be omitted. It
+    can be seen as a special case of [[https://en.wikipedia.org/wiki/Peephole_optimization][peephole optimiaztion]].
+
+    #+BEGIN_SRC clojure
+    (defn simplify [op]
+      "Reduces op it to a minimal form. It removes nop elements and adjacent
+      operations that are inverses of each other."
+      (-> (fn [stack o]
+            (cond (nop? o) stack
+                  (empty? stack) (conj stack o)
+                  (inverses? (peek stack) o) (pop stack)
+                  :else (conj stack o)))
+          (reduce [] op) seq))
+    #+END_SRC
+
+    The operations that are sent to the clients are always simplified before
+    they are sent. The list is reversed and before sending it to a client. This
+    is because it is more natural to traverse a list (or array) form left to
+    right at the client, applying operations while traversing. Lastly, the list
+    of maps is converted to an array of JSON objects (using a [[https://github.com/clojure/data.json][JSON library]]).
+
+** Remaining Work
+
+   The implementation is in an prototype stage. Most importantly, not all
+   control mechanisms from Chapter [[Server-side Specification]] has yet been
+   implemented. As translating the Maude specification has been quite straight
+   forward, we do not foresee any particularly challenging problems with
+   completing this, and is why we have prioritized a correct specification
+   before a correct implementation.
+
+   By analyzing the specification, and removing the control mechanisms that are
+   not yet implemented, then we can give some estimate at how well the
+   implementation performs, with regards to consistency. Given two clients and
+   three operations working on a buffer of initial size two, then eventual
+   consistency is breached in roughly two percent of the states. This is
+   assuming that all states are equally likely to be reached. We would argue
+   that these situations are even less likely to occur in reality, because it
+   would require users to simultaneously perform operations on the same
+   position of the buffer.
+
+   There are also a lot of features that would be natural to add to a real-time
+   collaborative editor that have not been discussed. For instance, it could be
+   very useful to display the cursor of other participants; in addition,
+   displaying highlighted regions simplifies communication about the buffer.
+   Yet, we want to keep the system minimalistic and not include features that
+   could be better solved with a separate tool; an example would be a chat
+   feature. Features of this kind is discussed, as they are of little (or no)
+   relevance to the main problem, namely ensuring eventual consistency.
+
+*** Stringwise Operations
+
+   The protocol allows for inserting and deleting strings, yet the
+   specification only deals with single characters. Because Shared Buffer
+   leverages a server for performing all resolving all conflicts, we could
+   solve this by breaking up stringwise operations to a series of operations
+   working on characters.
+
+   Given an event $\tuple{O, t, m, u} \in \mathbb E$ where $O$ is an operation
+   containing a string, rather than a character, we can split the event into
+   one event per character. If we assume $i$ is a position, =c= is a character
+   and =s= is a string, and let =c s= be a string with =c= as the first
+   character, then the idea can be expressed with this equation:
+   #+BEGIN_EXPORT latex
+   \begin{alignat*}{2}
+     &split(\tuple{\ins{i}{c}, t, m, u})    &&= \tuple{\ins{i}{c}, t, m, u}\\
+     &split(\tuple{\ins{i}{c\ s}, t, m, u}) &&= \tuple{\ins{i}{c}, t, m, u}\ split(\tuple{\ins{i+1}{s}, t, m, u})\\\\
+     &split(\tuple{\del{i}{c}, t, m, u})    &&= \tuple{\del{i}{c}, t, m, u}\\
+     &split(\tuple{\del{i}{c\ s}, t, m, u}) &&= \tuple{\del{i}{c}, t, m, u}\ split(\tuple{\del{i}{s}, t, m, u})
+   \end{alignat*}
+   #+END_EXPORT
+   The list of events can be treated one by one, emulating that the client has
+   performed the operations in a characterwise fashion. In the specification we
+   made sure that $m$ is always unique, but this is in order to always have a
+   tie breaker and decide whether an event happened before (Definition
+   ref:def:happened-before) another. This is not necessary when all the events
+   are performed by the user, because an event by a user can never precede an
+   event (that is already present in the history) performed by the same user.
+
+   We implemented this as a proof of concept. Though it seemed to yield a
+   pleasing result, it greatly degraded the performance of the system, to such
+   a degree that we don't consider it a satisfactory solution.
+
+   In cite:DBLP:journals/tochi/SunJZYC98 Sun et al. introduced both exclusion
+   and inclusion transformation functions for strings. This is a much more
+   performant solution which should be preferred in the implementation. Most
+   Operational Transformation algorithms work independently from the data that
+   is transformed, as long as they satisfies the properties ref:eqn:C1 and
+   ref:eqn:C2 (which were introduced in Section [[Discussing Consistency in
+   Operational Transformation]]). We see no reason this should not be true for
+   Shared Buffer as well. Even though ref:eqn:C2 has been shown not to hold for
+   the transformation function of Sun et al., but this only effects fully
+   distributed solutions, and should therefore not be a problem for Shared
+   Buffer.
+
+*** Agents in Favor of an Atom
+
+    In Section [[State Management]] we described how the state of the program is
+    contained in a single atom. An alternative structure, which would relieve
+    the need of a lock, is using one agent per session. Every agent keeps a
+    queue of functions that will eventually be applied to its current state.
+    The problem with this approach is how to keep track of the different
+    agents; these agents would need to be located in some piece of mutable
+    state, because nesting reference types (i.e. refs, atoms and agents) can
+    lead to unpredictable behavior. Having not been able to solve this, we
+    decided to go for a single atom solution.
+
+*** Acknowledgement Messages
+
+    No acknowledgement messages are needed in Shared Buffer to ensure
+    consistency. Yet, without acknowledgement messages, both the history and
+    list of rejected messages will continue to grow indefinitely. If all
+    clients have successfully received a token $n$ or higher, then they have
+    all executed the operations with arrival time $n$ or smaller. This means
+    they cannot operate independently from any of these operations, and so, no
+    new event will be concurrent with an arrival time smaller than $n$. This
+    allows us to safely remove these entries from the history.
+
+    If one client stays silent during a session, there is no way for the server
+    to safely remove entries from the history. If we were to introduce regular
+    acknowledgement messages from the clients, this would yield substantially
+    better performance at the server, as there are multiple linear time
+    functions applied to the history every time a message is received.
+
+    As of now, the history is trimmed on the server, but no acknowledgement
+    messages are sent. Every message received from a client is an implicit
+    acknowledgement, which yields good performance if all the clients are
+    active. Some consideration should go into the frequency of the
+    acknowledgement messages. A suggestion would be to send an acknowledgement
+    when the token number has been raised $n$ times, while the client has
+    stayed silent. The $n$ should be chosen on the basis of how much overhead
+    sending acknowledgement messages causes, and how large the $n$ needs to be
+    before performance on the server is noticeably degraded.
+
+[fn:6] This solution was found after noticing that the problem is almost
+identical to a programming challenge we happened to have solved. The exercise
+can be found here: https://open.kattis.com/problems/evenup.
+[fn:7] Note that a solution where a map containing =:nop= would serve as the
+sole identity element would work just as well; however it seemed redundant to
+add such an element only to later remove it in the simplification step. This is
+why the empty list is treated as an "alternative" identity element.
 
 
 * Shared Buffer for Emacs --- Source Code
