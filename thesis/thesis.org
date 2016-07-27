@@ -32,57 +32,65 @@
 #+LaTeX: \frontmatter{}
 #+LaTeX: \maketitle{}
 
+#+LaTeX: \newpage
+#+LaTeX: \thispagestyle{empty}
+#+LaTeX: \mbox{}
+
 #+BEGIN_abstract
 Placeholder for abstract.
 #+END_abstract
 
-#+LaTeX: \tableofcontents{}
-#+LaTeX: \listoffigures{}
-#+LaTeX: \listoftables{}
-* Acknowledgements
-  :PROPERTIES:
-  :UNNUMBERED: t
-  :END:
+#+LaTeX: \newpage
+#+LaTeX: \thispagestyle{empty}
+#+LaTeX: \mbox{}
+#+LaTeX: \renewcommand{\abstractname}{Acknowledgements}
 
+#+BEGIN_abstract
   When I was looking for a thesis project, I got to talk with Rudi. It did not
   take more than five minutes to realize that he would be a great supervisor.
   Throughout the process he has shown genuine interest in the project and given
-  me the both the freedom I wanted and the guidance I needed. Martin has been a
+  me both the freedom I wanted and the guidance I needed. Martin has been a
   tremendous help. He has given me the theoretical foundations that I sorely
   needed, both as my supervisor and as a lecturer. He is a bottomless source of
   knowledge, and I am convinced he has read every paper on theoretical computer
   science since the early 70's. I would like to convey my deepest gratitude to
   Rudi and Martin.
 
-  Throughout my years at the Department of Informatics I have been worked as a
+  Throughout my years at the Department of Informatics I have worked as a
   teaching assistant and been actively involved in the department's student
   council. Both of these arenas are simply packed with fantastic people that I
-  have been lucky enough to get to know. I want to thank the students who
-  attended my lessons for letting me have their attention; I like to think we
-  all learned a lot, and had a great time doing so. Furthermore, I would like
-  to thank the many faculty members who actively work to make the Department of
-  Informatics a fantastic place to study, and not shying from discussions with
-  the students where improvement is due. I would like to thank my wonderful
-  friends from the student council (FUI) who made my life at university a joy;
-  we excelled at having coffee and spending our "hard-earned" money on
-  tremendous feasts. There are simply too many to thank. This has made the
-  university a great place to be.
+  have been lucky enough to get to know. A thanks goes out to Joshi, who have
+  played a big part in encouraging me to pursue these roles. I want to thank
+  the students who attended my lessons for letting me have their attention; it
+  has been a wonderful experience for me, and hopefully for the students too.
+  Furthermore, I would like to thank the many faculty members who actively work
+  to make the Department of Informatics a fantastic place to study, and not
+  shying from discussions with the students where improvement is due. I would
+  like to thank my wonderful friends from the student council (FUI), who made
+  my life at university a joy. There are simply too many to thank. This has
+  made the university a great place to be.
 
   Thanks to the nano-gang, who I started my time at the university with and
   still visit regularly on the fourth floor. I especially want to thank Jarle
   and Kai for having long discussions about the thesis.
 
-  For the last couple of years, I have spent a fair share of my time with Tore
-  (the love of my life), Carl Martin and Sigurd, constantly having excited
-  discussions of both a fruitful and completely useless nature. I've thoroughly
-  enjoyed it, and would like to them to know that I kind-of love them.
+  For the last couple of years, I have spent a fair share of my time with Tore,
+  Carl Martin and Sigurd, constantly having excited discussions of both a
+  fruitful and completely useless nature. I've thoroughly enjoyed it, and would
+  like to them to know that I kind-of love them.
 
-  Finally I want to thank my wonderful family. My sisters, Lisa and Julie, for
+  Finally, I want to thank my wonderful family. My sisters, Lisa and Julie, for
   being the coolest kids I know, my father for being the one I can always turn
   to for sound advice, my mother for being the most loving and caring person in
   the world and finally, my brother, Vegard, for being my favorite person.
 
+  \hfill Thank you \\
+  \null\hfill Lars Tveito
 
+#+END_abstract
+  #+LaTeX: \tableofcontents{}
+  #+LaTeX: \listoffigures{}
+  #+LaTeX: \listoftables{}
 * Preface
   :PROPERTIES:
   :UNNUMBERED: t
@@ -93,40 +101,33 @@ Placeholder for abstract.
   Felleisen, Richard Gabriel, Rich Hickey, Peter Norvig, Christian Queinnec and
   Taiichi Yuasa.
 
-  Around the time of the announcement of the competition, I attended a course
-  on functional programming, in which we were to collaborate on programming
-  assignments in small teams (of two or three participants). Mostly, we
-  programmed together whilst in the same room (physically), and at any given
-  moment, the one with the most promising idea held the keyboard. Sometimes we
-  all wanted to explore some idea, and we would have to type it out on separate
-  computers, and synchronize our changes thereafter.
-
-  At times we (or at least I) felt it broke our flow. I started investigating
-  how to allow separate Emacs sessions communicate using network processes, and
-  realized it was completely plausible to enable real-time collaboration in
-  Emacs.
+  Around the time the competition was announced, I attended a course on
+  functional programming, in which we were to collaborate on programming
+  assignments in small teams. Mostly, we programmed together while in the same
+  room, and at any given moment the one with the most promising idea used the
+  keyboard. Sometimes we all wanted to explore some idea, and we would have to
+  type it out on separate computers, and synchronize our changes afterwards.
 
   Seeing the aforementioned competition announcement, I immediately decided
   that implementing real-time collaboration in Emacs would make the perfect
-  project.
-
-  My approach was quite naïve, and it was developed using a trial and error
-  approach. By the end of the summer I had a rough prototype that worked for
-  what I deemed "the most common use-cases". It had a very serious problem: All
-  changes were applied under the assumption of consistency between clients, but
-  this assumption proved false in non-trivial use-cases. There was no recovery
-  mechanism in place, and if consistency was breached, then it would be up to
-  the user to detect this, and reconnect.
+  project. A program was developed using a trial and error approach, and by the
+  end of the summer I had a rough prototype, consisting of an Emacs client and
+  a server written in Common Lisp. It did not handle concurrent edits, which
+  poses the greatest algorithmic challenge for a real-time collaborative
+  editing system.
 
   Still, the judges of the competition deemed the program worthy of second
-  prize, awarding me $500 for my efforts.
+  prize, awarding me $500 for my efforts. The project description submitted to
+  the competition can be found in at the [[http://lispinsummerprojects.org/static/summer/231030-sharedbuffer.pdf][Lisp in Summer Projects website]], and
+  the source code for the project is hosted on [[https://github.com/larstvei/shared-buffer-lisp-in-summer-projects][Github]].
 
-  It was by far the most ambitious project I've embarked on, and also the most
-  rewarding. I was greatly honored for receiving the prize, and feel my
-  gratitude should be expressed in elegant Lisp code, that compose a working
-  implementation of the program I wished I had written back in 2013.
-
-  #+LaTeX: \mainmatter{}
+  This thesis is a continuation of the work I did on that project, but with a
+  different focus. The aim is to find a way to gracefully handle concurrent
+  edits, without adding complexity to the client side algorithm. Having
+  experienced that detecting bugs in such a system was a challenging endeavor,
+  lead to the decision of leveraging formal methods to ensure correctness for
+  the algorithm.
+ #+LaTeX: \mainmatter{}
 * Introduction
 
   A real-time collaborative editor enables multiple users, at (potentially)
