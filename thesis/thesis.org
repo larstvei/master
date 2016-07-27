@@ -1255,9 +1255,9 @@ not satisfy ref:eqn:C1.
 ** Client-side Specification
 
    In Chapter [[Formal Semantics of Editing Operations]] we defined operations and
-   the how they are applied. This was stated as a set of equations which has
-   been translated to Maude. The Maude representation is almost identical with
-   the aforementioned definitions, but operation application is syntactically
+   how they are applied. This was stated as a set of equations which has been
+   translated to Maude. The Maude representation is almost identical with the
+   aforementioned definitions, but operation application is syntactically
    different and have not modeled the entire $Unicode$ set, but rather chosen a
    small set of characters.
 
