@@ -3636,6 +3636,32 @@ cite:Clarke:2000:MC:332656.
     sending acknowledgement messages causes, and how large the $n$ needs to be
     before performance on the server is noticeably degraded.
 
+*** Undo
+
+    The adOPTed-algorithm cite:DBLP:conf/cscw/ResselNG96 tackles the problem of
+    undo in a real-time collaborative editor; their idea is to only undo
+    operations that are generated locally. This problem needs to be handled on
+    the client side, as undo is a editor-specific feature. The Shared Buffer
+    system does not provide any special mechanisms for undo, but specific
+    client implementations may provide solutions to this problem; the only
+    requirement is that all changes (including undos) are reported to the
+    server.
+
+    As of now, the Emacs client ignores this problem, which only allows for
+    global undo (i.e. undoing both local and remote operations). In Emacs, a
+    user can mark a region, and only undo in this region. This means that a
+    user can solve this problem manually by marking region they want to undo.
+    However, it would be preferable to do this automatically.
+
+    We are not sure if this is achievable without altering the existing undo
+    functions in Emacs. Because Emacs supports undoing within a region, there
+    must also exist mechanisms for undoing a change which is not the /latest/
+    change; it seems plausible to use these mechanisms to "skip" undo entries
+    that were generated remotely.
+
+    We consider the problem outside the scope of this thesis, but encourage the
+    idea of exploring this further in future work.
+
 [fn:6] This solution was found after noticing that the problem is almost
 identical to a programming challenge we happened to have solved. The exercise
 can be found here: https://open.kattis.com/problems/evenup.
