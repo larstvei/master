@@ -1236,12 +1236,12 @@ not satisfy ref:eqn:C1.
    if the term (or a subterm) matches the left-hand term of an equation, it is
    rewritten to the right hand term, and the process continues until the
    reduced term does not match any equation in the specification. The /rewrite/
-   command can be given an argument deciding how many rewrites it should
-   perform. It takes a term which it applies to an arbitrary rewrite rule that
-   matches the left-hand term of the rule, followed by reducing the resulting
-   term. The process is repeated until it has reached the specified number of
-   rewrites, or if no more rewrites can be applied. It can be useful to think
-   of an equation as special case of a rewrite rule which is always applied
+   command can be given an argument deciding how many rewrites it performs. It
+   takes a term which it applies to an arbitrary rewrite rule that matches the
+   left-hand term of the rule, followed by reducing the resulting term. The
+   process is repeated until it has reached the specified number of rewrites,
+   or if no more rewrites can be applied. It can be useful to think of an
+   equation as special case of a rewrite rule which is always applied
    immediately.
 
    # A reduction should be deterministic, meaning that, for a given input, it
