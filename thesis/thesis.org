@@ -446,14 +446,20 @@ Placeholder for abstract.
   editor, like "search and replace", are also omitted, because such features
   can be represented as a series of deletions and insertions.
 
-  In this chapter we introduce a formal definition of editing operations. The
-  definitions are based on
-  cite:ellis1989concurrency,DBLP:journals/corr/abs-1302-3292, but we provide
-  more formal definitions, in the sense that the semantics of editing
-  operations are described as a set of equations. This chapter is only
-  concerned with events at a single client. We assume that every event is
-  simply an operation being applied, and do not differentiate between an
-  operation originating locally or remotely.
+  In this chapter we introduce a formal definition of editing operations and
+  their semantics. Operations are fundamental for all /Operational
+  Transformation/ (OT) algorithms, as well as the Shared Buffer algorithm. To
+  get a deeper understanding of the operations we study their algebraic
+  properties, which simplifies the process of both specifying and implementing
+  them. Furthermore, the Shared Buffer heavily relies on the ability to take
+  the inverse of an operation, which motivates Section [[Invertibility]].
+
+  The definitions are based on
+  cite:ellis1989concurrency,DBLP:journals/corr/abs-1302-3292; we specify them
+  formally and define the semantics of editing operations as a set of
+  equations. This chapter is only concerned with events at a single client. We
+  assume that every event is simply an operation being applied, and do not
+  differentiate between an operation originating locally or remotely.
 
 ** Operations and Buffers
 
@@ -687,7 +693,9 @@ Placeholder for abstract.
     because applying $del(0) \circ \ins{0}{a}$ to a buffer will always yield
     the same buffer. We can make the exact same argument for $\ins{0}{b}$; its
     inverse should be $del(0)$. What should then be the inverse of $del(0)$? It
-    cannot be both $\ins{0}{a}$ and $\ins{0}{b}$, which poses a problem.
+    cannot be both $\ins{0}{a}$ and $\ins{0}{b}$. If we were to choose one
+    arbitrarily, then a user could suddenly experience that the character the
+    inserted morphed in to another.
 
     The problem is solved by extending the delete operations with what
     character is deleted, and so we redefine delete operations as so:
