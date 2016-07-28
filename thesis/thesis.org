@@ -2735,7 +2735,7 @@ queues.
    equal to each other". This is expressed by using a function that gathers all
    buffers in a given state, adding them to a set, and checking if the size of
    this set is (less than or) equal to one. We allow for an empty set, because
-   a system with no clients should be consistent. The property is formally
+   a system with no clients is considered consistent. The property is formally
    specified as:
 
    #+BEGIN_EXAMPLE
@@ -3552,7 +3552,7 @@ cite:Clarke:2000:MC:332656.
    feature. Features of this kind is discussed, as they are of little (or no)
    relevance to the main problem, namely ensuring eventual consistency.
 
-*** Stringwise Operations
+*** String-wise Operations
 
    The protocol allows for inserting and deleting strings, yet the
    specification only deals with single characters. Because Shared Buffer
@@ -3574,7 +3574,7 @@ cite:Clarke:2000:MC:332656.
    \end{alignat*}
    #+END_EXPORT
    The list of events can be treated one by one, emulating that the client has
-   performed the operations in a characterwise fashion. In the specification we
+   performed the operations in a character-wise fashion. In the specification we
    made sure that $m$ is always unique, but this is in order to always have a
    tie breaker and decide whether an event happened before (Definition
    ref:def:happened-before) another. This is not necessary when all the events
