@@ -3174,9 +3174,9 @@ cite:Clarke:2000:MC:332656.
    #+BEGIN_SRC dot :file client.eps :cmdline -Teps
       digraph finite_state_machine {
               node [shape = ellipse, fixedsize=true, width=1.2];
-              1 [label="Process"];
-              2 [label="Process"];
-              3 [label="Process"];
+              1 [label="Process1"];
+              2 [label="Process2"];
+              3 [label="Process3"];
 
               Ready -> 1 [label = "user types", minlen="4.0"];
               1 -> Ready [label = "send(operation)", minlen="4.0"];
@@ -3188,7 +3188,7 @@ cite:Clarke:2000:MC:332656.
               3 -> Ready [label = "  send(buffer-response)", minlen="2.0"];
 
               Uninitialized -> Wait [ label = "send(connect-request)"];
-              Wait -> Ready [ label = "receive(connect-responce)", minlen="2.0"];
+              Wait -> Ready [ label = "receive(connect-response)", minlen="2.0"];
               Wait -> Ready [ label = "  receive(operations)", minlen="2.0"];
 
               {rank=same Wait Uninitialized}
@@ -3207,9 +3207,9 @@ cite:Clarke:2000:MC:332656.
    digraph finite_state_machine {
            node [shape = ellipse, fixedsize=true, width=1.2];
 
-           1 [label="Process"];
-           2 [label="Process"];
-           3 [label="Process"];
+           1 [label="Process1"];
+           2 [label="Process2"];
+           3 [label="Process3"];
 
            Ready -> 1 [label = "  receive(connect-request)"]
            1 -> Ready [label = "send(connect-response)"]
