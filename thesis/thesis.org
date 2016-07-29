@@ -87,7 +87,6 @@ Placeholder for abstract.
 
   \hfill Thank you \\
   \null\hfill Lars Tveito
-
 #+END_abstract
   #+LaTeX: \tableofcontents{}
   #+LaTeX: \listoffigures{}
@@ -713,7 +712,7 @@ Placeholder for abstract.
     $\ins{1}{b} \circ \ins{0}{a}$ should be $\del{0}{a} \circ \del{1}{b}$.
     #+BEGIN_EXPORT latex
     \\
-    \begin{definition}[Inverse of an Operation]
+    \begin{definition}[Inverse of an Operation]\label{def:inverse}
       The inverse of the $nop$ element is the $nop$ element itself:
       \[ nop^{-1} = nop \]
       The inverse of an insertion of a character $c \in Unicode$ at position $i
@@ -1149,7 +1148,7 @@ not satisfy ref:eqn:C1.
    acknowledgement. This reduces the memory consumption at the server, because
    the server will only need to keep one history of operations.
 
-* Client-side Specification and Maude
+* Client-side Specification
 
   The Shared Buffer System is formally modeled using The Maude System. Modeling
   a system is in essence capturing what can occur in the system in a precise
@@ -1171,10 +1170,10 @@ not satisfy ref:eqn:C1.
   We aim at modeling the clients, the server and the communication between
   these, but restrict ourselves to editing sessions where all the clients have
   the same initial buffer and a constant number of connected clients. The
-  Shared Buffer Algorithm is deeply embedded in the model, and therefore also
-  subject of verification. To the best of our knowledge, formal verification
-  techniques has not been applied on a complete real-time collaboration
-  algorithm in the literature before.
+  algorithm is a part of the specification, and therefore also subject for
+  verification. To the best of our knowledge, formal verification techniques
+  has not been applied on a /complete/ real-time collaboration algorithm in the
+  literature before.
 
   The verification technique we have chosen to apply is model checking. Proving
   properties of a finite-state system using model checking is /decidable/, but
@@ -1198,12 +1197,11 @@ not satisfy ref:eqn:C1.
   # not provide a proof that the Shared Buffer Algorithm is correct.
 
   # Dette avsnittet suger:
-  This chapter starts of by giving a short introduction to the Maude language.
-  We will then go on to describe our model; by describing the model we will
-  also describe the Shared Buffer Algorithm in detail. The equations in this
-  chapter are translations of the Maude specification. For rewrite rules (that
-  we will introduce shortly) we use Maude syntax in favor of mathematical
-  notation.
+  This chapter starts of by giving a short introduction to the Maude language
+  and how we specify the system. We will then go on to specify the behavior of
+  the clients. The equations in this chapter are translations of the Maude
+  specification. For rewrite rules (that we will introduce shortly) we use
+  Maude syntax in favor of mathematical notation.
 
 ** A Short Introduction to Maude
 
@@ -1542,15 +1540,18 @@ not satisfy ref:eqn:C1.
 
   At this point the behavior of clients has been specified. The more
   interesting part of the system is the server, as it handles most of the
-  complexity in the algorithm.
+  complexity in the algorithm. This chapter fully describes the server-side
+  algorithm.
 
-  The server maintains a /state token/, a /history/ and a mapping from users
-  to /sites/. For every operation received, the server increments its state
-  token, which is one initially. The history determines the order of which
-  operations should be applied. A /site/ is an object which represents the
-  server's information about a given client; when receiving a message from a
-  client, we assume that there exists a way of uniquely identifying the
-  client --- in the model this is a user identifier.
+  The server maintains a /state token/, a /history/ and a mapping from users to
+  a list of possibly rejected operations associated with a token. For every
+  operation received, the server increments its state token, which is one
+  initially. The history determines the order of which operations should be
+  applied. The list of possibly rejected operations (associated with a token)
+  is used to construct an operation which will make the client consistent with
+  the current history. When receiving a message from a client, we assume that
+  there exists a way of uniquely identifying the client --- in the model this
+  is a user identifier.
 
 ** Events
 
@@ -1567,7 +1568,7 @@ not satisfy ref:eqn:C1.
      following:
      \begin{itemize}
      \item \(O \in \mathcal O\) and $O$ is not a composition of operations
-     \item \(t \in \mathbb N \land t < m\)
+     \item \(t \in \mathbb N\)
      \item \(m \in \mathbb N\)
      \item \(u \in \mathcal U\)\hfill$\dashv$
      \end{itemize}
@@ -1575,19 +1576,18 @@ not satisfy ref:eqn:C1.
    #+END_EXPORT
    # The events are constructed based on a message $msg(O, t, s)$ from $u \in
    # \mathcal U$ and a logical clock $m$ maintained on the server.
-   The events are constructed based on a message received from a user and the
-   state token $m$, maintained on the server. Given a message $msg(O, t, s)$
-   sent from $u \in \mathcal U$ the event $\tuple{O, t, m, u}$ is constructed.
+   Given a message $msg(O, t, s)$ sent from $u \in \mathcal U$ and received by
+   the server at time $m$, the event $\tuple{O, t, m, u}$ is constructed.
    Remember that the token $t$ is only updated at the client when it
    successfully receives a message from the server (i.e. does not reject); it
    implies that the latest message the client has received was when the
-   server's state token was $t$. Furthermore, we assume that the client have
+   server's state token was $t$. Furthermore, we rely on the client to have
    executed all operations with a time stamp smaller than $t$.
 
    The history of events dictates an order of which operations should be
    applied. In the case where there are no concurrent events, the arrival time
-   is used to determine what event should precede the other. But in order to
-   decide an order, we first need to be able to detect concurrent operations.
+   $m$ is used to determine what event should precede the other. But to decide
+   an order, we first need to be able to detect concurrent operations.
    Intuitively, two operations are concurrent if they were generated
    independently from each other.
    #+BEGIN_EXPORT latex
@@ -1939,11 +1939,11 @@ not satisfy ref:eqn:C1.
    an iterative manner, meaning that for every incoming message the new event
    is placed at some point in the history.
 
-   The /happened before/ relation yields a partial order of events, leaving
-   some events unordered, due to them being concurrent; the precedence
-   relation preservers the ordering provided by the happened before relation,
-   while trying to order the concurrent events in a way that preserves the
-   users intentions.
+   The /happened before/ (Definition ref:def:happened-before) relation yields a
+   partial order of events, leaving some events unordered, due to them being
+   concurrent; the precedence relation (Definition ref:def:prec) preservers the
+   ordering provided by the happened before relation, while trying to order the
+   concurrent events in a way that preserves the users intentions.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -2043,7 +2043,7 @@ not satisfy ref:eqn:C1.
    of inconsistencies that can arise. Our hope was that this approach would be
    sufficient to handle all conflicts, but it turns out that there can still
    arise inconsistencies between clients. Using Maude to analyze the system
-   uncovered that $0.7\%$ of states in the system, given a buffer of size two
+   uncovered that $2.2\%$ of states in the system, given a buffer of size two
    and 3 operations are inconsistent. To deal with the remaining portion of
    inconsistent states we apply transformation functions (discussed in Chapter
    [[Related Work]]).
@@ -2654,6 +2654,15 @@ not satisfy ref:eqn:C1.
    is expressed as a /conditional/ rule =crl= in order to achieve the effects
    of a /let/-expression, commonly found in functional programming languages.
 
+   In this chapter we have seen how the server orders events in a way that
+   ensures that causality violation does not occur, and minimizes the need for
+   transformation functions. We have demonstrated that this is not sufficient,
+   and show how inclusion and exclusion transformation functions can be applied
+   to produce a history which can dictate a safe order of which operations can
+   be applied. Lastly, we have seen how consistency is ensured by constructing
+   operations which can be applied by clients, leaving them consistent with the
+   constructed history.
+
 [fn:3] The rules stated here are slightly simplified from those in the actual
 Maude specification.
 [fn:4] In the Maude specification, each user maps to a list of messages. It
@@ -2873,8 +2882,8 @@ queues.
    time on a local computer. It was first when the specification started
    showing real promise that we needed to access more computing power in order
    to produce counter examples. We have been able to correct all errors that
-   have been found by the model checker, and as of now, we have not been able
-   to produce further counter examples.
+   have been found by the model checker, and have not been able to produce
+   further counter examples.
 
 ** Processing Counter Examples
 
@@ -2897,9 +2906,9 @@ queues.
 
    Because each line in a state represents some specific part of the system, a
    simple program has been written to extract the difference between
-   consecutive states. We found this program immensely useful, as it reduces
-   the size of the output by a factor between 2 and 3, and contained less
-   visual noise.
+   consecutive states. We found this program immensely useful, as it generally
+   reduces the size of the output by a factor between 2 and 3, and contained
+   much less visual noise.
 
    Our experience is that spending some time optimizing the visual
    representation of the output from the model checker greatly improves its
@@ -3061,26 +3070,25 @@ cite:Clarke:2000:MC:332656.
    of reaction, and that this must be completed before the client is free to
    continue typing or receiving messages.
 
-   #+BEGIN_SRC dot :file client.png
+   #+BEGIN_SRC dot :file client.eps :cmdline -Teps
       digraph finite_state_machine {
-              graph [ dpi = 150 ];
               node [shape = ellipse, fixedsize=true, width=1.2];
               1 [label="Process"];
               2 [label="Process"];
               3 [label="Process"];
 
-              Ready -> 1 [label = "user types", fontsize=12, minlen="4.0"];
-              1 -> Ready [label = "send(operation)", fontsize=12, minlen="4.0"];
+              Ready -> 1 [label = "user types", minlen="4.0"];
+              1 -> Ready [label = "send(operation)", minlen="4.0"];
 
-              Ready -> 2 [label = "receive(operations)", fontsize=12, minlen="4.0"];
-              2 -> Ready [label = "apply operations", fontsize=12, minlen="4.0"];
+              Ready -> 2 [label = "receive(operations)", minlen="4.0"];
+              2 -> Ready [label = "apply operations", minlen="4.0"];
 
-              Ready -> 3 [label = "receive(buffer-request)", fontsize=12, minlen="2.0"];
-              3 -> Ready [label = "  send(buffer-response)", fontsize=12, minlen="2.0"];
+              Ready -> 3 [label = "receive(buffer-request)", minlen="2.0"];
+              3 -> Ready [label = "  send(buffer-response)", minlen="2.0"];
 
-              Uninitialized -> Wait [ label = "send(connect-request)", fontsize=12];
-              Wait -> Ready [ label = "receive(connect-responce)", fontsize=12, minlen="2.0"];
-              Wait -> Ready [ label = "  receive(operations)", fontsize=12, minlen="2.0"];
+              Uninitialized -> Wait [ label = "send(connect-request)"];
+              Wait -> Ready [ label = "receive(connect-responce)", minlen="2.0"];
+              Wait -> Ready [ label = "  receive(operations)", minlen="2.0"];
 
               {rank=same Wait Uninitialized}
               {rank=same 1 Ready 2}
@@ -3089,35 +3097,34 @@ cite:Clarke:2000:MC:332656.
    #+CAPTION: Client message flow diagram.
    #+LABEL: fig:client-message-flow
    #+RESULTS:
-   [[file:client.png]]
+   [[file:client.eps]]
 
    A similar diagram is provided in Figure [[fig:server-message-flow]] to show how
    different messages trigger different responses from the server.
 
-   #+BEGIN_SRC dot :file server.png
+   #+BEGIN_SRC dot :file server.eps :cmdline -Teps
    digraph finite_state_machine {
-           graph [ dpi = 150 ];
            node [shape = ellipse, fixedsize=true, width=1.2];
 
            1 [label="Process"];
            2 [label="Process"];
            3 [label="Process"];
 
-           Ready -> 1 [label = "  receive(connect-request)", fontsize=12]
-           1 -> Ready [label = "send(connect-response)", fontsize=12]
-           1 -> Ready [label = " send(buffer-request)", fontsize=12]
+           Ready -> 1 [label = "  receive(connect-request)"]
+           1 -> Ready [label = "send(connect-response)"]
+           1 -> Ready [label = " send(buffer-request)"]
 
-           Ready -> 2 [label = "receive(operation)", fontsize=12]
-           2 -> Ready [label = "send(operations)", fontsize=12]
+           Ready -> 2 [label = "receive(operation)"]
+           2 -> Ready [label = "send(operations)"]
 
-           Ready -> 3 [label = "receive(buffer-response)", fontsize=12]
-           3 -> Ready [label = "  send(operations)", fontsize=12]
+           Ready -> 3 [label = "receive(buffer-response)"]
+           3 -> Ready [label = "  send(operations)"]
    }
    #+END_SRC
    #+CAPTION: Server message flow diagram.
    #+LABEL: fig:server-message-flow
    #+RESULTS:
-   [[file:server.png]]
+   [[file:server.eps]]
 
 ** Conflicts During Client Initialization
 
@@ -3210,20 +3217,20 @@ cite:Clarke:2000:MC:332656.
     /uninitialized/.
 
     The server arbitrarily chooses an initialized client, and sends it a
-    message of type =send-buffer=. The client immediately responds with a
-    message of type =buffer=, containing the =session=, the current =token= and
-    an operation $O_a$ which is an insertion at position zero with the entire
-    contents of the buffer. It is not, however, guaranteed that the buffer is
-    sent from a consistent state.
+    message of type =send-buffer=. On reception, the client immediately
+    responds with a message of type =buffer=, containing the =session=, the
+    current =token= and an operation $O_a$ which is an insertion at position
+    zero with the entire contents of the buffer. It is not, however, guaranteed
+    that the buffer is sent from a consistent state.
 
     Remember from Section [[Constructing Operations]], that the server keeps a list
     of (possibly) rejected operations, each corresponding to a token for every
     client. When the server receives the =buffer= message, containing $O_a$, it
     constructs an operation which contains $O_a$ and the operations needed to
     make the new client consistent with the current state. These operations are
-    gathered by calling the $rejected$ function, with the list of rejected
-    operations associated with the client that sent the =buffer= message, and
-    the token the message was sent from. A function $makeInitialOp$, which is
+    gathered by calling the $rejected$ function with the list of rejected
+    operations associated with the client that sent the =buffer= message, along
+    with the token from the message. A function $makeInitialOp$, which is
     similar to $makeResponse$ from Section [[Constructing Operations]], is defined
     as follows:
 
@@ -3262,10 +3269,11 @@ cite:Clarke:2000:MC:332656.
    32-bit platforms)cite:gnu-emacs. Assuming that there is only one participant
    who types at 80 words per minute cite:ostrach1997typing (which is higher
    than the average typist) and words are of length six on average, then this
-   user could type continuously for over a year before a problem occurs. The
-   time it takes will decrease as more users connect to the editing session,
-   but it still seems like a low-priority issue, and is therefore not solved in
-   the prototype implementation.
+   user could type continuously for over a year before a problem occurs. On a
+   64-bit platform, they may type continuously for (roughly) as long as the sun
+   has existed. The time it takes will decrease as more users connect to the
+   editing session, but it still seems like a low-priority issue, and is
+   therefore not solved in the prototype implementation.
 
    For sequence numbers, the problem could be easily solved by using modulo
    arithmetic and some chosen $n$ (for instance $2^{16}$). The only relation
@@ -3385,9 +3393,9 @@ cite:Clarke:2000:MC:332656.
    (but leaving the buffer as it was before disconnecting). Lastly,
    =sb-add-key-to-kill-ring= is a function to add the current session key to
    the clipboard ("kill-ring" is Emacs jargon for the clipboard), making it
-   easier to share to others. Note that every function is prefixed with =sb=,
-   which is an established code convention in Emacs, due to it having a single
-   name space for all global variables and functions.
+   easier to share to others. Note that every function is prefixed with the
+   abbreviation =sb=, which is an established code convention in Emacs, due to
+   it having a single name space for all global variables and functions.
 
 ** Implementing Shared Buffer in Clojure
 
@@ -3395,6 +3403,13 @@ cite:Clarke:2000:MC:332656.
    Maude equations to Clojure functions, most of which have been described in
    Chapter [[Server-side Specification]]. This is mostly a straight forward task,
    due to the both being declarative languages.
+
+   Two libraries are leveraged to ease communication with the clients, namely
+   [[http://www.http-kit.org/][HTTP Kit]] and [[https://github.com/clojure/data.json][data.json]]. Together they form a very similar interface to the
+   Emacs Lisp equivalents (Section [[Implementing Shared Buffer for Emacs]]). The
+   main difference is that messages on a WebSocket is received on a /channel/
+   (i.e. a blocking queue), and messages from multiple channels can be
+   processed concurrently.
 
 *** State Management
 
@@ -3422,8 +3437,8 @@ cite:Clarke:2000:MC:332656.
    when we used rewrite rules in Maude. If an error occurs in a purely
    functional program, then a stack trace will give a very precise location of
    where the error occurred; either the function is erroneous or it is called
-   with a bad argument; this greatly reduces the potential locations of the
-   error.
+   with a bad argument; limiting the places state change occurs greatly reduces
+   the potential locations of the error.
 
    To get an idea of how the state is structured, we provide an example of a
    state. The state is a nested map, which maps keys to values, and is
@@ -3482,7 +3497,8 @@ cite:Clarke:2000:MC:332656.
     will never observe its existence, because it will be omitted before the
     operation is sent.
 
-    The following function defines the inverse of an operation:
+    The following function defines the inverse of an operation (Definition
+    ref:def:inverse) in Clojure:
     #+BEGIN_SRC clojure
     (defn inv
       "Returns the inverse of x."
@@ -3500,7 +3516,7 @@ cite:Clarke:2000:MC:332656.
     Clojure.
 
     The following Clojure function simplifies a given operation in linear
-    time[fn:6]. It looks at one element of the list (i.e. one map which
+    time[fn:6]. It looks at one element of the list (i.e. a map which
     represents a deletion or insertion) at the time and adds it to the stack
     /unless/ it is a $nop$ element or the inverse of the top of the stack; in
     that case, both the top of the stack and the element will be omitted. It
@@ -3522,7 +3538,7 @@ cite:Clarke:2000:MC:332656.
     they are sent. The list is reversed and before sending it to a client. This
     is because it is more natural to traverse a list (or array) form left to
     right at the client, applying operations while traversing. Lastly, the list
-    of maps is converted to an array of JSON objects (using a [[https://github.com/clojure/data.json][JSON library]]).
+    of maps is converted to an array of JSON objects.
 
 ** Remaining Work
 
@@ -3554,11 +3570,11 @@ cite:Clarke:2000:MC:332656.
 
 *** String-wise Operations
 
-   The protocol allows for inserting and deleting strings, yet the
-   specification only deals with single characters. Because Shared Buffer
-   leverages a server for performing all resolving all conflicts, we could
-   solve this by breaking up stringwise operations to a series of operations
-   working on characters.
+   The protocol allows for inserting and deleting /strings/, yet the
+   specification only deals with single characters. We suggest a way of dealing
+   with this, which allows us to remain faithful to the specification, in the
+   sense that the history will consist of events where each operation contains
+   a single character.
 
    Given an event $\tuple{O, t, m, u} \in \mathbb E$ where $O$ is an operation
    containing a string, rather than a character, we can split the event into
@@ -3581,9 +3597,11 @@ cite:Clarke:2000:MC:332656.
    are performed by the user, because an event by a user can never precede an
    event (that is already present in the history) performed by the same user.
 
-   We implemented this as a proof of concept. Though it seemed to yield a
-   pleasing result, it greatly degraded the performance of the system, to such
-   a degree that we don't consider it a satisfactory solution.
+   We implemented this as a proof of concept. Though we are very confident that
+   it preserves eventual consistency, it greatly degraded the performance of
+   the system, to such a degree that we don't consider it a satisfactory
+   solution. It might be possible to optimize this, but instead we want to rely
+   on existing solutions to the problem.
 
    In cite:DBLP:journals/tochi/SunJZYC98 Sun et al. introduced both exclusion
    and inclusion transformation functions for strings. This is a much more
@@ -3603,22 +3621,22 @@ cite:Clarke:2000:MC:332656.
     contained in a single atom. An alternative structure, which would relieve
     the need of a lock, is using one agent per session. Every agent keeps a
     queue of functions that will eventually be applied to its current state.
-    The problem with this approach is how to keep track of the different
-    agents; these agents would need to be located in some piece of mutable
-    state, because nesting reference types (i.e. refs, atoms and agents) can
-    lead to unpredictable behavior. Having not been able to solve this, we
-    decided to go for a single atom solution.
+    A problem with this approach is that these agents would need to be placed
+    in some piece of mutable state. Generally, reference types (i.e. refs,
+    atoms and agents) do not nest well, as computations might be run multiple
+    times. Having not been able to find a safe solution to this, we have
+    decided to stay with the single atom solution.
 
 *** Acknowledgement Messages
 
     No acknowledgement messages are needed in Shared Buffer to ensure
     consistency. Yet, without acknowledgement messages, both the history and
-    list of rejected messages will continue to grow indefinitely. If all
-    clients have successfully received a token $n$ or higher, then they have
-    all executed the operations with arrival time $n$ or smaller. This means
-    they cannot operate independently from any of these operations, and so, no
-    new event will be concurrent with an arrival time smaller than $n$. This
-    allows us to safely remove these entries from the history.
+    list of rejected messages can continue to grow indefinitely. If all clients
+    have successfully received a token $n$ or higher, then they have all
+    executed the operations with arrival time $n$ or smaller. This means they
+    cannot operate independently from any of these operations, and so, no new
+    event will be concurrent with an arrival time smaller than $n$. This allows
+    us to safely remove these entries from the history.
 
     If one client stays silent during a session, there is no way for the server
     to safely remove entries from the history. If we were to introduce regular
@@ -3636,6 +3654,13 @@ cite:Clarke:2000:MC:332656.
     sending acknowledgement messages causes, and how large the $n$ needs to be
     before performance on the server is noticeably degraded.
 
+[fn:6] This solution was found after noticing that the problem is almost
+identical to a programming challenge we happened to have solved. The exercise
+can be found here: https://open.kattis.com/problems/evenup.
+[fn:7] Note that a solution where a map containing =:nop= would serve as the
+sole identity element would work just as well; however it seemed redundant to
+add such an element only to later remove it in the simplification step. This is
+why the empty list is treated as an "alternative" identity element.
 *** Undo
 
     The adOPTed-algorithm cite:DBLP:conf/cscw/ResselNG96 tackles the problem of
