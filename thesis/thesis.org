@@ -1148,6 +1148,107 @@ not satisfy ref:eqn:C1.
    acknowledgement. This reduces the memory consumption at the server, because
    the server will only need to keep one history of operations.
 
+** Existing Implementations
+
+   There are a wide range of existing implementations that supports
+   collaborative editing. Providing a comprehensive survey on all existing
+   solutions is not a goal of this thesis, so we will only briefly discuss a
+   select few.
+
+   One particularly interesting implementation is [[https://gobby.github.io/][Gobby]], which runs on the Obby
+   protocol and is open. Through browsing the source code, we believe it is
+   based on the Jupiter Collaborative System algorithm to ensure consistency
+   between clients[fn:8]. It is a feature-full protocol, supporting things like
+   group undo (only undo locally generated operations), group chat and more.
+
+   There exists an Emacs extension called [[https://sourceforge.net/projects/rudel/][Rudel]], which supports the Obby
+   protocol. It does however seem abandoned, and we have not been able to make
+   it run on a modern Emacs distribution. In addition, the protocol seems
+   non-trivial to implement, seeing that the extension is over 5000 lines of
+   code.
+
+   Another interesting implementation is [[https://floobits.com/][Floobits]], as it supports a wide range
+   of editors, leveraging a centralized server. It is, however, not open and it
+   can be used with a limited amount of "workspaces" in exchange for a monthly
+   fee. Because the protocol is closed, we do not know how it resolves
+   conflicts between participating clients.
+
+** Shared Buffer in Comparison
+
+   The Shared Buffer algorithm leverages a centralized server, similarly to the
+   Jupiter Collaborative System. The main problem that Shared Buffer solves
+   which, to the best of our knowledge is not covered in the literature, is to
+   maintain consistency between clients without requiring complicated control
+   mechanisms on the client side. It does this in an optimistic way, meaning
+   that there are put no restrictions to when, or in what section of the
+   buffer the clients may perform editing operations.
+
+   When leveraging a centralized server, the transformation function used only
+   needs to satisfy ref:eqn:C1 in order to guarantee convergence cite:ellis-ot.
+   ref:eqn:C2 essentially states that the transformation function is not
+   dependent on the order of which a sequence of operations are transformed
+   cite:DBLP:conf/ecscw/ImineMOR03. As the server is the only entity that will
+   perform transformations, there is only one order of which the operations
+   will be transformed.
+
+   There are complicating factors introduced by relieving the clients of having
+   to applying control mechanisms themselves. One is that the client is the
+   only entity that has a fully updated view of what operations it has
+   performed. To deal with this, the algorithm must ensure that clients never
+   perform operations received from the server, if the client is in conflict
+   with the server. This is ensured by using a sequence number scheme (Section
+   [[Sequence Number Scheme]]), which is very simple on the client side.
+
+   Further complications arise when a client simply rejects outdated messages;
+   in the Jupiter Collaboration System, the client would accept the operation,
+   and transform it if necessary, which would leave it consistent with the
+   server. Transformation functions only work for operations that are generated
+   from the same state cite:sun1998reversible; when giving the client the
+   opportunity to generate operations from an inconsistent state, then
+   transformation functions alone cannot be used to ensure consistency. To
+   resolve this, the new operations from the client must be reset to a
+   consistent state; to achieve this we leverage /exclusion/ transformations
+   cite:DBLP:journals/tochi/SunJZYC98, which can be seen as the dual of the
+   transformation functions we have seen so far.
+
+   Shared Buffer does not rely heavily on transformation functions, and instead
+   try to order operations in a way that preserves the users intentions. This
+   has proved successful for the majority of cases, but transformation
+   functions are needed to deal with some edge cases; these are typically the
+   cases where multiple operations are performed at the same position in the
+   buffer.
+
+   The Shared Buffer algorithm borrows ideas from both fully distributed
+   algorithms and the Jupiter Collaborative System. It has similarities to the
+   GOT algorithm cite:DBLP:journals/tochi/SunJZYC98, in that it uses both
+   inclusion and exclusion transformation functions. The GOT algorithm also
+   uses a undo/do/redo-scheme which is similar to Shared Buffer. A main
+   distinction is that Shared Buffer constructs operations that will undo
+   operations on the clients behalf.
+
+   The consistency model used for Shared Buffer is a weak consistency model,
+   namely /eventual consistency/ cite:Vogels:2009:EC:1435417.1435432. This was
+   chosen because it can naturally be seen as a minimum requirement for a
+   real-time collaborative system. In addition, it is a property which is easy
+   to express in LTL (Linear Temporal Logic), which allows us to use the Maude
+   LTL model checker for verification. Requirements with regards to preserving
+   user intent is not formally specified, but measures are taken to preserve
+   user intent in the majority of cases.
+
+   The system has been formally specified and model checked, and has been
+   verified correct for a small number of clients and operations (see Section
+   [[Experiments]]). This means that it handles /all possible conflicts/ that can
+   occur within the set bounds. Our specification is /broader/ than that of
+   Imine et al. in the sense that we model the clients, the server and the flow
+   of messages, where as the work of Imine et al. focuses on properties of the
+   transformation functions. This gives us confidence that the algorithm is
+   correct in its entirety.
+
+[fn:8] We have skimmed the source code and found files with "jupiter" in the
+name, which indicates that the Jupiter algorithm is used. However, we have not
+found this explicitly stated in the documentation or done a comprehensive study
+of the source code.
+
 * Client-side Specification
 
   The Shared Buffer System is formally modeled using The Maude System. Modeling
