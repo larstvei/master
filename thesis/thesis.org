@@ -375,6 +375,106 @@ Placeholder for abstract.
    or OT algorithms. To the best of our knowledge, no such algorithm has been
    documented in the literature.
 
+** The Shared Buffer Algorithm
+
+   At the client side, the Shared Buffer algorithm is very similar to the naïve
+   algorithm. The main difference is that messages sent to the server contains
+   two numbers in addition to what editing operation was just performed. One
+   number provides the server with sufficient information to resolve conflicts,
+   while the other is a sequence number. The sequence number scheme (Section
+   [[Sequence Number Scheme]]) allows a client to easily detect when to /reject/ an
+   incoming message. In a diagram, we can see that a message will be rejected
+   if two lines between the server to a client /overlaps/.
+
+   To give a basic idea of how Shared Buffer handles conflicting editing
+   operations, we will now revisit the example from Section [[The Naïve
+   Algorithm]], where the naïve algorithm failed to ensure consistency. The
+   scenario is illustrated in Figure ref:fig:sb-resolved-min-conflict.
+
+   #+BEGIN_EXPORT latex
+   \begin{figure}[h]
+     \centering
+     \begin{tikzpicture}[>=stealth, shorten >= 5pt, node distance=1em, scale=1]
+       \tikzstyle{vertex} = [circle, scale=0.5]
+       \tikzstyle{O_0} = [vertex, fill=black!30!green]
+       \tikzstyle{O_1} = [vertex, fill=black!30!blue]
+
+       \tikzstyle{to} = [-{Stealth[scale=1.2]}]
+       \tikzstyle{toO_0} = [to, color=black!30!green]
+       \tikzstyle{toO_1} = [to, color=black!30!blue]
+
+       \tikzstyle{op} = [midway, above=-3pt, sloped, text=black, font=\small]
+
+       %% Server receives operations in this order
+       \node (s) at (4, 4) {$S$};
+       \coordinate (se) at (4, 0) {};
+       \node[O_0, below = 3em of s] (s1) {};
+       \node[O_1, below = 1em of s1] (s2) {};
+
+       %% User 0 generates/receives in this order
+       \node (u0) at (0, 4) {$u_0$};
+       \node (u0e) at (0, 0) {};
+       \node[O_0, below = of u0, label=left:{\texttt{a}}] (u00) {};
+       \node[O_1, above = 2em of u0e, label=left:{\texttt{ba}}] (u01) {};
+       \node[O_0, above = of u01, label=left:{\texttt{a}}] (u00a) {};
+
+       %% User 1 generates/receives in this order
+       \node (u1) at (8, 4) {$u_1$};
+       \node (u1e) at (8, 0) {};
+       \node[O_1, below = 1.5em of u1, label=right:{\texttt{b}}] (u11) {} ;
+       \node[O_0, below = 3em of u11, label=right:{$\times$}] (u10a) {};
+       \node[O_1, above = 2em of u1e, label=right:{\texttt{ba}}] (u11a) {};
+
+       \begin{pgfonlayer}{bg} % select the background layer
+         \draw[to, color=black!30] (s) -- (s1)  -- (s2) -- (se);
+         \draw[to, color=black!30] (u0) -- (u00) -- (u01) -- (u0e);
+         \draw[to, color=black!30] (u1) -- (u11) -- (u10a) -- (u1e);
+
+         % Life of O_0
+         \draw[toO_0] (u00) -- (s1) node [op] {$\overbrace{\ins{0}{a}}^{O_0}$};
+         \draw[toO_0] (s1) -- (u00a) node [op] {$nop$};
+         \draw[toO_0] (s1) -- (u10a) node [op, near end] {$O_0$};
+
+         % Life of O_1
+         \draw[toO_1] (u11) -- (s2) node [op] {$\overbrace{\ins{0}{b}}^{O_1}$};
+         \draw[toO_1] (s2) -- (u01) node [op] {$O_1$};
+         \draw[toO_1] (s2) -- (u11a) node [op] {$O_1 \circ O_0 \circ O_1^{-1}$};
+       \end{pgfonlayer}
+     \end{tikzpicture}
+     \caption{A minimal conflict resolved by Shared Buffer.}
+     \label{fig:sb-resolved-min-conflict}
+   \end{figure}
+   #+END_EXPORT
+
+   From the perspective of $u_0$, the situation has hardly changed. First,
+   $u_0$ inserts an =a= at the first point in the buffer, and communicates this
+   to the server $S$. Next, she receives a message, saying not to do anything.
+   Finally, a message saying that a =b= should be inserted at the first point
+   in the buffer is received, after which the resulting buffer is ="ba"=. The
+   only difference here is that a message, saying not to do anything, was
+   received.
+
+   There are two changes at $u_1$. First $u_1$ inserts a =b= at the first point
+   in the buffer. Second, the message saying that an =a= should be inserted at
+   the first point is /rejected/, due to a mismatch of sequence numbers (notice
+   that the lines between $S$ and $u_1$ overlaps in Figure
+   ref:fig:sb-resolved-min-conflict). Finally, a new message is received, which
+   says to first /undo/ the =b= that was added, then insert an =a= at the first
+   position in the buffer, and finally, insert a =b= at the first position of
+   the buffer. This leaves $u_1$ with the buffer ="ba"=, which is the same as
+   $u_0$, and we say we reached a /consistent/ state.
+
+   More generally, the algorithm essentially consists of the server receiving
+   operations, and adding them to a history that dictates the order of which
+   operations must be applied. Then for every incoming message, it constructs
+   an operation for every client that (if not rejected) will make the client
+   consistent with the history that has been constructed. The idea is simple,
+   but as we will see in Chapter [[Server-side Specification]], it is not at all
+   trivial to construct such a history, or make the clients consistent with the
+   constructed history. In order to develop this algorithm, we have relied
+   heavily on the use of /formal methods/, which has shed light on the many
+   complexities that may arise.
+
 ** Method
 
    In this thesis we use a formal verification technique called /model
