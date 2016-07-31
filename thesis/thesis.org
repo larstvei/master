@@ -3929,6 +3929,67 @@ can be found here: https://open.kattis.com/problems/evenup.
 sole identity element would work just as well; however it seemed redundant to
 add such an element only to later remove it in the simplification step. This is
 why the empty list is treated as an "alternative" identity element.
+
+* Conclusions and Future Work
+
+  In this concluding chapter we start by summarizing how the use of formal
+  methods have influenced the development of the algorithm. We present some
+  ideas that we did not have time to pursue, but consider interesting
+  candidates for future work. Lastly, we show what we have achieved with
+  regards to the goals that we set for this thesis.
+
+** Leveraging Formal Methods
+
+   We are completely convinced that writing a formal specification, and using
+   model checking to analyze it, have been absolutely essential to the
+   development of the resulting algorithm of this thesis. Using Maude to
+   specify the program required us to find a representation for every component
+   in the program; this gave us a precise way of thinking, talking and writing
+   about the program, which in itself has been immensely useful.
+
+   Using a model checker is comparable with having a comprehensive test suite
+   for a system. A major advantage is that it will automatically test /every
+   possible scenario/, and relieve the programmer of the responsibility of
+   determining what scenarios are most likely to produce an error. Furthermore,
+   testing a distributed system can be extremely difficult, as the correctness
+   of the system is dependent on results that span over multiple computers. In
+   addition, it is difficult to write system-wide tests that are
+   /reproducible/.
+
+   We have experienced two downsides of using formal methods. One is that
+   writing a formal specification takes time, and the tools are not always are
+   somewhat crude[fn:9]. The other is that there will always be a gap between
+   the abstract model of the program one is specifying, and the actual running
+   program.
+
+   One major mistake was made in the specification that model checking could
+   not detect. For a long time, a client would insert a character at the end of
+   its buffer, if the position was outside the bounds of the buffer. This
+   should yield an error; the server should never send an operation to a client
+   which exceeds the bounds of that client's buffer.
+
+   After correcting the mistake, we redid the experiments, and found that the
+   algorithm did not guarantee eventual consistency after all. The problem was
+   manifested in the $fix$ function from Section [[Transform the History]]. A
+   challenge here was that it was hard to produce a counter example, as it took
+   about 12 hours of computation. We were able to correct this, but we suspect
+   we could have found a more elegant solution if we had caught it earlier.
+   After it was corrected we have not been able to produce further counter
+   examples, and have redone all experiments we have previously executed.
+
+   This somewhat sobering experience taught us that no matter the tool, there
+   is always room for human error.
+
+** Future Work
+
+   There is still remaining implementation work, as not all control mechanisms
+   are currently present in the implementation. We considered a correct
+   specification to be far more important for the thesis. The prototype
+   implementation gives us confidence that the ideas from the specification
+   work in practice.
+
+   Here we summarize some ideas for future work.
+
 *** Undo
 
     The adOPTed-algorithm cite:DBLP:conf/cscw/ResselNG96 tackles the problem of
@@ -3960,7 +4021,110 @@ why the empty list is treated as an "alternative" identity element.
     change; it seems plausible to use these mechanisms to "skip" undo entries
     that were generated remotely and achieve a good local undo.
 
-    #+LaTeX:\appendix
+*** Constructing a Total Order
+
+    In Section [[Events Under Precedence is not a Total Order]] we showed that the
+    precedence relation $\prec$ (Definition ref:def:prec) is not transitive,
+    and thus not a total order. We have an idea that we think could restore
+    transitivity, but have not had to include it in the specification; this is
+    mainly due to a change in the specification would require us to redo all
+    experiments.
+
+    The example showed the three events:
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      E_0 = \tuple{O_0, t_0, m_0, u_0} = \tuple{\ins{0}{a}, 0, 1, u_0}\\
+      E_1 = \tuple{O_1, t_1, m_1, u_0} = \tuple{\ins{1}{b}, 0, 2, u_0}\\
+      E_2 = \tuple{O_2, t_2, m_2, u_1} = \tuple{\del{0}{f}, 0, 3, u_1}
+    \end{align*}
+    #+END_EXPORT
+    The three events can be ordered in two different ways, none of which
+    satisfy transitivity.
+    #+BEGIN_EXPORT latex
+    \begin{align*}
+      E_0 \prec E_1 \prec E_2 \\
+      E_2 \prec E_0 \prec E_1
+    \end{align*}
+    #+END_EXPORT
+    One possible way of resolving this could be to use /exclusion
+    transformation/ to reset the operations to the latest consistent state
+    before comparing them. In this example this would mean to exclude $O_0$
+    from $O_1$, showing $O_1$ /as if/ $O_0$ had not been executed first. Then
+    we would have $E_2 \prec E_1$ because $\tuple{et(O_1, O_0), t_1, m_1, u_0}$
+    would give $\tuple{\ins{0}{b}, t_1, m_1, u_0}$, and a deletion should
+    precede an insertion if the positions are the same.
+
+    The observation was found to late to be able to implement it and properly
+    verify it. If our intuition serves us correct, this could yield a better
+    result with regards to preserving user intent, and could guarantee a
+    transitive ordering.
+
+*** Preserve User Intent Fully
+
+    The eventual consistency model does not formalize the notion of what a user
+    intended. As a first step, we could enforce that a delete operation must
+    always delete the correct character. As of now, the wrong character will
+    occasionally be deleted, which is a violation of user intent, and is not
+    considered a graceful handling of a conflict. Given a buffer of initial
+    size two, three clients and three operations, this will occur in $0.5\%$ of
+    states, assuming that all states are equally likely to be reached.
+
+    Formally verifying the specification using the consistency model described
+    in Section [[Discussing Consistency in Operational Transformation]] could be
+    better suited for ensuring that user intention is ensured. Furthermore, it
+    would be interesting to see if the suggestion from the last section would
+    be enough to fully preserve user intent.
+
+*** Community
+
+    When the prototype implementation is in a more production ready stage, it
+    will be published with a free software license. Seeing that the aim for the
+    developed protocol is to enable real-time collaboration in /existing
+    editors/ the protocol would ideally be ported to a wide range of editors in
+    the future. The developers who are best fit to implement this are probably
+    the developers who are an active part of the community around each editor.
+    We view fostering a community around the project as the most promising way
+    of spreading our real-time collaboration protocol to a wide range of
+    editors.
+
+** Conclusion
+
+  The goal for this thesis was producing a protocol for real-time collaboration
+  which could be characterized as:
+
+  1. *Portable* --- easy to implement in an /existing/ plain text editor,
+  2. *Responsive* --- regular usage of the editor should not be degraded by
+     enabling real-time collaboration,
+  3. *Robust* --- gracefully handle all conflicting editing operations.
+
+  /Portability/ has been ensured by designing a client-side algorithm that is
+  easy to implement. Compared to the naïve algorithm, there are very few added
+  complexities. We consider this goal to have been fully achieved.
+
+  The system is /responsive/, in the sense that local editing operations are
+  never prohibited, and sending a message after changes causes, at worst, a
+  negligible delay. Existing /Operational Transformation/ (OT) algorithms where
+  the client performs transformations themselves are arguably more responsive,
+  in the sense that intermediate results are displayed during a conflict. Yet,
+  this is a necessary trade-off in order to achieve our wanted level of
+  portability, and we consider the goal achieved.
+
+  Aided by formal methods, we have shown that no conflict can break eventual
+  consistency under certain bounds. Occasionally a wrong character will be
+  deleted, but we do not consider this a very serious issue, because this only
+  occurs when multiple concurrent operations are performed at the same
+  position, and it does not affect eventual consistency. The system has not
+  been proven to guarantee eventual consistency for an arbitrary number of
+  clients and operations, yet we still think the system can rightfully be
+  characterized as /robust/.
+
+  Though we see room for improvement, we think the protocol fits nicely in the
+  intersection of portability, responsiveness and robustness.
+
+  #+LaTeX:\appendix
+[fn:9] For instance, we experienced problems with commenting out sections of
+the Maude specification. Maude seem to parse comments, and sometimes mistaking
+it for code.
 
 * Shared Buffer for Emacs --- Source Code
   #+INCLUDE: ../shared-buffer-clients/shared-buffer-emacs/shared-buffer.el src emacs-lisp
