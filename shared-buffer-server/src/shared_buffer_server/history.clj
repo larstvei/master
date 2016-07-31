@@ -5,7 +5,7 @@
 (defn concurrent?
   "Returns non-nil iff the events are concurrent."
   [[_ t1 m1 u1] [_ t2 m2 u2]]
-  (and (empty? (intersection u1 u2))
+  (and (not= u1 u2)
        (or (and (<= t1 t2) (<= t2 m1))
            (and (<= t2 t1) (<= t1 m2)))))
 
@@ -26,7 +26,7 @@
 (defn add-event
   "Adds an event to the history."
   [history [op1 _ _ u1 :as e1]]
-  (let [u?      (comp empty? (partial intersection u1) last)
+  (let [u?      (comp (partial = u1) last)
         [xs ys] (split-with u? history)
         [x y]   (split-with (partial precedes? e1) xs)]
     (concat x [e1] y ys)))
@@ -38,9 +38,14 @@
        (drop-while (fn [[_ _ m _]] (< m t)))
        (mapcat first) reverse))
 
+(defn rejected [r t]
+  (mapcat first (take-while (fn [[_ m]] (< t m)) r)))
+
 (defn make-op [h1 h2 t]
   (simplify (compose (until h2 t) (inv (until h1 t)))))
 
 (defn make-response [op1 op2 sent-ops t]
-  (let [opr (mapcat first (take-while (fn [[_ m]] (< t m)) sent-ops))]
-    (simplify (compose op2 (compose opr (inv op1))))))
+  (simplify (compose op2 (compose (rejected sent-ops t) (inv op1)))))
+
+(defn make-initial-op [op1 sent-ops t]
+  (simplify (compose (rejected sent-ops t) op1)))
