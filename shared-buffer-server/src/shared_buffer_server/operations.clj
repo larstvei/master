@@ -4,24 +4,25 @@
 (def nop? :nop)
 
 (defn inv
-  "Returns the inverse of a given operation."
+  "Returns the inverse of x."
   [x]
   (if (seq? x)
     (map inv (reverse x))
     (rename-keys x {:ins :del, :del :ins})))
 
-(defn inverses? [x y]
-  (= (inv x) y))
+(defn inverses?
+  "Returns true if x is the inverse of y"
+  [x y]
+  (= x (inv y)))
 
 (defn compose
   "Takes two operations, and returns their composition."
   [x y]
-  (cond (nop? x) y
-        (nop? y) x
-        (inverses? x y) (list {:nop true})
-        :else (concat x y)))
+  (concat x y))
 
 (defn simplify [op]
+  "Reduces op it to a minimal form. It removes nop elements and adjacent
+  operations that are inverses of each other."
   (-> (fn [stack o]
         (cond (nop? o) stack
               (empty? stack) (conj stack o)
