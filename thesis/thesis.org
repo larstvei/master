@@ -1,4 +1,4 @@
-#+TITLE: Achieving Portable, Responsive and Robust Real-Time Collaborative Editing
+#+TITLE: Developing Real-Time Collaborative Editing Using Formal Methods
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
@@ -24,7 +24,7 @@
 #+LaTeX_HEADER: \theoremstyle{definition}
 #+LaTeX_HEADER: \newtheorem{definition}{Definition}[section]
 
-#+LaTeX_HEADER: \setlength\footnotemargin{5pt}
+#+LaTeX_HEADER: \setlength\footnotemargin{7pt}
 
 #+LaTeX: \pgfdeclarelayer{bg}    % declare background layer
 #+LaTeX: \pgfsetlayers{bg,main}  % set the order of the layers (main is the standard layer)
