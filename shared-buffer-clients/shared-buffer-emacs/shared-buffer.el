@@ -70,8 +70,8 @@ It is only updated when an operation is received.")
   "Establishes connection with HOST, and binds `sb-socket'."
   (let ((host (concat "ws://" (or host "localhost") ":3705")))
     (setq sb-socket (websocket-open host
-                                    :on-message #'sb-receive
                                     :on-open    #'sb-on-open
+                                    :on-message #'sb-receive
                                     :on-close   #'sb-on-close))
     (when sb-socket
       (setf (process-buffer (websocket-conn sb-socket))
@@ -83,7 +83,7 @@ It is only updated when an operation is received.")
 It sends an a request to connect to a session, specified by
 `sb-key', and waits for a reply."
   (with-current-buffer (process-buffer (websocket-conn websocket))
-    (sb-send (list :type 'connect :session sb-key))
+    (sb-send (list :type 'connect-request :session sb-key))
     (with-local-quit
       ;; Block until first message is received
       (accept-process-output (websocket-conn websocket)))))
@@ -102,10 +102,12 @@ It sends an a request to connect to a session, specified by
 
 (defun sb-send-buffer ()
   "Send an insertion that includes the entire buffer."
-  (sb-send (list :type 'buffer
+  (sb-send (list :type 'buffer-response
                  :session sb-key
-                 :pos (1- (point-min))
-                 :ins (sb-substr (point-min) (point-max))
+                 :operation
+                 (list
+                  :pos (1- (point-min))
+                  :ins (sb-substr (point-min) (point-max)))
                  :token sb-token)))
 
 (defun sb-send-operation (type beg end)
@@ -115,9 +117,10 @@ TYPE specifies if it is a deletion or insertion, whilst BEG and
 END specifies what part of the buffer is sent."
   (sb-send (list :type 'operation
                  :session sb-key
-                 type (sb-substr beg end)
-                 :pos (1- beg)
-                 :current-pos (1- (point))
+                 :operation
+                 (list
+                  type (sb-substr beg end)
+                  :pos (1- beg))
                  :token sb-token
                  :seqno (1- (cl-incf sb-seqno)))))
 
@@ -127,8 +130,7 @@ END specifies what part of the buffer is sent."
 Called after every change, where BEG and END specifies the part
 of the buffer which is changed. If LEN is zero then the change
 was a deletion, and nothing is sent."
-  (let ((inhibit-modification-hooks nil))
-    (when (zerop len) (sb-send-operation :ins beg end))))
+  (when (zerop len) (sb-send-operation :ins beg end)))
 
 (defun sb-send-deletion (beg end)
   "Send an insertion.
@@ -136,8 +138,7 @@ was a deletion, and nothing is sent."
 Called before every change, where BEG and END specifies the part
 of the buffer which is about to be changed. If BEG is equal to
 END, then the change was a deletion, and nothing is sent."
-  (let ((inhibit-modification-hooks nil))
-    (when (not (= beg end)) (sb-send-operation :del beg end))))
+  (when (not (= beg end)) (sb-send-operation :del beg end)))
 
 ;;; Receive
 
@@ -152,9 +153,9 @@ is either \"connect\", \"send-buffer\" or \"operations\"."
            (json-array-type 'list)
            (data (json-read-from-string payload))
            (type (plist-get data :type)))
-      (cond ((string= type "connect")
+      (cond ((string= type "connect-response")
              (sb-set-session (plist-get data :session)))
-            ((string= type "send-buffer")
+            ((string= type "buffer-request")
              (sb-send-buffer))
             ((string= type "operations")
              (sb-apply-operations data))
