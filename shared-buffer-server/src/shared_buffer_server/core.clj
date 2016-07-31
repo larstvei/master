@@ -4,14 +4,9 @@
   (:require [shared-buffer-server.app :refer :all]
             [shared-buffer-server.utils :refer :all]
             [shared-buffer-server.history :refer :all]
-            [shared-buffer-server.syncprn :refer [syncprn]]
             [clojure.data.json :as json]))
 
 (defonce state (atom {:sessions {} :clients {}}))
-
-(def key-length
-  "This dictates the length of random generated keys."
-  8)
 
 ;;; Initialization and termination
 
@@ -19,7 +14,7 @@
   (-> state :sessions key :clients count))
 
 (defn empty-session? [state key]
-  (= 0 (clients-in-session state key)))
+  (zero? (clients-in-session state key)))
 
 (defn initialized? [state client]
   (get-in state [:clients client :initialized]))
@@ -46,8 +41,8 @@
       (assoc-in [:clients client :seqno] 0)))
 
 (defn join-session
-  "The function is called when a client requests to join a session. It is added to
-  the session unconditionally in the state."
+  "The function is called when a client requests to join a session. It is added
+  to the session, unconditionally"
   [state client key]
   (-> state
       (assoc-in  [:clients client :session] key)
@@ -58,8 +53,8 @@
       (update-in [:sessions key :lock] (fnil identity (Object.)))))
 
 (defn dissolve-client
-  "The function is called when a connection to a client is closed. It
-  removes the client. If the session its in has no more clients, the session is
+  "The function is called when a connection to a client is closed. It removes
+  the client. If the session its in has no more clients, the session is
   closed."
   [state client status]
   (let [session (get-in state [:clients client :session])
@@ -84,8 +79,8 @@
         t       (min-token site)]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
-        (update-session session (trim-history history t))
-        (assoc-in [:sessions session :tokens client] token))))
+        (assoc-in [:sessions session :tokens client] token)
+        (update-session session (trim-history history t)))))
 
 ;;; Send
 
@@ -108,7 +103,7 @@
       (swap! state update-client c (inc seqno) [op token] conj))))
 
 (defn send-buffer-request [state key]
-  (->> {:type :send-buffer :session key}
+  (->> {:type :buffer-request :session key}
        (json/write-str)
        (send! (get-initialized-client state key))))
 
@@ -116,28 +111,24 @@
 
 (defmulti receive (comp keyword :type))
 
-(defmethod receive :buffer [msg client]
+(defmethod receive :buffer-response [msg client]
   (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
     (let [key (keyword (:session msg))
-          op  (list (select-keys msg [:pos :ins]))
+          op  (list (-> msg :operation))
           ops (get-in @state [:clients client :ops])
-          op2 (make-response nil op ops (:token msg))
-          msg  {:type :operations
-                :session (:session msg)
-                :operations op2
-                :token (:token msg)
-                :seqno 0}]
+          op2 (make-initial-op op ops (:token msg))
+          msg (make-msg key op2 0 (-> @state :sessions key :token))]
       (doseq [c (get-uninitialized-clients @state key)]
         (send! c (json/write-str msg))
         (swap! state assoc-in  [:clients c :initialized] true)
         (swap! state update-in [:clients c :seqno] inc)))))
 
-(defmethod receive :connect [msg client]
-  (let [key (or (:session msg) (generate-key key-length))]
+(defmethod receive :connect-request [msg client]
+  (let [key (or (:session msg) (generate-key))]
     (swap! state join-session client (keyword key))
     (when (or (not (:session msg))
               (= 1 (clients-in-session @state (keyword key))))
-      (->> {:type :connect :session key}
+      (->> {:type :connect-response :session key}
            (json/write-str)
            (send! client)))
     (when-not (initialized? @state client)
@@ -148,11 +139,11 @@
     (let [key     (keyword (:session msg))
           session (get-in @state [:sessions key])
           site    (get-in @state [:clients client])
-          op      (list (select-keys msg [:pos :ins :del]))
+          op      (list (-> msg :operation))
           seqno   (next-seq (:seqno msg) (:seqno site))
           token   (:token msg)
           time    (inc (:token session))
-          event   [op token (:token session) #{(:id site)}]
+          event   [op token (:token session) (:id site)]
           hist    (add-event (:history session) event)
           op1     (make-op (:history session) hist token)
           op2     (make-response op op1 (:ops site) token)
@@ -167,22 +158,21 @@
 
 ;;; Handle requests
 
-(defn reader [client]
+(defn receiver [client]
   (fn [data]
-    (let [res (json/read-str data :key-fn keyword)]
-      (syncprn res)
-      res)))
+    (-> data
+        (json/read-str :key-fn keyword)
+        (receive client))))
 
 (defn handler
   "The handler for incoming requests."
   [req]
   (with-channel req channel
-    ;; TODO: make synchronous initialization.
     (if (websocket? channel)
       (swap! state initialize-client channel)
       (send! channel (app req)))
     (on-close channel (partial swap! state dissolve-client channel))
-    (on-receive channel (comp #(receive % channel) (reader channel)))))
+    (on-receive channel (receiver channel))))
 
 ;;; Server management
 
