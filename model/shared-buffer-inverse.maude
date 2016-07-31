@@ -63,8 +63,8 @@ view Str from TRIV to STR is
 endv
 
 fmod BUFFER is
-    pr LIST{Str} .
-    pr STR .
+    including LIST{Str} .
+    including STR .
 
     sort Buffer .
     subsort List{Str} < Buffer .
@@ -75,7 +75,7 @@ view Buffer from TRIV to BUFFER is
 endv
 
 fmod ERROR is
-    pr BUFFER .
+    including BUFFER .
 
     sort Error .
     subsort Buffer < Error .
@@ -89,8 +89,8 @@ fmod ERROR is
 endfm
 
 mod UNIQUE is
-    pr CONFIGURATION .
-    pr LIST{Str} .
+    including CONFIGURATION .
+    including LIST{Str} .
 
     sort Unique .
 
@@ -100,7 +100,7 @@ mod UNIQUE is
 endm
 
 fmod USER is
-    pr NAT .
+    including NAT .
 
     sort User .
     op user_ : Nat -> User .
@@ -111,14 +111,13 @@ view User from TRIV to USER is
 endv
 
 mod ACTIONS is
-    pr CONFIGURATION .
-    pr USER .
-    pr SET{User} .
-    pr NAT .
+    including CONFIGURATION .
+    including USER .
+    including SET{User} .
+    including NAT .
 
     sorts Actions .
-    subsort Set{User} < Actions .
-    subsort Actions < Configuration .
+    subsort Set{User} < Actions < Configuration .
 
     op empty : -> Actions [ctor] .
     op _-_ : Actions Actions -> Actions [ctor assoc id: empty] .
@@ -149,9 +148,9 @@ view Op from TRIV to ABSTRACT-OPERATION is
 endv
 
 fmod INSERT-DELETE is
-    pr ABSTRACT-OPERATION .
-    pr NAT .
-    pr STR .
+    including ABSTRACT-OPERATION .
+    including NAT .
+    including STR .
 
     sort Type .
 
@@ -174,7 +173,7 @@ fmod INSERT-DELETE is
 endfm
 
 fmod TRANSFORMATION is
-    pr INSERT-DELETE .
+    including INSERT-DELETE .
 
     vars N N' : Nat .
     vars S S' : Str .
@@ -205,9 +204,9 @@ fmod TRANSFORMATION is
 endfm
 
 fmod APPLY is
-    pr BUFFER .
-    pr ERROR .
-    pr INSERT-DELETE .
+    including BUFFER .
+    including ERROR .
+    including INSERT-DELETE .
 
     vars Oi Oj : Op .
     vars S T : Str .
@@ -226,7 +225,7 @@ fmod APPLY is
 
     eq apply del(0, S) on T B = B .
     eq apply del(s I, S) on T B = T (apply del(I, S) on B) .
-    eq apply del(I, S) on nil = error .
+    eq apply del(I, S) on B = error [owise] .
 
     eq apply Oi o Oj on B = apply Oi on (apply Oj on B) .
 
@@ -234,8 +233,8 @@ fmod APPLY is
 endfm
 
 fmod MSG is
-    pr NAT .
-    pr ABSTRACT-OPERATION .
+    including NAT .
+    including ABSTRACT-OPERATION .
 
     sort Msg .
 
@@ -247,12 +246,12 @@ view Msg from TRIV to MSG is
 endv
 
 mod SITE is
-    pr CONFIGURATION .
-    pr BUFFER .
-    pr LIST{Msg} .
-    pr MSG .
-    pr ABSTRACT-OPERATION .
-    pr USER .
+    including CONFIGURATION .
+    including BUFFER .
+    including LIST{Msg} .
+    including MSG .
+    including ABSTRACT-OPERATION .
+    including USER .
 
     sorts Site Queue .
     subsort Site < Configuration  .
@@ -286,15 +285,15 @@ view Queue from TRIV to SITE is
 endv
 
 mod SITE-RULES is
-    pr ACTIONS .
-    pr APPLY .
-    pr BUFFER .
-    pr LIST{Msg} .
-    pr MSG .
-    pr ABSTRACT-OPERATION .
-    pr USER .
-    pr UNIQUE .
-    pr SITE .
+    including ACTIONS .
+    including APPLY .
+    including BUFFER .
+    including LIST{Msg} .
+    including MSG .
+    including ABSTRACT-OPERATION .
+    including USER .
+    including UNIQUE .
+    including SITE .
 
     vars B B' B'' : Buffer .
     vars T T' N M : Nat .
@@ -337,11 +336,11 @@ mod SITE-RULES is
 endm
 
 fmod ORDERING is
-    pr ABSTRACT-OPERATION .
-    pr BOOL .
-    pr INSERT-DELETE .
-    pr NAT .
-    pr SET{User} .
+    including ABSTRACT-OPERATION .
+    including BOOL .
+    including INSERT-DELETE .
+    including NAT .
+    including SET{User} .
 
     sort Event .
 
@@ -373,9 +372,9 @@ view Event from TRIV to ORDERING is
 endv
 
 fmod HISTORY is
-    pr ORDERING .
-    pr LIST{Event} .
-    pr TRANSFORMATION .
+    including ORDERING .
+    including LIST{Event} .
+    including TRANSFORMATION .
 
     sort History .
     subsort List{Event} < History .
@@ -440,10 +439,10 @@ fmod HISTORY is
 endfm
 
 mod SERVER is
-    pr CONFIGURATION .
-    pr MAP{User,Queue} .
-    pr NAT .
-    pr HISTORY .
+    including CONFIGURATION .
+    including MAP{User,Queue} .
+    including NAT .
+    including HISTORY .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
     op history :_ : History -> Attribute .
@@ -452,12 +451,12 @@ mod SERVER is
 endm
 
 mod SEND is
-    pr CONFIGURATION .
-    pr LIST{Msg} .
-    pr MAP{User,Queue} .
-    pr SERVER .
-    pr SITE .
-    pr HISTORY .
+    including CONFIGURATION .
+    including LIST{Msg} .
+    including MAP{User,Queue} .
+    including SERVER .
+    including SITE .
+    including HISTORY .
 
     sort Send .
     subsort Send < Configuration .
@@ -483,14 +482,14 @@ mod SEND is
 endm
 
 mod SERVER-RULES is
-    pr CONFIGURATION .
-    pr LIST{Msg} .
-    pr MAP{User,Queue} .
-    pr ABSTRACT-OPERATION .
-    pr SEND .
-    pr SERVER .
-    pr SITE .
-    pr HISTORY .
+    including CONFIGURATION .
+    including LIST{Msg} .
+    including MAP{User,Queue} .
+    including ABSTRACT-OPERATION .
+    including SEND .
+    including SERVER .
+    including SITE .
+    including HISTORY .
 
     vars A A' : AttributeSet .
     vars Q Q' Q'' : Queue .
@@ -523,16 +522,16 @@ mod SERVER-RULES is
 endm
 
 mod PREDICATES is
-    pr APPLY .
-    pr BUFFER .
-    pr CONFIGURATION .
-    pr LTL-SIMPLIFIER .
-    pr MODEL-CHECKER .
-    pr SATISFACTION .
-    pr SERVER .
-    pr SET{Buffer} .
-    pr SITE .
-    pr HISTORY .
+    including APPLY .
+    including BUFFER .
+    including CONFIGURATION .
+    including LTL-SIMPLIFIER .
+    including MODEL-CHECKER .
+    including SATISFACTION .
+    including SERVER .
+    including SET{Buffer} .
+    including SITE .
+    including HISTORY .
 
     subsort Configuration < State .
 
@@ -558,24 +557,24 @@ mod PREDICATES is
 endm
 
 mod TEST is
-    pr ACTIONS .
-    pr APPLY .
-    pr BUFFER .
-    pr CONFIGURATION .
-    pr ERROR .
-    pr MSG .
-    pr ABSTRACT-OPERATION .
-    pr PREDICATES .
-    pr SERVER .
-    pr SERVER-RULES .
-    pr SITE .
-    pr SITE-RULES .
-    pr STR .
-    pr SET{Buffer} .
-    pr HISTORY .
-    pr TRANSFORMATION .
-    pr UNIQUE .
-    pr USER .
+    including ACTIONS .
+    including APPLY .
+    including BUFFER .
+    including CONFIGURATION .
+    including ERROR .
+    including MSG .
+    including ABSTRACT-OPERATION .
+    including PREDICATES .
+    including SERVER .
+    including SERVER-RULES .
+    including SITE .
+    including SITE-RULES .
+    including STR .
+    including SET{Buffer} .
+    including HISTORY .
+    including TRANSFORMATION .
+    including UNIQUE .
+    including USER .
 
     var C : Configuration .
     vars T T' N N' I : Nat .
@@ -600,7 +599,7 @@ mod TEST is
 
     op init___ : Buffer Nat Nat -> Configuration .
     eq init B N N' =
-        [ a b c d ]
+        [ a b c d e ]
         (actions 0 N N')
         < server | history : nil, state : 1,
                    sites : sites N >
