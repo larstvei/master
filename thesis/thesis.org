@@ -341,6 +341,40 @@ Placeholder for abstract.
    at some point, then given enough time for traveling messages to reach their
    destination, they will all be looking at the same buffer.
 
+** Goals
+
+   The goal for this thesis is to create a protocol for real-time collaborative
+   editing which can be characterized as:
+
+   1. *Portable* --- easy to implement in an /existing/ plain text editor,
+   2. *Responsive* --- regular usage of the editor should not be degraded by
+      enabling real-time collaboration,
+   3. *Robust* --- gracefully handle all conflicting editing operations.
+
+   We would characterize the naïve algorithm as /portable/ and /responsive/,
+   but in no way /robust/. As we just demonstrated, it does not handle
+   concurrent editing operations correctly.
+
+   The majority of existing /Operational Transformation/ (OT) algorithms
+   (presented in Chapter [[Related Work]]) can be considered /responsive/ and
+   /robust/, but not very /portable/, as all clients must implement control
+   mechanisms to handle conflicts. It is fair to say that a fully distributed
+   solution can be more /robust/ than one with a centralized server, as this
+   server is a single point of failure.
+
+   A fully synchronous solution (i.e. one where only one user may type at the
+   time) would require some form of distributed locking scheme. It can be
+   considered /portable/, given that the locking scheme is easy to implement.
+   It is /robust/ because conflicting editing operations are simply not
+   allowed; however it does have a single point of failure. It not, however,
+   /responsive/ as the user might have to wait before being able to type.
+
+   Our goal is to find the intersection these three characteristics, where we
+   end up with an algorithm that is both /portable/ like the naïve algorithm,
+   /responsive/ like the naïve or OT algorithms and /robust/ like synchronous
+   or OT algorithms. To the best of our knowledge, no such algorithm has been
+   documented in the literature.
+
 ** Method
 
    In this thesis we use a formal verification technique called /model
