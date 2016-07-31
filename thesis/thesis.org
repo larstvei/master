@@ -523,6 +523,42 @@ Placeholder for abstract.
    In addition, the thesis demonstrates how formal specification and model
    checking has driven the development of the algorithm.
 
+** Chapter Overview
+
+   *Chapter [[Formal Semantics of Editing Operations]]* introduces notation for
+   operations which we will rely heavily on throughout the thesis. Our
+   algorithm leverages both the composition of operations and the inverting of
+   operations; we show some properties about operations and their composition
+   to get a deeper understanding of the most fundamental structure this thesis
+   is concerned with.
+
+   *Chapter [[Related Work]]* covers related work. We introduce /Operational
+   Transformation/ (OT), and briefly discusses some OT-based algorithms. Some
+   work has been done on formally verifying transformation functions, and we
+   try to convey the results of this work. Lastly, we show how Shared Buffer
+   compares to other solutions.
+
+   *Chapter [[Client-side Specification]]* contains a short introduction to Maude,
+   and shows how we can use Maude to formally specify the behavior of the
+   system. In particular, it shows how the /clients/ in the system are
+   specified.
+
+   *Chapter [[Server-side Specification]]* shows how the server in the system is
+   specified. By walking through the most essential parts of the specification,
+   we describe the server-side algorithm in detail, and show /why/ each control
+   mechanism is put in place.
+
+   *Chapter [[Model Checking the Specification]]* shows how we express the chosen
+   consistency model (eventual consistency) has been formalized as a LTL
+   formula, and how we have leveraged the Maude LTL Model Checker.
+
+   *Chapter [[Implementation of Shared Buffer]]* describes the general structure of
+   the implementation, and how the protocol has been implemented. Here, the
+   focus is on the remaining problems not fully covered specification.
+
+   *Chapter [[Conclusions and Future Work]]* concludes the thesis by discussing
+   what we could have done differently, whether we have reached the goals we
+   set, and propose some interesting work that could be pursued in the future.
 * Formal Semantics of Editing Operations
 
   #+BEGIN_EXPORT latex
