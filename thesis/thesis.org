@@ -195,16 +195,15 @@ Placeholder for abstract.
 ** The Naïve Algorithm
 
    Let us now consider two cases that illustrates how a naïve implementation
-   (like the one briefly described in the [[Preface]]) might work, and where it
-   fails to produce a desirable result.
+   might work, and where it fails to produce a desirable result.
 
-   Say we have two users, our European friend $u_0$ and $u_1$, the American,
-   who are both communicating with a server $S$. They each have a copy of a
-   shared buffer. Both may either insert a character, or delete one from the
-   buffer, and they may do so at any time. When a user performs an operation
-   (meaning insertion or deletion) on its local buffer, then this should be
-   communicated to $S$. When $S$ receives an operation, it should communicate
-   this to the other user.
+   Say we have two users, $u_0$ and $u_1$ who are located in different
+   countries; both are communicating with a server $S$. They each have a copy
+   of a shared buffer. Both may either insert a character, or delete one from
+   the buffer, and they may do so at any time. When a user performs an
+   operation (meaning performing an insertion or deletion) on its local buffer,
+   then this should be communicated to $S$. When $S$ receives an operation, it
+   should communicate this to the other user.
 
    We represent scenarios that can occur in the system graphically by using a
    variation of message sequence charts. The diagrams are read from top to
@@ -263,28 +262,27 @@ Placeholder for abstract.
    #+END_EXPORT
 
    Figure [[ref:fig:noconflict0]] describes a very simple scenario. Imagine that
-   $u_0$ has an empty buffer which she precedes to insert an ="a"= into. Then
-   $u_1$ inserts a ="b"= in front of the ="a"= that just showed up in her
-   buffer. The ="b"= eventually reaches $u_0$, and the end result of the
-   interaction is that they both will be looking at a buffer containing ="ba"=.
-   In this scenario the buffers ended up identical, so we say that we have
-   reached a /consistent state/.
+   $u_0$ has an empty buffer which she precedes to insert an =a= into. Then
+   $u_1$ inserts a =b= in front of the =a= that just showed up in her buffer.
+   The =b= eventually reaches $u_0$, and the end result of the interaction is
+   that they both will be looking at a buffer containing ="ba"=. In this
+   scenario the buffers ended up identical, so we say that we have reached a
+   /consistent state/.
 
    Simple scenarios like the one we saw, where only one message is "in flight"
    at any one time, would be gracefully handled even by the naïve approach. We
-   can see that ="a"= was inserted prior to the ="b"= at both $u_0$ and $u_1$,
+   can see that =a= was inserted prior to the =b= at both $u_0$ and $u_1$,
    hence they cannot have been applied concurrently. We will now demonstrate
    that the approach does not work when we introduce concurrent edits.
 
    Let us return to the example from Figure [[ref:fig:noconflict0]], with a slight
    modification, visualized in Figure [[ref:fig:conflict0]]. The scenario is
-   unchanged at $u_0$, where she first inserts an ="a"=, and later receives the
-   ="b"= which leaves her with a buffer containing ="ba"=. Now say that $u_1$
-   inserts her ="b"= /before/ having received the ="a"=. When she has already
-   typed a ="b"=, she receives a message saying that she should place an ="a"=
-   at the first point in her buffer. The resulting buffer is ="ab"=. Now they
-   are looking at different buffers, so we say we have reached an /inconsistent
-   state/.
+   unchanged at $u_0$, where she first inserts an =a=, and later receives the
+   =b= which leaves her with a buffer containing ="ba"=. Now say that $u_1$
+   inserts =b= /before/ having received the =a=. When she has already typed a
+   =b=, she receives a message saying that she should place an =a= at the first
+   point in her buffer. The resulting buffer is ="ab"=. Now they are looking at
+   different buffers, so we say we have reached an /inconsistent state/.
 
    #+BEGIN_EXPORT latex
    \begin{figure}[h]
@@ -341,10 +339,7 @@ Placeholder for abstract.
    /eventual consistency/ cite:Vogels:2009:EC:1435417.1435432 between
    participating clients. Intuitively, this means that if all users stop typing
    at some point, then given enough time for traveling messages to reach their
-   destination, they will all be looking at the same buffer. In later chapters
-   we will come to realize that is not at all trivial, considering the highly
-   concurrent and distributed nature of the problem. In order to handle this
-   level of complexity we will rely heavily on the use of formal methods.
+   destination, they will all be looking at the same buffer.
 
 ** Method
 
