@@ -508,18 +508,20 @@ Placeholder for abstract.
 
 ** Contributions
 
-   The main result of this thesis is a protocol that enables real-time
-   collaborative editing. Both a client- and server-side algorithm have been
-   modeled and implemented. The model has been formally verified to guarantee
-   eventual consistency for a limited number of clients and operations.
+   The main contribution of this thesis is a protocol that enables real-time
+   collaborative editing. Both a client- and server-side algorithm has been
+   formally specified and implemented. The specification has been formally
+   verified to guarantee eventual consistency for a limited number of clients
+   and operations.
 
    In the process we have:
-   - provided a formal description of our system based on OT,
-   - demonstrated how modeling has been used to drive the development,
-   - presented a representation of the system in Maude,
-   - performed LTL model checking on our model in Maude,
-   - provided a client as an extension for Emacs,
-   - provided an implementation of the server-side algorithm in Clojure.
+   - formally specified the system in Maude,
+   - performed model checking on the specified system in Maude,
+   - provide a client-side implementation as an extension for Emacs,
+   - provide a prototype server-side implementation in Clojure.
+
+   In addition, the thesis demonstrates how formal specification and model
+   checking has driven the development of the algorithm.
 
 * Formal Semantics of Editing Operations
 
