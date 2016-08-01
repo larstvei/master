@@ -35,8 +35,8 @@
   (->> session :tokens vals (apply min)))
 
 (defn next-seq [n m]
-  "Given the a stored sequence number for a client and the sequence number of a
-  message, calculate the next sequence number for the client."
+  "Given the a stored sequence number for a client and the sequence number
+  of a message, calculate the next sequence number for the client."
   (+ (inc n) (- m n)))
 
 (defn initialize-client
@@ -68,8 +68,8 @@
       (update-in state [:sessions key :clients] disj client))))
 
 (defn update-client [state client seqno op f]
-  "Update the sequence number and list of (possibly) rejected operations of a
-  given client. Function f is either conj or a function that replaces the
+  "Update the sequence number and list of (possibly) rejected operations of
+  a given client. Function f is either conj or a function that replaces the
   list."
   (-> state
       (assoc-in  [:clients client :seqno] seqno)
@@ -124,8 +124,8 @@
   (comp keyword :type))
 
 (defmethod receive :buffer-response [msg client]
-  "Given a buffer, send an operation to all uninitialized clients, making them
-  consistent with the current history."
+  "Given a buffer, send an operation to all uninitialized clients, making
+  them consistent with the current history."
   (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
     (let [key (keyword (:session msg))
           op  (list (-> msg :operation))
@@ -139,8 +139,8 @@
 
 (defmethod receive :connect-request [msg client]
   "Given a connect-request, add the client to the session specified in message,
-  or generate a new session. If the session is ongoing, then fetch the buffer
-  from a client."
+  or generate a new session. If the session is ongoing, then fetch the
+  buffer from a client."
   (let [key (or (:session msg) (generate-key))]
     (swap! state join-session client (keyword key))
     (when (or (not (:session msg))
