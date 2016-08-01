@@ -1,4 +1,4 @@
-#+TITLE: Developing Real-Time Collaborative Editing Using Formal Methods
+#+TITLE: Developing Real-Time Collaborative Editing @@latex:\\@@ Using Formal Methods
 #+AUTHOR: Lars Tveito
 #+EMAIL: larstvei@ifi.uio.no
 #+DATE: August 2016
