@@ -71,23 +71,11 @@ def gen_message(key):
     global seqno
     global token
     global buffer
-    # op = {}
 
     type = choice(['ins', 'ins', 'del']) if len(buffer) != 0 else 'ins'
     pos = choice(range(len(buffer) + 1)) if type == 'ins' else choice(range(len(buffer)))
     str = choice('abcdefghijklmnopqrstuvwxyz \n') if type == 'ins' else buffer[pos]
     return type, pos, str
-    # if choice(['ins', 'ins', 'del']) == 'ins' or len(buffer) == 0:
-        
-    #     op = {'pos' : choice(range(len(buffer) + 1)),
-    #           'ins' : choice('abcdefghijklmnopqrstuvwxyz \n')}
-    # else:
-    #     pos = choice(range(len(buffer)))
-    #     op = {'pos' : pos, 'del' : buffer[pos]}
-
-    # msg = {'type' : 'operation', 'session' : key,
-    #        'seqno' : seqno, 'token' : token, 'operation' : op}
-    # return msg
 
 def opener(keyreq, secs):
     def on_open(ws):
@@ -107,14 +95,6 @@ def opener(keyreq, secs):
             type, pos, s = gen_message(key)
             print type, pos, s
             on_change(ws, s, pos, type)
-            # msg = gen_message(key)
-            # try:
-            #     ws.send(json.dumps(msg))
-            # except websocket.WebSocketConnectionClosedException:
-            #     ws.close()
-            #     print 'failed connection bug...'
-            # seqno += 1
-            # applyops([msg['operation']])
 
         time.sleep(10)
 
