@@ -3418,6 +3418,101 @@ cite:Clarke:2000:MC:332656.
    #+RESULTS:
    [[file:server.eps]]
 
+** Minimal Implementation in Python
+
+   For testing purposes, a minimal implementation of the protocol has been
+   implemented in Python. It connects to an editing session, and types randomly
+   for a given number of seconds, and finally writes its buffer to file. The
+   buffer is simply a Python string.
+
+   The function =on_open= is called when a connection to the sever has been
+   established (how a connection is established is not covered here, as it is
+   specific for what WebSocket library one chooses to use). =on_open= is given
+   a socket and key as argument.
+   #+BEGIN_SRC python
+   def on_open(ws, key):
+       ws.send(json.dumps({'type' : 'connect-request', 'session' : key}))
+   #+END_SRC
+
+   We assume that certain global variables are defined, namely a key, a token,
+   a sequence number and a buffer. When a message is received, a function
+   =on_message= is triggered, and is given a socket and the message as
+   arguments. The message must be converted to a Python dictionary, using a
+   JSON library.
+
+   If the message type is =connect-response=, then the key is set. If it is a
+   =buffer-request=, then a response is sent over the socket containing an
+   operation which contains the entire buffer. Lastly, if the message type is
+   =operations=, then we call a function which will be described shortly.
+   #+BEGIN_SRC python
+   def on_message(ws, message):
+       global key
+       global token
+       global buf
+
+       msg = json.loads(message)
+
+       if msg['type'] == 'connect-response':
+           key = msg['session']
+       elif msg['type'] == 'buffer-request':
+           response = {'type':'buffer-response',
+                       'session':key,
+                       'token':token,
+                       'operation' : {'pos':0, 'ins':buf}}
+           ws.send(json.dumps(response))
+       elif msg['type'] == 'operations':
+           on_operation(msg)
+   #+END_SRC
+
+   When an operation is received, the following function is applied. If the
+   sequence number matches the sequence number of the client, then the token is
+   set, and the operations are applied. The sequence number is incremented
+   regardless.
+   #+BEGIN_SRC python
+   def on_operation(msg):
+       global seqno
+       global token
+
+       if msg['seqno'] == seqno:
+           token = msg['token']
+           applyops(msg['operations'])
+       seqno += 1
+   #+END_SRC
+
+   The function =applyops= traverses a list of operations, and inserts or
+   deletes from the buffer at the given position.
+   #+BEGIN_SRC python
+   def applyops(operations):
+       global buf
+
+       for op in operations:
+           pos = op['pos']
+           if op.has_key('ins'):
+               buf = buf[0:pos] + op['ins'] + buf[pos:]
+           elif op.has_key('del'):
+               buf = buf[0:pos] + buf[pos + len(op['del']):]
+   #+END_SRC
+
+   When a (random) operation has been generated, this is applied, then sent
+   over the socket. Finally the sequence number is incremented.
+   #+BEGIN_SRC python
+   def on_change(ws, string, pos, msgtype):
+       global key
+       global seqno
+       global token
+
+       op = {msgtype:string, 'pos':pos }
+       msg = {'type':'operation', 'session':key,
+              'seqno':seqno, 'token':token, 'operation':op}
+
+       applyops([op])
+       ws.send(json.dumps(msg))
+       seqno += 1
+   #+END_SRC
+
+   Together, these functions summarize a minimal client-side implementation of
+   the Shared Buffer protocol.
+
 ** Conflicts During Client Initialization
 
    In the specification we assumed that the connected clients stayed constant
