@@ -582,6 +582,10 @@ library for the Python programming language.
    could be pursued in the future, and concludes the thesis by comparing our
    results with the goal we set for the thesis.
 
+** Project Source Code
+
+   All source code from the thesis can be found on [[https://github.com/larstvei/master][Github]].
+
 * Formal Semantics of Editing Operations
 
   #+BEGIN_EXPORT latex
