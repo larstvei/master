@@ -79,11 +79,11 @@ library for the Python programming language.
   science since the early 70's. I would like to convey my deepest gratitude to
   Rudi and Martin.
 
-  Throughout my years at the Department of Informatics I have worked as a
+  Throughout my years at the Department of Informatics, I have worked as a
   teaching assistant and been actively involved in the department's student
-  council. Both of these arenas are simply packed with fantastic people that I
-  have been lucky enough to get to know. A thanks goes out to Joshi, who have
-  played a big part in encouraging me to pursue these roles. I want to thank
+  council. These arenas are simply packed with fantastic people that I have
+  been lucky enough to get to know. A thanks goes out to Joshi, who have played
+  a significant part in encouraging me to pursue these roles. I want to thank
   the students who attended my lessons for letting me have their attention; it
   has been a wonderful experience for me, and hopefully for the students too.
   Furthermore, I would like to thank the many faculty members who actively work
@@ -365,7 +365,7 @@ library for the Python programming language.
 
 ** Goals
 
-   The goal for this thesis is to create a protocol for real-time collaborative
+   The goal of this thesis is to create a protocol for real-time collaborative
    editing which can be characterized as:
 
    1. *Portable* --- easy to implement in an /existing/ plain text editor,
@@ -388,7 +388,7 @@ library for the Python programming language.
    time) would require some form of distributed locking scheme. It can be
    considered /portable/, given that the locking scheme is easy to implement.
    It is /robust/ because conflicting editing operations are simply not
-   allowed; however it does have a single point of failure. It not, however,
+   allowed; however, it does have a single point of failure. It is not
    /responsive/ as the user might have to wait before being able to type.
 
    Our goal is to find the intersection these three characteristics, where we
@@ -489,13 +489,13 @@ library for the Python programming language.
    More generally, the algorithm essentially consists of the server receiving
    operations, and adding them to a history that dictates the order of which
    operations must be applied. Then for every incoming message, it constructs
-   an operation for every client that (if not rejected) will make the client
-   consistent with the history that has been constructed. The idea is simple,
-   but as we will see in Chapter [[Server-side Specification]], it is not at all
-   trivial to construct such a history, or make the clients consistent with the
-   constructed history. In order to develop this algorithm, we have relied
-   heavily on the use of /formal methods/, which has shed light on the many
-   complexities that may arise.
+   an operation for every client that will make the client consistent with the
+   history that has been constructed. The idea is simple, but as we will see in
+   Chapter [[Server-side Specification]], it is not at all trivial to construct
+   such a history, or make the clients consistent with the constructed history.
+   In order to develop this algorithm, we have relied heavily on the use of
+   /formal methods/, which has shed light on the many complexities that may
+   arise.
 
 ** Method
 
@@ -515,12 +515,12 @@ library for the Python programming language.
    properties that are of interest.
 
    Moreover, we use the model as a way of driving the development process, or
-   rather, solving the problem. When model checking a property, a counter
-   example is given if the property does not hold. By studying the example, we
-   can change the model in hope of resolving the issue, and see the effects of
-   the change. This resembles Test Driven Development (TDD), but instead of
-   testing our actual system we perform tests on a model, and rather than
-   testing a few selected scenarios, we check all possible scenarios.
+   rather, solving the problem. When model checking a property, a
+   counterexample is given if the property does not hold. By studying the
+   example, we can change the model in hope of resolving the issue, and see the
+   effects of the change. This resembles Test Driven Development (TDD), but
+   instead of testing our actual system we perform tests on a model, and rather
+   than testing a few selected scenarios, we check all possible scenarios.
 
    [[http://maude.cs.illinois.edu/][The Maude System]] is our chosen modeling language and verification tool. It
    provides an expressive language, that is well suited for modeling concurrent
@@ -538,12 +538,12 @@ library for the Python programming language.
 
    In the process we have:
    - formally specified the system in Maude,
-   - performed model checking on the specified system in Maude,
-   - provide a client-side implementation as an extension for Emacs,
-   - provide a prototype server-side implementation in Clojure.
+   - validated the system via model checking using the Maude LTL model checker,
+   - provided a client-side implementation as an extension for Emacs,
+   - provided a prototype server-side implementation in Clojure.
 
    In addition, the thesis demonstrates how formal specification and model
-   checking has driven the development of the algorithm.
+   checking can drive the development of an algorithm.
 
 ** Chapter Overview
 
@@ -567,20 +567,21 @@ library for the Python programming language.
 
    *Chapter [[Server-side Specification]]* shows how the server in the system is
    specified. By walking through the most essential parts of the specification,
-   we describe the server-side algorithm in detail, and show /why/ each control
+   we describe the server-side algorithm in detail and show /why/ each control
    mechanism is put in place.
 
    *Chapter [[Model Checking the Specification]]* shows how we express the chosen
-   consistency model (eventual consistency) has been formalized as a LTL
+   consistency model (eventual consistency) has been formalized as an LTL
    formula, and how we have leveraged the Maude LTL Model Checker.
 
    *Chapter [[Implementation of Shared Buffer]]* describes the general structure of
    the implementation, and how the protocol has been implemented. Here, the
    focus is on the remaining problems not fully covered specification.
 
-   *Chapter [[Conclusions and Future Work]]* concludes the thesis by discussing
-   what we could have done differently, whether we have reached the goals we
-   set, and propose some interesting work that could be pursued in the future.
+   *Chapter [[Conclusions and Future Work]]* propose some interesting work that
+   could be pursued in the future, and concludes the thesis by comparing our
+   results with the goal we set for the thesis.
+
 * Formal Semantics of Editing Operations
 
   #+BEGIN_EXPORT latex
@@ -932,7 +933,7 @@ library for the Python programming language.
 
     Inverting operations is an essential part of the Shared Buffer algorithm,
     and we rely on the definition above even though the invertibillity axiom
-    does not hold. Notice that the counter example $\ins{0}{a} \circ \del{0}{a}
+    does not hold. Notice that the counterexample $\ins{0}{a} \circ \del{0}{a}
     (\epsilon)$ expresses that a deletion is applied to the empty buffer and
     then undone. It seems fair to question if that situation could really
     occur, because there is no reasonably defined way for an editor to perform
@@ -940,7 +941,8 @@ library for the Python programming language.
 
     We have to ensure that the algorithm never construct an operation that
     cannot be applied to a given client's buffer. We rely on the model checker
-    to provide a counter example, if we were to construct such an operation.
+    to provide a counterexample, if we were to construct such an operation.
+
 * Related Work
 
   In this chapter we present some of the work of Ellis and Gibbs
@@ -1159,7 +1161,7 @@ library for the Python programming language.
    cite:DBLP:conf/ecscw/ImineMOR03.
 
    We have been able to reproduce the result by model checking our Maude
-   specification. A minimal counter example, as shown in Figure
+   specification. A minimal counterexample, as shown in Figure
    [[ref:fig:disprove-c1]], involves two operations, $O_0 = \ins{0}{b}$ and $O_1 =
    del(0)$, applied to an initially non-empty buffer. The priority parameter is
    omitted in this example, because it has no effect on the outcome. Assume
@@ -2034,10 +2036,10 @@ of the source code.
 ** An Ordering of Events
 
    The history maintained on the server should respect an ordering $\prec$.
-   This ordering must respect the /happened before/-relation, meaning that for
-   any two events $E_i, E_j \in \mathbb E$ where if $E_i \longrightarrow E_j$
-   then $E_i \prec E_j$. The question that remains is how to order concurrent
-   events.
+   This ordering must respect the /happened before/-relation (Definition
+   ref:def:happened-before), meaning that for any two events $E_i, E_j \in
+   \mathbb E$ where if $E_i \longrightarrow E_j$ then $E_i \prec E_j$. The
+   question that remains is how to order concurrent events.
 
    Let us first take a step back to make a useful observation. Say a character
    is inserted at point $i$ in a given buffer. The characters that were
@@ -2174,10 +2176,10 @@ of the source code.
     A total order under a relation requires the relation to be antisymmetric,
     total and transitive. Antisymmetric, meaning that if $E_i$ precedes $E_j$
     then $E_j$ cannot precede $E_i$ and total, meaning that any two events are
-    comparable under the precedence relation; we have found no counter example
-    to either of these properties. However, the precedence relation is not
-    transitive, and so an ordering under $\prec$ is not a total order, nor is
-    it a partial order.
+    comparable under the precedence relation (Definition [[ref:def:prec]]); we have
+    found no counterexample to either of these properties. However, the
+    precedence relation is not transitive, and so an ordering under $\prec$ is
+    not a total order, nor is it a partial order.
 
     These following three events is enough to show that $\prec$ is not
     transitive:
@@ -2219,8 +2221,8 @@ of the source code.
 
     A possible resolution to this is discussed in Future Work, Section
     [[Constructing a Total Order]]. Instead we build a history that relies on the
-    given precedence relation (Definition [[ref:def:prec]]), presenting a scheme
-    that takes the lack of transitivity into consideration.
+    given precedence relation, presenting a scheme that takes the lack of
+    transitivity into consideration.
 
 ** Building a History of Events
 
@@ -3111,7 +3113,7 @@ queues.
    where =B=, =N= and =M= determines the buffer, number of clients and number
    of operation. The experiment can reduce to =true=, indicating that the
    system is eventually consistent within the given bounds. If the property
-   does not hold, the model checker provides a counter example which shows a
+   does not hold, the model checker provides a counterexample which shows a
    sequence of states that lead to an inconsistency. Lastly, the computation
    may not terminate within a reasonable amount of time consume or too much
    memory, which leaves us with an inconclusive result.
@@ -3164,22 +3166,22 @@ queues.
    found within reasonable time.
 
    Lastly, we want to emphasize that we consider the experiments that produced
-   counter examples, which are in a vast majority, to have been of great value
+   counterexamples, which are in a vast majority, to have been of great value
    to the development of the algorithm. Sadly, we cannot document these to the
-   same degree as the ones that did not produce a counter example. This is
+   same degree as the ones that did not produce a counterexample. This is
    because that, for a long time, the specification was under rapid
-   development, and counter examples were produced within a short amount of
-   time on a local computer. It was first when the specification started
-   showing real promise that we needed to access more computing power in order
-   to produce counter examples. We have been able to correct all errors that
-   have been found by the model checker, and have not been able to produce
-   further counter examples.
+   development, and counterexamples were produced within a short amount of time
+   on a local computer. It was first when the specification started showing
+   real promise that we needed to access more computing power in order to
+   produce counterexamples. We have been able to correct all errors that have
+   been found by the model checker, and have not been able to produce further
+   counterexamples.
 
-** Processing Counter Examples
+** Processing Counterexamples
 
-   Model checking provides a counter example if the system does not conform to
-   a given property; these counter examples have been extremely valuable for
-   understanding what caused some particular problem. A counter example is
+   Model checking provides a counterexample if the system does not conform to
+   a given property; these counterexamples have been extremely valuable for
+   understanding what caused some particular problem. A counterexample is
    represented as a sequence of states, starting from a given initial state and
    ending in some inconsistent state.
 
@@ -3190,7 +3192,7 @@ queues.
    represent a state in the system. In the representation of a state, all lines
    contain some piece of information we were interested in.
 
-   The counter examples provided by the model checker typically span hundreds
+   The counterexamples provided by the model checker typically span hundreds
    of lines, which makes them difficult to process. It is very useful to only
    look at /changes/ between two given states.
 
@@ -3954,8 +3956,8 @@ why the empty list is treated as an "alternative" identity element.
 
 * Conclusions and Future Work
 
-  In this concluding chapter we start by summarizing how the use of formal
-  methods have influenced the development of the algorithm. We present some
+  In this concluding chapter, we start by summarizing how the use of formal
+  methods has influenced the development of the algorithm. We present some
   ideas that we did not have time to pursue, but consider interesting
   candidates for future work. Lastly, we show what we have achieved with
   regards to the goals that we set for this thesis.
@@ -3963,25 +3965,25 @@ why the empty list is treated as an "alternative" identity element.
 ** Leveraging Formal Methods
 
    We are completely convinced that writing a formal specification, and using
-   model checking to analyze it, have been absolutely essential to the
-   development of the resulting algorithm of this thesis. Using Maude to
-   specify the program required us to find a representation for every component
-   in the program; this gave us a precise way of thinking, talking and writing
-   about the program, which in itself has been immensely useful.
+   model checking to analyze it, have been essential to the development of the
+   resulting algorithm of this thesis. Using Maude to specify the program
+   required us to find a representation for every component in the program;
+   this gave us a precise way of thinking, talking and writing about the
+   program, which in itself has been immensely useful.
 
    Using a model checker is comparable with having a comprehensive test suite
    for a system. A major advantage is that it will automatically test /every
    possible scenario/, and relieve the programmer of the responsibility of
    determining what scenarios are most likely to produce an error. Furthermore,
    testing a distributed system can be extremely difficult, as the correctness
-   of the system is dependent on results that span over multiple computers. In
-   addition, it is difficult to write system-wide tests that are
+   of the system is dependent on results that span over multiple computers.
+   Furthermore, it is notoriously hard to write system-wide tests that are
    /reproducible/.
 
    We have experienced two downsides of using formal methods. One is that
-   writing a formal specification takes time, and the tools are not always are
-   somewhat crude[fn:9]. The other is that there will always be a gap between
-   the abstract model of the program one is specifying, and the actual running
+   writing a formal specification takes time, and the tools can be somewhat
+   crude[fn:9]. The other is that there will always be a gap between the
+   abstract model of the program one is specifying, and the actual running
    program.
 
    One major mistake was made in the specification that model checking could
@@ -3990,22 +3992,22 @@ why the empty list is treated as an "alternative" identity element.
    should yield an error; the server should never send an operation to a client
    which exceeds the bounds of that client's buffer.
 
-   After correcting the mistake, we redid the experiments, and found that the
+   After correcting the mistake, we redid the experiments and found that the
    algorithm did not guarantee eventual consistency after all. The problem was
    manifested in the $fix$ function from Section [[Transform the History]]. A
-   challenge here was that it was hard to produce a counter example, as it took
+   challenge here was that it was hard to produce a counterexample, as it took
    about 12 hours of computation. We were able to correct this, but we suspect
    we could have found a more elegant solution if we had caught it earlier.
-   After it was corrected we have not been able to produce further counter
-   examples, and have redone all experiments we have previously executed.
+   After it was corrected we have not been able to produce further
+   counterexamples and have redone all experiments we have previously executed.
 
    This somewhat sobering experience taught us that no matter the tool, there
    is always room for human error.
 
 ** Future Work
 
-   There is still remaining implementation work, as not all control mechanisms
-   are currently present in the implementation. We considered a correct
+   There is remaining implementation work, as not all control mechanisms are
+   currently present in the implementation. We considered a correct
    specification to be far more important for the thesis. The prototype
    implementation gives us confidence that the ideas from the specification
    work in practice.
@@ -4015,17 +4017,17 @@ why the empty list is treated as an "alternative" identity element.
 *** Undo
 
     The adOPTed-algorithm cite:DBLP:conf/cscw/ResselNG96 tackles the problem of
-    undo in a real-time collaborative editor; their idea is to only undo
+    undo in a real-time collaborative editor; their idea is only to undo
     operations that are generated locally. The Shared Buffer system does not
     provide any special mechanisms for undo, but specific client
     implementations may provide solutions to this problem; the only requirement
     is that all changes (including undos) are reported to the server.
 
-    This problem would be best handled on the client side, as undo is a
+    This problem would be best handled on the client side, as undo is an
     editor-specific feature. If we were to handle this on the server side, a
     message would need to include information revealing that an operation was
     caused by an undo. Then the server could only add undone operations which
-    was originally performed by the same user, and ensure that operations
+    were originally performed by the same user, and ensure that operations
     generated by other users would be restored. Though it might provide a
     correct end result, it would be a confusing experience for the user, as it
     would need to perform global undos, and trust that remote operations would
@@ -4076,7 +4078,7 @@ why the empty list is treated as an "alternative" identity element.
     would give $\tuple{\ins{0}{b}, t_1, m_1, u_0}$, and a deletion should
     precede an insertion if the positions are the same.
 
-    The observation was found to late to be able to implement it and properly
+    The observation was found too late to be able to implement it and properly
     verify it. If our intuition serves us correct, this could yield a better
     result with regards to preserving user intent, and could guarantee a
     transitive ordering.
@@ -4093,25 +4095,25 @@ why the empty list is treated as an "alternative" identity element.
 
     Formally verifying the specification using the consistency model described
     in Section [[Discussing Consistency in Operational Transformation]] could be
-    better suited for ensuring that user intention is ensured. Furthermore, it
-    would be interesting to see if the suggestion from the last section would
-    be enough to fully preserve user intent.
+    better suited for ensuring that user intention is preserved. Furthermore,
+    it would be interesting to see if the suggestion from the last section
+    would be enough to fully preserve user intent.
 
 *** Community
 
     When the prototype implementation is in a more production ready stage, it
-    will be published with a free software license. Seeing that the aim for the
+    will be published with a free software license. Seeing that the aim of the
     developed protocol is to enable real-time collaboration in /existing
-    editors/ the protocol would ideally be ported to a wide range of editors in
-    the future. The developers who are best fit to implement this are probably
-    the developers who are an active part of the community around each editor.
-    We view fostering a community around the project as the most promising way
-    of spreading our real-time collaboration protocol to a wide range of
-    editors.
+    editors/, the protocol would ideally be ported to a wide range of editors
+    in the future. The developers who are best fit to implement this are
+    probably the developers who are an active part of the community around each
+    editor. We view fostering a community around the project as the most
+    promising way of spreading our real-time collaboration protocol to a wide
+    range of editors.
 
 ** Conclusion
 
-  The goal for this thesis was producing a protocol for real-time collaboration
+  The goal of this thesis was producing a protocol for real-time collaboration
   which could be characterized as:
 
   1. *Portable* --- easy to implement in an /existing/ plain text editor,
@@ -4120,25 +4122,25 @@ why the empty list is treated as an "alternative" identity element.
   3. *Robust* --- gracefully handle all conflicting editing operations.
 
   /Portability/ has been ensured by designing a client-side algorithm that is
-  easy to implement. Compared to the naïve algorithm, there are very few added
-  complexities. We consider this goal to have been fully achieved.
+  easy to implement. Compared to the naïve algorithm, Shared Buffer adds little
+  implementation overhead. We consider this goal to have been fully achieved.
 
   The system is /responsive/, in the sense that local editing operations are
-  never prohibited, and sending a message after changes causes, at worst, a
+  never prohibited, and sending a message after changes cause, at worst, a
   negligible delay. Existing /Operational Transformation/ (OT) algorithms where
   the client performs transformations themselves are arguably more responsive,
-  in the sense that intermediate results are displayed during a conflict. Yet,
-  this is a necessary trade-off in order to achieve our wanted level of
-  portability, and we consider the goal achieved.
+  in the sense that intermediate results are displayed during a conflict. This
+  is a necessary trade-off to achieve our wanted level of portability, and we
+  consider the goal achieved.
 
   Aided by formal methods, we have shown that no conflict can break eventual
   consistency under certain bounds. Occasionally a wrong character will be
-  deleted, but we do not consider this a very serious issue, because this only
-  occurs when multiple concurrent operations are performed at the same
-  position, and it does not affect eventual consistency. The system has not
-  been proven to guarantee eventual consistency for an arbitrary number of
-  clients and operations, yet we still think the system can rightfully be
-  characterized as /robust/.
+  deleted, but we do not consider this a serious issue because this only occurs
+  when multiple concurrent operations are performed at the same position, and
+  it does not affect eventual consistency. The system has not been proven to
+  guarantee eventual consistency for an arbitrary number of clients and
+  operations, yet we still think the system can rightfully be characterized as
+  /robust/.
 
   Though we see room for improvement, we think the protocol fits nicely in the
   intersection of portability, responsiveness and robustness.
