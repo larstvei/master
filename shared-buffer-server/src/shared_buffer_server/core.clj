@@ -30,9 +30,9 @@
   (->> state :sessions key :clients
        (remove (partial initialized? state))))
 
-(defn min-token [site]
-  "Get the smalles"
-  (->> site :tokens vals (apply min)))
+(defn min-token [session]
+  "Get the smallest state token among clients in the session."
+  (->> session :tokens vals (apply min)))
 
 (defn next-seq [n m]
   "Given the a stored sequence number for a client and the sequence number of a
