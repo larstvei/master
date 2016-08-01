@@ -38,7 +38,29 @@
 #+LaTeX: \mbox{}
 
 #+BEGIN_abstract
-Placeholder for abstract.
+Real-time collaboration allows multiple users to view and edit a document
+simultaneously over a network. In this thesis, we develop a new protocol,
+called Shared Buffer, which enables real-time collaboration in existing
+editors. Shared Buffer leverages a client-server architecture and minimizes the
+implementation effort of the client-side algorithm. It achieves this without
+degrading the responsiveness of the editor.
+
+The greatest challenge of a real-time collaborative system is ensuring
+consistency between the distributed copies of the document. We chose eventual
+consistency as the consistency model, which essentially states that if all
+users stop typing, then eventually they will look at the same document.
+
+We apply a formal verification technique called model checking, using it as a
+tool to validate the protocol. The behavior of the system is formally specified
+in Maude, a language based on equational and rewriting logic. Linear Temporal
+Logic (LTL) is used to formalize the consistency model. Using the Maude LTL
+model checker, we have verified that the system exhibits eventual consistency
+for a limited number of clients and operations.
+
+A Shared Buffer server has been implemented in Clojure, a modern functional
+language with strong support for concurrency. Client implementations have been
+developed as an extension for Emacs, a widely used text editor, and as a
+library for the Python programming language.
 #+END_abstract
 
 #+LaTeX: \newpage
