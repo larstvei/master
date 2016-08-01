@@ -204,7 +204,6 @@ fmod TRANSFORMATION is
 endfm
 
 fmod APPLY is
-    including BUFFER .
     including ERROR .
     including INSERT-DELETE .
 
@@ -249,8 +248,6 @@ mod SITE is
     including CONFIGURATION .
     including BUFFER .
     including LIST{Msg} .
-    including MSG .
-    including ABSTRACT-OPERATION .
     including USER .
 
     sorts Site Queue .
@@ -287,11 +284,6 @@ endv
 mod SITE-RULES is
     including ACTIONS .
     including APPLY .
-    including BUFFER .
-    including LIST{Msg} .
-    including MSG .
-    including ABSTRACT-OPERATION .
-    including USER .
     including UNIQUE .
     including SITE .
 
@@ -336,10 +328,7 @@ mod SITE-RULES is
 endm
 
 fmod ORDERING is
-    including ABSTRACT-OPERATION .
-    including BOOL .
     including INSERT-DELETE .
-    including NAT .
     including SET{User} .
 
     sort Event .
@@ -372,7 +361,6 @@ view Event from TRIV to ORDERING is
 endv
 
 fmod HISTORY is
-    including ORDERING .
     including LIST{Event} .
     including TRANSFORMATION .
 
@@ -439,9 +427,7 @@ fmod HISTORY is
 endfm
 
 mod SERVER is
-    including CONFIGURATION .
     including MAP{User,Queue} .
-    including NAT .
     including HISTORY .
 
     op < server |_> : AttributeSet -> Object [ctor object] .
@@ -451,12 +437,7 @@ mod SERVER is
 endm
 
 mod SEND is
-    including CONFIGURATION .
-    including LIST{Msg} .
-    including MAP{User,Queue} .
     including SERVER .
-    including SITE .
-    including HISTORY .
 
     sort Send .
     subsort Send < Configuration .
@@ -482,14 +463,7 @@ mod SEND is
 endm
 
 mod SERVER-RULES is
-    including CONFIGURATION .
-    including LIST{Msg} .
-    including MAP{User,Queue} .
-    including ABSTRACT-OPERATION .
     including SEND .
-    including SERVER .
-    including SITE .
-    including HISTORY .
 
     vars A A' : AttributeSet .
     vars Q Q' Q'' : Queue .
@@ -523,15 +497,11 @@ endm
 
 mod PREDICATES is
     including APPLY .
-    including BUFFER .
-    including CONFIGURATION .
     including LTL-SIMPLIFIER .
     including MODEL-CHECKER .
     including SATISFACTION .
     including SERVER .
     including SET{Buffer} .
-    including SITE .
-    including HISTORY .
 
     subsort Configuration < State .
 
