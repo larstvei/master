@@ -1,0 +1,9 @@
+* Files for "Developing Real-Time Collaborative Editing Using Formal Methods"
+
+  This repository is an addition to my master thesis on real-time collaborative
+  editing. Here are the most relevant files and directories:
+  - [[file:thesis/thesis.pdf][The thesis (PDF)]]
+  - [[file:thesis/thesis.org][The thesis (Org mode)]]
+  - [[file:shared-buffer-server/src/shared_buffer_server][Clojure src directory]]
+  - [[file:shared-buffer-clients/shared-buffer-emacs/shared-buffer.el][Emacs extension]]
+  - [[file:model/shared-buffer-inverse.maude][Formal specification in Maude]]
