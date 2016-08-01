@@ -8,41 +8,46 @@
 
 (defonce state (atom {:sessions {} :clients {}}))
 
-;;; Initialization and termination
-
 (defn clients-in-session [state key]
+  "Given a session key, return the number of clients the session."
   (-> state :sessions key :clients count))
 
 (defn empty-session? [state key]
+  "Given a key, return true if there are no clients in the session."
   (zero? (clients-in-session state key)))
 
 (defn initialized? [state client]
+  "Returns true if the given client is initialized."
   (get-in state [:clients client :initialized]))
 
 (defn get-initialized-client [state key]
+  "Get an initialized client from a session identified by key."
   (->> state :sessions key :clients
        (filter (partial initialized? state)) rand-nth))
 
 (defn get-uninitialized-clients [state key]
+  "Get all uninitialized clients from a session identified by key."
   (->> state :sessions key :clients
        (remove (partial initialized? state))))
 
 (defn min-token [site]
+  "Get the smalles"
   (->> site :tokens vals (apply min)))
 
 (defn next-seq [n m]
+  "Given the a stored sequence number for a client and the sequence number of a
+  message, calculate the next sequence number for the client."
   (+ (inc n) (- m n)))
 
 (defn initialize-client
-  "The function is called on initialization. It adds the client to the state."
+  "Adds a given client to the state."
   [state client]
   (-> state
       (assoc-in [:clients client :id] (hash client))
       (assoc-in [:clients client :seqno] 0)))
 
 (defn join-session
-  "The function is called when a client requests to join a session. It is added
-  to the session, unconditionally"
+  "Add a client to the session unconditionally."
   [state client key]
   (-> state
       (assoc-in  [:clients client :session] key)
@@ -53,38 +58,42 @@
       (update-in [:sessions key :lock] (fnil identity (Object.)))))
 
 (defn dissolve-client
-  "The function is called when a connection to a client is closed. It removes
-  the client. If the session its in has no more clients, the session is
-  closed."
+  "Remove a given client from the state. If this is the only client in the
+  session, then dissolve the session."
   [state client status]
-  (let [session (get-in state [:clients client :session])
+  (let [key   (get-in state [:clients client :session])
         state (dissoc-in state [:clients client])]
-    (if (= 1 (count (get-in state [:sessions session :clients])))
-      (dissoc-in state [:sessions session])
-      (update-in state [:sessions session :clients] disj client))))
+    (if (= 1 (count (get-in state [:sessions key :clients])))
+      (dissoc-in state [:sessions key])
+      (update-in state [:sessions key :clients] disj client))))
 
 (defn update-client [state client seqno op f]
+  "Update the sequence number and list of (possibly) rejected operations of a
+  given client. Function f is either conj or a function that replaces the
+  list."
   (-> state
       (assoc-in  [:clients client :seqno] seqno)
       (update-in [:clients client :ops] f op)))
 
-(defn update-session [state session history]
+(defn update-session [state key history]
+  "Update a session with a new history, and increment it's state token."
   (-> state
-      (assoc-in  [:sessions session :history] history)
-      (update-in [:sessions session :token] inc)))
+      (assoc-in  [:sessions key :history] history)
+      (update-in [:sessions key :token] inc)))
 
 (defn next-state [state client token seqno op history]
-  (let [session (get-in state [:clients client :session])
-        site    (-> state :sessions session)
-        t       (min-token site)]
+  "Updates the session and the client, and trims the history."
+  (let [key (get-in state [:clients client :session])
+        t   (-> state :sessions key min-token)]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
-        (assoc-in [:sessions session :tokens client] token)
-        (update-session session (trim-history history t)))))
+        (assoc-in [:sessions key :tokens client] token)
+        (update-session key (trim-history history t)))))
 
 ;;; Send
 
 (defn make-msg [key op seqno token]
+  "Given a operation, sequence number and token, generate a message."
   {:type :operations
    :session key
    :operations (reverse op)
@@ -103,15 +112,20 @@
       (swap! state update-client c (inc seqno) [op token] conj))))
 
 (defn send-buffer-request [state key]
+  "Send a buffer request to some initialized client."
   (->> {:type :buffer-request :session key}
        (json/write-str)
        (send! (get-initialized-client state key))))
 
 ;;; Receive
 
-(defmulti receive (comp keyword :type))
+(defmulti receive
+  "Receive is dispatched on the message type."
+  (comp keyword :type))
 
 (defmethod receive :buffer-response [msg client]
+  "Given a buffer, send an operation to all uninitialized clients, making them
+  consistent with the current history."
   (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
     (let [key (keyword (:session msg))
           op  (list (-> msg :operation))
@@ -124,6 +138,9 @@
         (swap! state update-in [:clients c :seqno] inc)))))
 
 (defmethod receive :connect-request [msg client]
+  "Given a connect-request, add the client to the session specified in message,
+  or generate a new session. If the session is ongoing, then fetch the buffer
+  from a client."
   (let [key (or (:session msg) (generate-key))]
     (swap! state join-session client (keyword key))
     (when (or (not (:session msg))
@@ -135,6 +152,8 @@
       (send-buffer-request @state (keyword key)))))
 
 (defmethod receive :operation [msg client]
+  "Given a new operation, add the operation to the history, and send operations
+  to all clients, making them consistent with the current history."
   (locking (get-in @state [:sessions (keyword (:session msg)) :lock])
     (let [key     (keyword (:session msg))
           session (get-in @state [:sessions key])
@@ -154,11 +173,13 @@
       (swap! state next-state client token (inc seqno) [op2 time] hist))))
 
 (defmethod receive :default [msg client]
-  (println "default" msg))
+  "If none of the above, then print the message for debugging purposes."
+  (println "undefined message type" msg))
 
 ;;; Handle requests
 
 (defn receiver [client]
+  "Returns a function that, that reads the json string and calls receive."
   (fn [data]
     (-> data
         (json/read-str :key-fn keyword)
