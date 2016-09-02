@@ -77,18 +77,18 @@
 
 (defn update-session [state key history]
   "Update a session with a new history, and increment it's state token."
-  (-> state
-      (assoc-in  [:sessions key :history] history)
-      (update-in [:sessions key :token] inc)))
+  (let [t (-> state :sessions key min-token)]
+    (-> state
+        (assoc-in  [:sessions key :history] (trim-history history t))
+        (update-in [:sessions key :token] inc))))
 
 (defn next-state [state client token seqno op history]
   "Updates the session and the client, and trims the history."
-  (let [key (get-in state [:clients client :session])
-        t   (-> state :sessions key min-token)]
+  (let [key (get-in state [:clients client :session])]
     (-> state
         (update-client client seqno op (fn [_ x] (list x)))
         (assoc-in [:sessions key :tokens client] token)
-        (update-session key (trim-history history t)))))
+        (update-session key history))))
 
 ;;; Send
 
