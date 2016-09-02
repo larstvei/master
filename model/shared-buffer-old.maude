@@ -433,6 +433,7 @@ mod LOOP-STATE is
     including PREDICATES .
 
     op endstate : Configuration -> Bool .
+    op break    : Configuration -> Bool .
 
     vars Q Q' : MsgQueue .
     var O     : Oid .
@@ -447,8 +448,57 @@ mod LOOP-STATE is
     eq endstate(< O : Client | in-channel : (M ~ Q'), A > CF) = false .
     eq endstate(CF) = true [owise] .
 
+    eq break(< O : Client | out-channel : (M ~ Q), A > CF) = false .
+    eq break(< O : Client | in-channel : (M ~ Q'), A > CF) = false .
+    eq break(CF) = true [owise] .
+
     crl { < O : Server | clients : CS, A > CF }
       =>
         init nil oids(CS)
       if endstate(CF) and ({ < O : Server | clients : CS > CF } |= consistent) .
 endm
+
+*** Commands:
+
+--- Finds example after 9 steps
+--- search[1] init nil ("C1", "C2") =>*
+---   { < "C1" : Client | content         : (head(nil)(ins S:Str at 0 in tail(nil))),
+---                       opsApplied           : N:Nat,
+---                       out-channel     : Q:MsgQueue,
+---                       in-channel      : Q':MsgQueue,
+---                       operations-left : N':Nat > C:Configuration } .
+
+--- search[1]
+---     next 0
+---     < "S"  : Server | clients : "C1", "C2" >
+---     < "C1" : Client | content : nil, opsApplied : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
+---     < "C2" : Client | content : nil, opsApplied : 0, out-channel : empty, in-channel : empty, operations-left : 3 >
+---   =>*
+---     < "C1" : Client | content : (head(nil)(ins S:Str at 0 in tail(nil))),
+---                       opsApplied   : N:Nat,
+---                       out     : Q:MsgQueue,
+---                       in      : Q':MsgQueue,
+---                       operations-left     : N':Nat > C:Configuration .
+
+--- red modelCheck(init nil ("C1", "C2"), (inconsistent -> <> consistent)) .
+--- red modelCheck(init nil ("C1", "C2"), [] <> consistent) .
+
+---search init =>* {CF} such that endstate(CF) /\ {CF} |= inconsistent . --- 1342
+---search init =>* {CF} such that endstate(CF) /\ {CF} |= consistent .   --- 866
+
+--- Updated
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= inconsistent . --- 16
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= consistent .   --- 130
+
+---search init 0 ("C1", "C2") =>* {CF} such that endstate(CF) /\ {CF} |= inconsistent . --- 128
+--- search init 0 ("C1", "C2") =>* {CF} such that endstate(CF) /\ {CF} |= consistent .   --- 812
+
+---red modelCheck(init, [] <> consistent) .
+
+--- With 4 operations, 77% goody
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= inconsistent . --- 544
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= consistent .   --- 1916
+
+--- With 5 operations, 57% goody...
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= consistent .   --- 33796
+--- search init =>* {CF} such that endstate(CF) /\ {CF} |= inconsistent . --- 24808
