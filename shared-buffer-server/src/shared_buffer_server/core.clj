@@ -190,10 +190,10 @@
   [req]
   (with-channel req channel
     (if (websocket? channel)
-      (swap! state initialize-client channel)
-      (send! channel (app req)))
-    (on-close channel (partial swap! state dissolve-client channel))
-    (on-receive channel (receiver channel))))
+      (do (swap! state initialize-client channel)
+          (on-close channel (partial swap! state dissolve-client channel))
+          (on-receive channel (receiver channel)))
+      (send! channel (app req)))))
 
 ;;; Server management
 
