@@ -173,6 +173,18 @@ Connected to session: %s, the key was added to the kill ring." session))
 
 ;;; Buffer modification
 
+
+(defun sb-next-point (p op)
+  "Return where cursor at P should be moved after applying OP."
+  (let ((point (1+ (plist-get op :pos)))
+        (ins (plist-get op :ins))
+        (del (plist-get op :del)))
+    (cond ((and (<= point p) ins)
+           (+ p (length ins)))
+          ((and (< point p) del)
+           (max point (- p (length del))))
+          (t p))))
+
 (defun sb-apply-operations (data)
   "Apply operations received from the server.
 
@@ -180,7 +192,12 @@ Connected to session: %s, the key was added to the kill ring." session))
 Argument DATA is a plist with fields :seqno, :operations
 and :token."
   (when (= sb-seqno (plist-get data :seqno))
-    (cl-mapc 'sb-apply-operation (plist-get data :operations))
+    (let* ((operations (plist-get data :operations))
+           (p (reduce #'sb-next-point operations :initial-value (point))))
+      (save-excursion
+        (atomic-change-group
+          (cl-mapc 'sb-apply-operation operations)))
+      (goto-char p))
     (setq sb-token (plist-get data :token)))
   (cl-incf sb-seqno))
 
@@ -189,16 +206,15 @@ and :token."
 
 The operation is either an insertion or a deletion at a given
 position."
-  (save-excursion
-    (let ((inhibit-modification-hooks t)
-          (point     (1+ (plist-get operation :pos)))
-          (insertion (plist-get operation :ins))
-          (deletion  (plist-get operation :del)))
-      (when (and insertion deletion)
-        (error "Shared Buffer: Error in protocol"))
-      (goto-char point)
-      (when insertion (insert insertion))
-      (when deletion  (delete-char (length deletion))))))
+  (let ((inhibit-modification-hooks t)
+        (point     (1+ (plist-get operation :pos)))
+        (insertion (plist-get operation :ins))
+        (deletion  (plist-get operation :del)))
+    (when (and insertion deletion)
+      (error "Shared Buffer: Error in protocol"))
+    (goto-char point)
+    (when insertion (insert insertion))
+    (when deletion  (delete-char (length deletion)))))
 
 ;;; Interactive functions
 
