@@ -20,16 +20,16 @@
              (< m1 m2)))
     (< m1 m2)))
 
-(defn trim-history [history min-token]
-  (take-while (fn [[_ t _ _]] (> t min-token)) history))
+(defn trim-history [history n]
+  (->> history reverse (drop-while (comp #(< % n) #(nth % 2))) reverse))
 
 (defn add-event
   "Adds an event to the history."
   [history [op1 _ _ u1 :as e1]]
-  (let [u?      (comp (partial = u1) last)
+  (let [u?      (comp (partial not= u1) last)
         [xs ys] (split-with u? history)
-        [x y]   (split-with (partial precedes? e1) xs)]
-    (concat x [e1] y ys)))
+        [x y]   (split-with (partial precedes? e1) history)]
+    (concat x [e1] y)))
 
 (defn until
   "Get the history until state t."
